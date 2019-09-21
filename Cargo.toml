@@ -1,0 +1,6 @@
+[workspace]
+members = [ "build/salva2d", "build/salva3d" ]
+
+[profile.release]
+#lto = true
+#codegen-units = 1

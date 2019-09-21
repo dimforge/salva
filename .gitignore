@@ -1,0 +1,16 @@
+*.swp
+*.swo
+*.html
+*.so
+*.dSYM
+target
+private
+lib
+examples/lib
+examples/bin
+*~
+BENCH
+DESIGN.md
+STYLE.md
+Cargo.lock
+.idea

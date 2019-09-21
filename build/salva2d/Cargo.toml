@@ -1,0 +1,28 @@
+[package]
+name    = "salva2d"
+version = "0.0.1"
+authors = [ "Sébastien Crozet <developer@crozet.re>" ]
+description = "2-dimensional particle-based fluid dynamics in Rust."
+documentation = "http://nphysics.org/rustdoc/salva2d/index.html"
+homepage = "http://nphysics.org"
+repository = "https://github.com/rustsim/salva"
+readme = "README.md"
+keywords = [ "physics", "dynamics", "rigid", "real-time", "particles", "fluids", "SPH" ]
+license = "BSD-3-Clause"
+edition = "2018"
+
+[features]
+default = [ "dim2" ]
+dim2    = [ ]
+parallel = [ "rayon" ]
+
+[lib]
+name = "nphysics2d"
+path = "../../src/lib.rs"
+required-features = [ "dim2" ]
+
+[dependencies]
+itertools = "0.8"
+nalgebra   = "0.18"
+rayon = { version = "1.0", optional = true }
+ncollide2d = { version = "0.20", optional = true }
