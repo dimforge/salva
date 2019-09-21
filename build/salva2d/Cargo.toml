@@ -7,7 +7,7 @@ documentation = "http://nphysics.org/rustdoc/salva2d/index.html"
 homepage = "http://nphysics.org"
 repository = "https://github.com/rustsim/salva"
 readme = "README.md"
-keywords = [ "physics", "dynamics", "rigid", "real-time", "particles", "fluids", "SPH" ]
+keywords = [ "physics", "dynamics", "particles", "fluids", "SPH" ]
 license = "BSD-3-Clause"
 edition = "2018"
 
