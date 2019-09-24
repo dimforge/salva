@@ -25,8 +25,10 @@ pub mod geometry;
 pub mod kernel;
 mod liquid_world;
 pub mod solver;
+mod timestep_manager;
 
 pub use crate::liquid_world::LiquidWorld;
+pub use crate::timestep_manager::TimestepManager;
 
 /// Compilation flags dependent aliases for mathematical types.
 #[cfg(feature = "dim3")]

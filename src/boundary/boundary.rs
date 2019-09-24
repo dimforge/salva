@@ -4,8 +4,6 @@ use na::{self, DVector, RealField};
 pub struct Boundary<N: RealField> {
     pub positions: Vec<Point<N>>,
     pub velocities: Vec<Vector<N>>,
-    pub densities: DVector<N>,
-    pub volumes: DVector<N>,
     assembly_id: usize,
 }
 
@@ -19,8 +17,6 @@ impl<N: RealField> Boundary<N> {
         Self {
             positions: particle_positions,
             velocities,
-            volumes: DVector::zeros(num_particles),
-            densities: DVector::zeros(num_particles),
             assembly_id: 0,
         }
     }

@@ -35,15 +35,32 @@ impl<N: RealField, T> HGrid<N, T> {
         self.cells.entry(key).or_insert(Vec::new()).push(elt)
     }
 
+    pub fn cells(&self) -> impl Iterator<Item = (&Point<i64>, &Vec<T>)> {
+        self.cells.iter()
+    }
+
+    pub fn neighbor_cells(
+        &self,
+        cell: &Point<i64>,
+        radius: N,
+    ) -> impl Iterator<Item = (Point<i64>, &Vec<T>)>
+    {
+        let cells = &self.cells;
+        let quantified_radius = Self::quantify(radius, self.cell_width) + 1;
+
+        NeighborCellsIterator::new(*cell, quantified_radius)
+            .filter_map(move |cell| cells.get(&cell).map(|c| (cell, c)))
+    }
+
     pub fn elements_close_to_point<'a>(
         &'a self,
         point: &Point<N>,
         radius: N,
-    ) -> impl Iterator<Item = &T> {
+    ) -> impl Iterator<Item = &T>
+    {
         let key = Self::key(point, self.cell_width);
         // FIXME: we could sometimes avoid the `+ 1` by taking into account the point location on the cell.
         let quantified_radius = Self::quantify(radius, self.cell_width) + 1;
-        let range = -(quantified_radius as i64)..=(quantified_radius as i64);
         let cells = &self.cells;
 
         NeighborCellsIterator::new(key, quantified_radius)

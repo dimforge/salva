@@ -17,12 +17,13 @@ dim2    = [ ]
 parallel = [ "rayon" ]
 
 [lib]
-name = "nphysics2d"
+name = "salva2d"
 path = "../../src/lib.rs"
 required-features = [ "dim2" ]
 
 [dependencies]
 itertools = "0.8"
-nalgebra   = "0.18"
+nalgebra  = "0.18"
+instant = { version = "0.1", features = [ "now" ] }
 rayon = { version = "1.0", optional = true }
 ncollide2d = { version = "0.20", optional = true }
