@@ -14,12 +14,18 @@ salva
 #![doc(html_root_url = "http://nphysics.org/rustdoc/")]
 
 extern crate nalgebra as na;
-//#[cfg(feature = "dim2")]
-//extern crate ncollide2d as ncollide;
-//#[cfg(feature = "dim3")]
-//extern crate ncollide3d as ncollide;
+#[cfg(all(feature = "dim2", feature = "nphysics"))]
+extern crate ncollide2d as ncollide;
+#[cfg(all(feature = "dim3", feature = "nphysics"))]
+extern crate ncollide3d as ncollide;
+#[cfg(all(feature = "dim2", feature = "nphysics"))]
+extern crate nphysics2d as nphysics;
+#[cfg(all(feature = "dim3", feature = "nphysics"))]
+extern crate nphysics3d as nphysics;
 
 pub mod boundary;
+#[cfg(feature = "nphysics")]
+pub mod coupling;
 pub mod fluid;
 pub mod geometry;
 pub mod kernel;

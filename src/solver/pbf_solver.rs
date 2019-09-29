@@ -281,6 +281,7 @@ where
 
     fn compute_position_changes(
         &mut self,
+        inv_dt: N,
         kernel_radius: N,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
@@ -306,7 +307,7 @@ where
                     let dq = N::zero();
                     let scorr = -k * (c.weight / KernelDensity::scalar_apply(dq, kernel_radius)).powi(n);
 
-                    // Compute velocity change.
+                    // Compute position change.
                     let coeff = fluid2.volumes[c.j] * (lambdas[c.i_model][c.i] + fluid2.density0 / fluid1.density0 * lambdas[c.j_model][c.j])/* + scorr*/;
                     position_change.axpy(coeff, &c.gradient, N::one());
                 }
@@ -317,8 +318,12 @@ where
 
                     let lambda = lambdas[c.i_model][c.i];
                     let coeff = boundaries_volumes[c.j_model][c.j] * (lambda + lambda)/* + scorr*/;
-                    position_change.axpy(coeff, &c.gradient, N::one());
-                    // XXX: apply the force to the boundary too.
+                    let delta = c.gradient * coeff;
+                    *position_change += delta;
+
+                    // Apply the force to the boundary too.
+                    let particle_mass = fluid1.volumes[c.i] * fluid1.density0;
+                    boundary2.apply_force(c.j, delta * (-inv_dt * inv_dt * particle_mass));
                 }
             })
         }
@@ -380,6 +385,7 @@ where
     fn pressure_solve(
         &mut self,
         dt: N,
+        inv_dt: N,
         gravity: &Vector<N>,
         kernel_radius: N,
         contact_manager: &mut ContactManager<N>,
@@ -416,6 +422,7 @@ where
             );
 
             self.compute_position_changes(
+                inv_dt,
                 kernel_radius,
                 &contact_manager.fluid_fluid_contacts,
                 &contact_manager.fluid_boundary_contacts,
@@ -431,13 +438,14 @@ where
     fn nonpressure_solve(
         &mut self,
         dt: N,
+        inv_dt: N,
         contact_manager: &mut ContactManager<N>,
         fluids: &mut [Fluid<N>],
     )
     {
         // Nonpressure forces.
         self.clear_nonpressure_forces(fluids);
-        self.apply_viscosity(N::one() / dt, &contact_manager.fluid_fluid_contacts, fluids);
+        self.apply_viscosity(inv_dt, &contact_manager.fluid_fluid_contacts, fluids);
         self.integrate_nonpressure_forces(dt, fluids);
     }
 
@@ -470,6 +478,8 @@ where
                 &contact_manager.fluid_boundary_contacts,
             );
 
+            let substep_inv_dt = N::one() / substep_dt;
+
             contact_manager.update_contacts(
                 kernel_radius,
                 fluids,
@@ -494,6 +504,7 @@ where
             let solver_start_time = instant::now();
             self.pressure_solve(
                 substep_dt,
+                substep_inv_dt,
                 gravity,
                 kernel_radius,
                 contact_manager,
@@ -501,7 +512,7 @@ where
                 boundaries,
             );
 
-            self.nonpressure_solve(dt, contact_manager, fluids);
+            self.nonpressure_solve(dt, substep_inv_dt, contact_manager, fluids);
 
             remaining_time -= substep_dt;
             println!("Performed substep: {}", substep_dt);

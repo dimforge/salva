@@ -1,3 +1,3 @@
-pub use self::boundary::Boundary;
+pub use self::boundary::{Boundary, BoundaryHandle};
 
 mod boundary;
