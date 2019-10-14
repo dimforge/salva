@@ -48,44 +48,63 @@ impl<N: RealField, T> HGrid<N, T> {
         let cells = &self.cells;
         let quantified_radius = Self::quantify(radius, self.cell_width) + 1;
 
-        NeighborCellsIterator::new(*cell, quantified_radius)
+        CellRangeIterator::with_center(*cell, quantified_radius)
             .filter_map(move |cell| cells.get(&cell).map(|c| (cell, c)))
     }
 
-    pub fn elements_close_to_point<'a>(
-        &'a self,
-        point: &Point<N>,
-        radius: N,
-    ) -> impl Iterator<Item = &T>
-    {
-        let key = Self::key(point, self.cell_width);
-        // FIXME: we could sometimes avoid the `+ 1` by taking into account the point location on the cell.
-        let quantified_radius = Self::quantify(radius, self.cell_width) + 1;
-        let cells = &self.cells;
-
-        NeighborCellsIterator::new(key, quantified_radius)
-            .flat_map(move |cell| cells.get(&cell).into_iter())
-            .flat_map(|cells| cells.iter())
-    }
-
-    //    pub fn elements_intersecting_aabb<'a>(&'a self, aabb: &AABB<N>) -> impl Iterator<Item = &T> {
-    //        self.cells.values().flat_map(|v| v)
+    //    pub fn elements_close_to_point<'a>(
+    //        &'a self,
+    //        point: &Point<N>,
+    //        radius: N,
+    //    ) -> impl Iterator<Item = &T>
+    //    {
+    //        let key = Self::key(point, self.cell_width);
+    //        // FIXME: we could sometimes avoid the `+ 1` by taking into account the point location on the cell.
+    //        let quantified_radius = Self::quantify(radius, self.cell_width) + 1;
+    //        let cells = &self.cells;
+    //
+    //        CellRangeIterator::with_center(key, quantified_radius)
+    //            .flat_map(move |cell| cells.get(&cell).into_iter())
+    //            .flat_map(|cells| cells.iter())
     //    }
 
-    pub fn elements_containing_point(&self, point: &Point<N>) -> impl Iterator<Item = &T> {
-        std::iter::empty()
+    pub fn cells_intersecting_aabb(
+        &self,
+        mins: &Point<N>,
+        maxs: &Point<N>,
+    ) -> impl Iterator<Item = (Point<i64>, &Vec<T>)>
+    {
+        let cells = &self.cells;
+        let start = Self::key(mins, self.cell_width);
+        let end = Self::key(maxs, self.cell_width);
+
+        CellRangeIterator::new(start, end)
+            .filter_map(move |cell| cells.get(&cell).map(|c| (cell, c)))
     }
+
+    //    pub fn elements_containing_point(&self, point: &Point<N>) -> impl Iterator<Item = &T> {
+    //        std::iter::empty()
+    //    }
 }
 
-struct NeighborCellsIterator {
+struct CellRangeIterator {
     start: Point<i64>,
     end: Point<i64>,
     curr: Point<i64>,
     done: bool,
 }
 
-impl NeighborCellsIterator {
-    fn new(center: Point<i64>, radius: i64) -> Self {
+impl CellRangeIterator {
+    fn new(start: Point<i64>, end: Point<i64>) -> Self {
+        Self {
+            start,
+            end,
+            curr: start,
+            done: false,
+        }
+    }
+
+    fn with_center(center: Point<i64>, radius: i64) -> Self {
         let start = center - Vector::repeat(radius as i64);
         Self {
             start,
@@ -96,7 +115,7 @@ impl NeighborCellsIterator {
     }
 }
 
-impl Iterator for NeighborCellsIterator {
+impl Iterator for CellRangeIterator {
     type Item = Point<i64>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -130,7 +149,7 @@ mod test {
     #[test]
     #[cfg(feature = "dim2")]
     fn grid_neighbor_iterator() {
-        use super::NeighborCellsIterator;
+        use super::CellRangeIterator;
         use crate::math::Point;
 
         let expected = [
@@ -156,7 +175,7 @@ mod test {
             Point::new(3, 3),
         ];
 
-        let iter = NeighborCellsIterator::new(Point::new(1, 2), 2);
+        let iter = CellRangeIterator::with_center(Point::new(1, 2), 2);
 
         assert!(iter.zip(expected.into_iter()).all(|(a, b)| a == *b))
     }

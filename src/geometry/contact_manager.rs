@@ -1,6 +1,6 @@
 use crate::boundary::Boundary;
 use crate::fluid::Fluid;
-use crate::geometry::{self, ParticlesContacts};
+use crate::geometry::{self, HGrid, HGridEntry, ParticlesContacts};
 use crate::math::Vector;
 use na::RealField;
 
@@ -24,7 +24,8 @@ impl<N: RealField> ContactManager<N> {
         h: N,
         fluids: &[Fluid<N>],
         boundaries: &[Boundary<N>],
-        fluid_delta_pos: Option<&[Vec<Vector<N>>]>,
+        fluids_delta_pos: Option<&[Vec<Vector<N>>]>,
+        hgrid: &HGrid<N, HGridEntry>,
     )
     {
         self.fluid_fluid_contacts.clear();
@@ -35,10 +36,11 @@ impl<N: RealField> ContactManager<N> {
             h,
             &fluids,
             &boundaries,
-            fluid_delta_pos,
+            fluids_delta_pos,
             &mut self.fluid_fluid_contacts,
             &mut self.fluid_boundary_contacts,
             &mut self.boundary_boundary_contacts,
+            hgrid,
         );
     }
 }

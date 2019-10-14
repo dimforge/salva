@@ -41,7 +41,7 @@ pub use crate::timestep_manager::TimestepManager;
 pub mod math {
     use na::{
         Dynamic, Isometry3, Matrix3, Matrix6, MatrixMN, MatrixSlice6xX, MatrixSliceMut6xX, Point3,
-        Rotation3, Translation3, UnitQuaternion, Vector3, Vector6, U3, U6,
+        RealField, Rotation3, Translation3, UnitQuaternion, Vector3, Vector6, U3, U6,
     };
 
     /// The maximum number of possible rotations and translations of a rigid body.
@@ -107,6 +107,11 @@ pub mod math {
 
     /// The type of a mutable slice of the constraint jacobian in twist coordinates.
     pub type JacobianSliceMut<'a, N> = MatrixSliceMut6xX<'a, N>;
+
+    /// The cross-product matrix for the given vector.
+    pub fn gcross_matrix<N: RealField>(v: &Vector<N>) -> Matrix<N> {
+        v.cross_matrix()
+    }
 }
 
 /// Compilation flags dependent aliases for mathematical types.
@@ -114,7 +119,8 @@ pub mod math {
 pub mod math {
     use na::{
         Dynamic, Isometry2, Matrix1, Matrix2, Matrix3, MatrixMN, MatrixSlice3xX, MatrixSliceMut3xX,
-        Point2, Rotation2, Translation2, UnitComplex, Vector1, Vector2, Vector3, U1, U2, U3,
+        Point2, RealField, Rotation2, RowVector2, Translation2, UnitComplex, Vector1, Vector2,
+        Vector3, U1, U2, U3,
     };
 
     /// The maximum number of possible rotations and translations of a rigid body.
@@ -180,4 +186,9 @@ pub mod math {
 
     /// The type of a mutable slice of the constraint jacobian in twist coordinates.
     pub type JacobianSliceMut<'a, N> = MatrixSliceMut3xX<'a, N>;
+
+    /// The cross-product matrix for the given vector, generalized in 2D.
+    pub fn gcross_matrix<N: RealField>(v: &Vector<N>) -> RowVector2<N> {
+        RowVector2::new(-v.y, v.x)
+    }
 }

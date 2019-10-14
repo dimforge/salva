@@ -13,7 +13,7 @@ use na::{self, DVector, DVectorSlice, DVectorSliceMut, RealField, Unit, VectorSl
 
 use crate::boundary::Boundary;
 use crate::fluid::Fluid;
-use crate::geometry::{ContactManager, ParticlesContacts};
+use crate::geometry::{self, ContactManager, HGrid, HGridEntry, ParticlesContacts};
 use crate::kernel::{Kernel, Poly6Kernel, SpikyKernel};
 use crate::math::{Dim, Point, Vector, DIM};
 use crate::TimestepManager;
@@ -127,11 +127,18 @@ where
         }
     }
 
-    fn resize_buffers(&mut self, dt: N, fluids: &[Fluid<N>], boundaries: &[Boundary<N>]) {
+    pub fn position_changes(&self) -> &[Vec<Vector<N>>] {
+        &self.position_changes
+    }
+
+    pub fn position_changes_mut(&mut self) -> &mut [Vec<Vector<N>>] {
+        &mut self.position_changes
+    }
+
+    pub fn init_with_fluids(&mut self, fluids: &[Fluid<N>]) {
         // Resize every buffer.
         self.lambdas.resize(fluids.len(), Vec::new());
         self.densities.resize(fluids.len(), Vec::new());
-        self.boundaries_volumes.resize(boundaries.len(), Vec::new());
         self.position_changes.resize(fluids.len(), Vec::new());
         self.nonpressure_forces.resize(fluids.len(), Vec::new());
 
@@ -149,13 +156,17 @@ where
             position_changes.resize(fluid.num_particles(), Vector::zeros());
             nonpressure_forces.resize(fluid.num_particles(), Vector::zeros());
         }
+    }
+
+    pub fn init_with_boundaries(&mut self, boundaries: &[Boundary<N>]) {
+        self.boundaries_volumes.resize(boundaries.len(), Vec::new());
 
         for (boundary, volumes) in boundaries.iter().zip(self.boundaries_volumes.iter_mut()) {
             volumes.resize(boundary.num_particles(), N::zero())
         }
     }
 
-    fn predict_advection(&mut self, dt: N, gravity: &Vector<N>, fluids: &[Fluid<N>]) {
+    pub fn predict_advection(&mut self, dt: N, gravity: &Vector<N>, fluids: &[Fluid<N>]) {
         for (fluid, position_changes) in fluids.iter().zip(self.position_changes.iter_mut()) {
             par_iter_mut!(position_changes)
                 .zip(par_iter!(fluid.velocities))
@@ -459,63 +470,34 @@ where
         particle_radius: N,
         fluids: &mut [Fluid<N>],
         boundaries: &[Boundary<N>],
+        hgrid: &mut HGrid<N, HGridEntry>,
     )
     {
-        let mut remaining_time = dt;
+        let inv_dt = N::one() / dt;
 
-        // Init buffers.
-        self.resize_buffers(dt, fluids, boundaries);
+        // Init boundary-related data.
+        self.update_boundary_contacts(
+            kernel_radius,
+            &mut contact_manager.boundary_boundary_contacts,
+            boundaries,
+        );
+        self.compute_boundary_volumes(
+            kernel_radius,
+            &contact_manager.boundary_boundary_contacts,
+            boundaries,
+        );
 
-        // Perform substeps.
-        while remaining_time > N::zero() {
-            // Substep length.
-            let substep_dt = timestep_manager.compute_substep(
-                dt,
-                remaining_time,
-                particle_radius,
-                fluids,
-                &contact_manager.fluid_fluid_contacts,
-                &contact_manager.fluid_boundary_contacts,
-            );
+        let solver_start_time = instant::now();
+        self.pressure_solve(
+            dt,
+            inv_dt,
+            gravity,
+            kernel_radius,
+            contact_manager,
+            fluids,
+            boundaries,
+        );
 
-            let substep_inv_dt = N::one() / substep_dt;
-
-            contact_manager.update_contacts(
-                kernel_radius,
-                fluids,
-                boundaries,
-                Some(&self.position_changes),
-            );
-
-            self.predict_advection(substep_dt, gravity, fluids);
-
-            // Init boundary-related data.
-            self.update_boundary_contacts(
-                kernel_radius,
-                &mut contact_manager.boundary_boundary_contacts,
-                boundaries,
-            );
-            self.compute_boundary_volumes(
-                kernel_radius,
-                &contact_manager.boundary_boundary_contacts,
-                boundaries,
-            );
-
-            let solver_start_time = instant::now();
-            self.pressure_solve(
-                substep_dt,
-                substep_inv_dt,
-                gravity,
-                kernel_radius,
-                contact_manager,
-                fluids,
-                boundaries,
-            );
-
-            self.nonpressure_solve(dt, substep_inv_dt, contact_manager, fluids);
-
-            remaining_time -= substep_dt;
-            println!("Performed substep: {}", substep_dt);
-        }
+        self.nonpressure_solve(dt, inv_dt, contact_manager, fluids);
     }
 }

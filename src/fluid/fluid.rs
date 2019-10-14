@@ -49,4 +49,29 @@ impl<N: RealField> Fluid<N> {
     pub fn num_particles(&self) -> usize {
         self.positions.len()
     }
+
+    #[cfg(feature = "nphysics")]
+    pub fn compute_aabb(&self, particle_radius: N) -> ncollide::bounding_volume::AABB<N> {
+        use ncollide::bounding_volume::{self, BoundingVolume};
+        bounding_volume::local_point_cloud_aabb(&self.positions).loosened(particle_radius)
+    }
+
+    pub fn particle_mass(&self, i: usize) -> N {
+        self.volumes[i] * self.density0
+    }
+
+    pub fn particle_inv_mass(&self, i: usize) -> N {
+        if self.volumes[i].is_zero() {
+            N::zero()
+        } else {
+            N::one() / (self.volumes[i] * self.density0)
+        }
+    }
+
+    pub fn integrate_positions(&mut self, dt: N) {
+        // FIXME: parallelize this.
+        for (pos, vel) in self.positions.iter_mut().zip(self.velocities.iter()) {
+            *pos += vel * dt;
+        }
+    }
 }
