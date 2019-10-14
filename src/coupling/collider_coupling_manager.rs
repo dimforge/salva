@@ -1,7 +1,7 @@
 use crate::boundary::{Boundary, BoundaryHandle};
 use crate::fluid::Fluid;
 use crate::math::{Point, Vector};
-use na::RealField;
+use na::{RealField, Unit};
 use ncollide::shape::FeatureId;
 use nphysics::math::{Force, ForceType};
 use nphysics::object::{Body, BodyHandle, BodySet, ColliderHandle, ColliderSet};
@@ -96,7 +96,14 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                 boundaries.get_mut(entry.boundary),
             ) {
                 if let Some(body) = bodies.get_mut(collider.body()) {
-                    let (linear, angular) = boundary.force();
+                    let (mut linear, mut angular) = boundary.force();
+                    let ratio = na::convert::<_, N>(3.0) * body.part(0).unwrap().inertia().mass();
+
+                    if ratio < na::convert(1.0) {
+                        linear *= ratio;
+                        angular *= ratio;
+                    }
+
                     let boundary_ref_point = boundary.positions[0];
 
                     // FIXME: the part_id should not be zero.
