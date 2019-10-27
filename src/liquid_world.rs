@@ -1,6 +1,6 @@
 use crate::boundary::{Boundary, BoundaryHandle};
 use crate::fluid::{Fluid, FluidHandle};
-use crate::geometry::{self, ContactManager, HGrid, HGridEntry, ParticlesContacts};
+use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
 use crate::math::Vector;
 use crate::solver::PBFSolver;
 use crate::TimestepManager;
@@ -40,22 +40,50 @@ impl<N: RealField> LiquidWorld<N> {
     }
 
     pub fn step(&mut self, dt: N, gravity: &Vector<N>) {
-        let step_start_time = instant::now();
         let mut remaining_time = dt;
 
-        self.solver.step(
-            dt,
-            &self.timestep_manager,
-            &mut self.contact_manager,
-            gravity,
-            self.h,
-            self.particle_radius,
-            &mut self.fluids,
-            &self.boundaries,
-            &mut self.hgrid,
-        );
+        // Perform substeps.
+        while remaining_time > N::zero() {
+            // Substep length.
+            let substep_dt = self.timestep_manager.compute_substep(
+                dt,
+                remaining_time,
+                self.particle_radius,
+                &self.fluids,
+            );
 
-        println!("Total step time: {}ms", instant::now() - step_start_time);
+            self.solver.init_with_fluids(&self.fluids);
+            self.solver
+                .predict_advection(substep_dt, gravity, &self.fluids);
+
+            self.hgrid.clear();
+            geometry::insert_fluids_to_grid(
+                &self.fluids,
+                Some(self.solver.position_changes()),
+                &mut self.hgrid,
+            );
+
+            geometry::insert_boundaries_to_grid(&self.boundaries, &mut self.hgrid);
+            self.solver.init_with_boundaries(&self.boundaries);
+
+            self.contact_manager.update_contacts(
+                self.h,
+                &self.fluids,
+                &self.boundaries,
+                Some(self.solver.position_changes()),
+                &self.hgrid,
+            );
+
+            self.solver.step(
+                dt,
+                &mut self.contact_manager,
+                self.h,
+                &mut self.fluids,
+                &self.boundaries,
+            );
+
+            remaining_time -= substep_dt;
+        }
     }
 
     #[cfg(feature = "nphysics")]
@@ -63,7 +91,8 @@ impl<N: RealField> LiquidWorld<N> {
         &mut self,
         dt: N,
         gravity: &Vector<N>,
-        geometrical_world: &GeometricalWorld<N, Bodies::Handle, Colliders::Handle>,
+        // We keep this here because it is very likely to become useful in the future.
+        _geometrical_world: &GeometricalWorld<N, Bodies::Handle, Colliders::Handle>,
         coupling: &mut ColliderCouplingManager<N, Colliders::Handle>,
         bodies: &mut Bodies,
         colliders: &mut Colliders,
@@ -81,11 +110,7 @@ impl<N: RealField> LiquidWorld<N> {
                 remaining_time,
                 self.particle_radius,
                 &self.fluids,
-                &self.contact_manager.fluid_fluid_contacts,
-                &self.contact_manager.fluid_boundary_contacts,
             );
-
-            let substep_inv_dt = N::one() / substep_dt;
 
             self.solver.init_with_fluids(&self.fluids);
             self.solver
@@ -120,20 +145,15 @@ impl<N: RealField> LiquidWorld<N> {
 
             self.solver.step(
                 dt,
-                &self.timestep_manager,
                 &mut self.contact_manager,
-                gravity,
                 self.h,
-                self.particle_radius,
                 &mut self.fluids,
                 &self.boundaries,
-                &mut self.hgrid,
             );
 
-            coupling.transmit_forces(&mut self.boundaries, &self.fluids, bodies, colliders);
+            coupling.transmit_forces(&mut self.boundaries, bodies, colliders);
 
             remaining_time -= substep_dt;
-            println!("Performed substep: {}", substep_dt);
         }
     }
 

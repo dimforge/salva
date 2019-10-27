@@ -1,4 +1,4 @@
-use crate::math::{Point, Vector, DIM};
+use crate::math::{Point, Vector};
 use na::{self, DVector, RealField};
 
 pub type FluidHandle = usize;

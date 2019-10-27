@@ -1,22 +1,17 @@
-use std::any::Any;
-use std::collections::{HashMap, HashSet};
-use std::iter;
 use std::marker::PhantomData;
-use std::ops::{AddAssign, SubAssign};
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 #[cfg(feature = "dim3")]
 use na::Vector2;
-use na::{self, DVector, DVectorSlice, DVectorSliceMut, RealField, Unit, VectorSliceMutN};
+use na::{self, RealField};
 
 use crate::boundary::Boundary;
 use crate::fluid::Fluid;
-use crate::geometry::{self, ContactManager, HGrid, HGridEntry, ParticlesContacts};
+use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{Kernel, Poly6Kernel, SpikyKernel};
-use crate::math::{Dim, Point, Vector, DIM};
-use crate::TimestepManager;
+use crate::math::Vector;
 
 macro_rules! par_iter {
     ($t: expr) => {{
@@ -176,7 +171,6 @@ where
 
     fn compute_boundary_volumes(
         &mut self,
-        kernel_radius: N,
         boundary_boundary_contacts: &[ParticlesContacts<N>],
         boundaries: &[Boundary<N>],
     ) {
@@ -201,7 +195,6 @@ where
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
     ) {
         let boundaries_volumes = &self.boundaries_volumes;
 
@@ -241,12 +234,10 @@ where
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
     ) {
         let boundaries_volumes = &self.boundaries_volumes;
 
         for fluid_id in 0..fluids.len() {
-            let fluid1 = &fluids[fluid_id];
             let fluid_fluid_contacts = &fluid_fluid_contacts[fluid_id];
             let fluid_boundary_contacts = &fluid_boundary_contacts[fluid_id];
             let densities1 = self.densities[fluid_id].as_slice();
@@ -285,13 +276,11 @@ where
     fn compute_position_changes(
         &mut self,
         inv_dt: N,
-        kernel_radius: N,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
         boundaries: &[Boundary<N>],
     ) {
-        let densities = &self.densities;
         let lambdas = &self.lambdas;
         let boundaries_volumes = &self.boundaries_volumes;
 
@@ -303,11 +292,11 @@ where
                 for c in fluid_fluid_contacts[fluid_id].particle_contacts(i) {
                     let fluid2 = &fluids[c.j_model];
 
-                    // Compute virtual pressure.
-                    let k: N = na::convert(0.001);
-                    let n = 4;
-                    let dq = N::zero();
-                    let scorr = -k * (c.weight / KernelDensity::scalar_apply(dq, kernel_radius)).powi(n);
+//                    // Compute virtual pressure.
+//                    let k: N = na::convert(0.001);
+//                    let n = 4;
+//                    let dq = N::zero();
+//                    let scorr = -k * (c.weight / KernelDensity::scalar_apply(dq, kernel_radius)).powi(n);
 
                     // Compute position change.
                     let coeff = fluid2.volumes[c.j] * (lambdas[c.i_model][c.i] + fluid2.density0 / fluid1.density0 * lambdas[c.j_model][c.j])/* + scorr*/;
@@ -343,7 +332,7 @@ where
         }
     }
 
-    fn clear_nonpressure_forces(&mut self, fluids: &mut [Fluid<N>]) {
+    fn clear_nonpressure_forces(&mut self) {
         for forces in &mut self.nonpressure_forces {
             par_iter_mut!(forces).for_each(|f| f.fill(N::zero()))
         }
@@ -368,7 +357,6 @@ where
         // Add XSPH viscosity
         for (fluid_id, fluid_i) in fluids.iter().enumerate() {
             let contacts = &fluid_fluid_contacts[fluid_id];
-            let velocities = &fluid_i.velocities;
             let forces = &mut self.nonpressure_forces[fluid_id];
 
             par_iter_mut!(forces).enumerate().for_each(|(i, f)| {
@@ -387,7 +375,6 @@ where
         &mut self,
         dt: N,
         inv_dt: N,
-        gravity: &Vector<N>,
         kernel_radius: N,
         contact_manager: &mut ContactManager<N>,
         fluids: &mut [Fluid<N>],
@@ -395,7 +382,7 @@ where
     ) {
         let niters = 10;
 
-        for loop_i in 0..niters {
+        for _ in 0..niters {
             self.update_fluid_contacts(
                 kernel_radius,
                 &mut contact_manager.fluid_fluid_contacts,
@@ -408,7 +395,6 @@ where
                 &contact_manager.fluid_fluid_contacts,
                 &contact_manager.fluid_boundary_contacts,
                 fluids,
-                boundaries,
             );
 
             //            println!("Densities: {:?}", self.densities);
@@ -418,12 +404,10 @@ where
                 &contact_manager.fluid_fluid_contacts,
                 &contact_manager.fluid_boundary_contacts,
                 fluids,
-                boundaries,
             );
 
             self.compute_position_changes(
                 inv_dt,
-                kernel_radius,
                 &contact_manager.fluid_fluid_contacts,
                 &contact_manager.fluid_boundary_contacts,
                 fluids,
@@ -443,7 +427,7 @@ where
         fluids: &mut [Fluid<N>],
     ) {
         // Nonpressure forces.
-        self.clear_nonpressure_forces(fluids);
+        self.clear_nonpressure_forces();
         self.apply_viscosity(inv_dt, &contact_manager.fluid_fluid_contacts, fluids);
         self.integrate_nonpressure_forces(dt, fluids);
     }
@@ -451,14 +435,10 @@ where
     pub fn step(
         &mut self,
         dt: N,
-        timestep_manager: &TimestepManager<N>,
         contact_manager: &mut ContactManager<N>,
-        gravity: &Vector<N>,
         kernel_radius: N,
-        particle_radius: N,
         fluids: &mut [Fluid<N>],
         boundaries: &[Boundary<N>],
-        hgrid: &mut HGrid<N, HGridEntry>,
     ) {
         let inv_dt = N::one() / dt;
 
@@ -468,17 +448,11 @@ where
             &mut contact_manager.boundary_boundary_contacts,
             boundaries,
         );
-        self.compute_boundary_volumes(
-            kernel_radius,
-            &contact_manager.boundary_boundary_contacts,
-            boundaries,
-        );
+        self.compute_boundary_volumes(&contact_manager.boundary_boundary_contacts, boundaries);
 
-        let solver_start_time = instant::now();
         self.pressure_solve(
             dt,
             inv_dt,
-            gravity,
             kernel_radius,
             contact_manager,
             fluids,

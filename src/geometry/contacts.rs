@@ -134,8 +134,6 @@ pub fn compute_contacts<N: RealField>(
             .resize(boundary.num_particles(), 0..0)
     }
 
-    let mut num_pushed_contacts = 0;
-
     for (cell, curr_particles) in grid.cells() {
         let neighbors: Vec<_> = grid.neighbor_cells(cell, h).collect();
 
@@ -151,8 +149,8 @@ pub fn compute_contacts<N: RealField>(
                             // NOTE: we are not interested by boundary-fluid contacts.
                             // Those will already be detected as fluid-boundary contacts instead.
                             if let HGridEntry::BoundaryParticle(boundary_j, particle_j) = entry {
-                                let mut pi = &boundaries[*boundary_i].positions[*particle_i];
-                                let mut pj = &boundaries[*boundary_j].positions[*particle_j];
+                                let pi = &boundaries[*boundary_i].positions[*particle_i];
+                                let pj = &boundaries[*boundary_j].positions[*particle_j];
 
                                 if na::distance_squared(pi, pj) <= h * h {
                                     let contact = Contact {
@@ -163,7 +161,6 @@ pub fn compute_contacts<N: RealField>(
                                         weight: N::zero(),
                                         gradient: Vector::zeros(),
                                     };
-                                    num_pushed_contacts += 1;
 
                                     bb_contacts.contacts.push(contact);
                                     bb_contacts.contact_ranges[*particle_i].end += 1;

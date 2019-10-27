@@ -1,6 +1,5 @@
-use crate::math::{AngularVector, Point, Vector};
-use na::{self, DVector, RealField};
-use std::collections::HashMap;
+use crate::math::{Point, Vector};
+use na::{self, RealField};
 use std::sync::RwLock;
 
 pub type BoundaryHandle = usize;

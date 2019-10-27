@@ -6,7 +6,7 @@ use na::{RealField, Unit};
 use ncollide::bounding_volume::BoundingVolume;
 use ncollide::query::PointQuery;
 use ncollide::shape::FeatureId;
-use nphysics::math::{Force, ForceType};
+use nphysics::math::ForceType;
 use nphysics::object::{Body, BodyHandle, BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
 use std::collections::HashMap;
 
@@ -96,7 +96,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                                     let fluid = &fluids[*fluid_id];
                                     let particle_delta =
                                         &mut fluids_delta_pos[*fluid_id][*particle_id];
-                                    let mut particle_pos =
+                                    let particle_pos =
                                         fluid.positions[*particle_id] + *particle_delta;
 
                                     if aabb.contains_local_point(&particle_pos) {
@@ -140,13 +140,11 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                 false
             }
         });
-        println!("Num boundary particles: {}", num_boundary_particles);
     }
 
     pub fn transmit_forces<Bodies, Colliders>(
         &self,
         boundaries: &mut [Boundary<N>],
-        fluids: &[Fluid<N>],
         bodies: &mut Bodies,
         colliders: &Colliders,
     ) where
@@ -167,7 +165,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                 match collider.anchor() {
                     ColliderAnchor::OnBodyPart { body_part, .. } => {
                         if let Some(body) = bodies.get_mut(body_part.0) {
-                            for (pos, mut force) in
+                            for (pos, force) in
                                 boundary.positions.iter().zip(forces.iter().cloned())
                             {
                                 // FIXME: how do we deal with large density ratio?
@@ -194,7 +192,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                     }
                     ColliderAnchor::OnDeformableBody { body, body_parts } => {
                         if let Some(body) = bodies.get_mut(*body) {
-                            for (feature, pos, mut force) in itertools::multizip((
+                            for (feature, pos, force) in itertools::multizip((
                                 coupling.features.iter(),
                                 boundary.positions.iter(),
                                 forces.iter(),
