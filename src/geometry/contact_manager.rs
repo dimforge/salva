@@ -26,12 +26,7 @@ impl<N: RealField> ContactManager<N> {
         boundaries: &[Boundary<N>],
         fluids_delta_pos: Option<&[Vec<Vector<N>>]>,
         hgrid: &HGrid<N, HGridEntry>,
-    )
-    {
-        self.fluid_fluid_contacts.clear();
-        self.fluid_boundary_contacts.clear();
-        self.boundary_boundary_contacts.clear();
-
+    ) {
         geometry::compute_contacts(
             h,
             &fluids,

@@ -33,7 +33,10 @@ pub struct Contact<N: RealField> {
 
 #[derive(Clone, Debug)]
 pub struct ParticlesContacts<N: RealField> {
+    // All the particle contact for one model.
+    // Contacts involving the same particle `i` are adjascent.
     contacts: Vec<Contact<N>>,
+    // There is one range per perticle.
     contact_ranges: Vec<Range<usize>>,
 }
 
@@ -66,8 +69,7 @@ pub fn insert_fluids_to_grid<N: RealField>(
     fluids: &[Fluid<N>],
     fluids_delta_pos: Option<&[Vec<Vector<N>>]>,
     grid: &mut HGrid<N, HGridEntry>,
-)
-{
+) {
     for (fluid_id, fluid) in fluids.iter().enumerate() {
         if let Some(deltas) = fluids_delta_pos {
             let fluid_deltas = &deltas[fluid_id];
@@ -89,8 +91,7 @@ pub fn insert_fluids_to_grid<N: RealField>(
 pub fn insert_boundaries_to_grid<N: RealField>(
     boundaries: &[Boundary<N>],
     grid: &mut HGrid<N, HGridEntry>,
-)
-{
+) {
     for (boundary_id, boundary) in boundaries.iter().enumerate() {
         for (particle_id, point) in boundary.positions.iter().enumerate() {
             grid.insert(
@@ -110,8 +111,11 @@ pub fn compute_contacts<N: RealField>(
     fluid_boundary_contacts: &mut Vec<ParticlesContacts<N>>,
     boundary_boundary_contacts: &mut Vec<ParticlesContacts<N>>,
     grid: &HGrid<N, HGridEntry>,
-)
-{
+) {
+    fluid_fluid_contacts.clear();
+    fluid_boundary_contacts.clear();
+    boundary_boundary_contacts.clear();
+
     fluid_fluid_contacts.resize(fluids.len(), ParticlesContacts::new());
     fluid_boundary_contacts.resize(fluids.len(), ParticlesContacts::new());
     boundary_boundary_contacts.resize(boundaries.len(), ParticlesContacts::new());
@@ -129,6 +133,8 @@ pub fn compute_contacts<N: RealField>(
             .contact_ranges
             .resize(boundary.num_particles(), 0..0)
     }
+
+    let mut num_pushed_contacts = 0;
 
     for (cell, curr_particles) in grid.cells() {
         let neighbors: Vec<_> = grid.neighbor_cells(cell, h).collect();
@@ -157,6 +163,7 @@ pub fn compute_contacts<N: RealField>(
                                         weight: N::zero(),
                                         gradient: Vector::zeros(),
                                     };
+                                    num_pushed_contacts += 1;
 
                                     bb_contacts.contacts.push(contact);
                                     bb_contacts.contact_ranges[*particle_i].end += 1;

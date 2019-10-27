@@ -35,6 +35,11 @@ impl<N: RealField, T> HGrid<N, T> {
         self.cells.entry(key).or_insert(Vec::new()).push(elt)
     }
 
+    pub fn cell_containing_point(&self, point: &Point<N>) -> Option<&Vec<T>> {
+        let key = Self::key(point, self.cell_width);
+        self.cells.get(&key)
+    }
+
     pub fn cells(&self) -> impl Iterator<Item = (&Point<i64>, &Vec<T>)> {
         self.cells.iter()
     }
@@ -43,8 +48,7 @@ impl<N: RealField, T> HGrid<N, T> {
         &self,
         cell: &Point<i64>,
         radius: N,
-    ) -> impl Iterator<Item = (Point<i64>, &Vec<T>)>
-    {
+    ) -> impl Iterator<Item = (Point<i64>, &Vec<T>)> {
         let cells = &self.cells;
         let quantified_radius = Self::quantify(radius, self.cell_width) + 1;
 
@@ -72,8 +76,7 @@ impl<N: RealField, T> HGrid<N, T> {
         &self,
         mins: &Point<N>,
         maxs: &Point<N>,
-    ) -> impl Iterator<Item = (Point<i64>, &Vec<T>)>
-    {
+    ) -> impl Iterator<Item = (Point<i64>, &Vec<T>)> {
         let cells = &self.cells;
         let start = Self::key(mins, self.cell_width);
         let end = Self::key(maxs, self.cell_width);

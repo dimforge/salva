@@ -1,3 +1,3 @@
-pub use self::fluid::Fluid;
+pub use self::fluid::{Fluid, FluidHandle};
 
 mod fluid;

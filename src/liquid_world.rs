@@ -1,5 +1,5 @@
 use crate::boundary::{Boundary, BoundaryHandle};
-use crate::fluid::Fluid;
+use crate::fluid::{Fluid, FluidHandle};
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry, ParticlesContacts};
 use crate::math::Vector;
 use crate::solver::PBFSolver;
@@ -8,7 +8,7 @@ use na::RealField;
 
 #[cfg(feature = "nphysics")]
 use {
-    crate::coupling::{ColliderCollisionDetector, ColliderCouplingManager},
+    crate::coupling::ColliderCouplingManager,
     nphysics::object::{BodySet, ColliderSet},
     nphysics::world::GeometricalWorld,
 };
@@ -98,26 +98,13 @@ impl<N: RealField> LiquidWorld<N> {
                 &mut self.hgrid,
             );
 
-            //            let mut detector = ColliderCollisionDetector::new();
-            //            detector.detect_contacts(
-            //                substep_dt,
-            //                substep_inv_dt,
-            //                gravity,
-            //                &self.fluids,
-            //                self.particle_radius,
-            //                &self.hgrid,
-            //                geometrical_world,
-            //                bodies,
-            //                colliders,
-            //            );
-
             coupling.update_boundaries(
                 self.h,
                 colliders,
                 &mut self.boundaries,
                 &self.fluids,
                 self.solver.position_changes_mut(),
-                &mut self.hgrid,
+                &self.hgrid,
             );
 
             geometry::insert_boundaries_to_grid(&self.boundaries, &mut self.hgrid);
@@ -143,15 +130,17 @@ impl<N: RealField> LiquidWorld<N> {
                 &mut self.hgrid,
             );
 
+            coupling.transmit_forces(&mut self.boundaries, &self.fluids, bodies, colliders);
+
             remaining_time -= substep_dt;
             println!("Performed substep: {}", substep_dt);
         }
-
-        coupling.transmit_forces(&mut self.boundaries, &self.fluids, bodies, colliders);
     }
 
-    pub fn add_fluid(&mut self, fluid: Fluid<N>) {
-        self.fluids.push(fluid)
+    pub fn add_fluid(&mut self, fluid: Fluid<N>) -> FluidHandle {
+        let handle = self.fluids.len();
+        self.fluids.push(fluid);
+        handle
     }
     pub fn add_boundary(&mut self, boundary: Boundary<N>) -> BoundaryHandle {
         let handle = self.boundaries.len();

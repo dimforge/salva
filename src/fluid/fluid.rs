@@ -1,6 +1,8 @@
 use crate::math::{Point, Vector, DIM};
 use na::{self, DVector, RealField};
 
+pub type FluidHandle = usize;
+
 pub struct Fluid<N: RealField> {
     pub positions: Vec<Point<N>>,
     pub velocities: Vec<Vector<N>>,
@@ -16,17 +18,19 @@ impl<N: RealField> Fluid<N> {
         particle_radius: N,
         density0: N,
         viscosity: N,
-    ) -> Self
-    {
+    ) -> Self {
         let num_particles = particle_positions.len();
         let velocities = std::iter::repeat(Vector::zeros())
             .take(num_particles)
             .collect();
+        // The volume of a fluid is computed as the volume of a cuboid of half-width equal to particle_radius.
+        // It is multiplied by 0.8 so that there is no pressure when the cuboids are aligned on a grid.
+        // This mass computation method is inspired from the SplishSplash project.
         #[cfg(feature = "dim2")]
-        let particle_volume = particle_radius * particle_radius * N::pi();
+        let particle_volume = particle_radius * particle_radius * na::convert(4.0 * 0.8); // N::pi();
         #[cfg(feature = "dim3")]
         let particle_volume =
-            particle_radius * particle_radius * particle_radius * N::pi() * na::convert(4.0 / 3.0);
+            particle_radius * particle_radius * particle_radius * na::convert(8.0 * 0.8); //  * N::pi() * na::convert(4.0 / 3.0);
 
         Self {
             positions: particle_positions,

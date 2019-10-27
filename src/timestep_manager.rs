@@ -12,7 +12,7 @@ impl<N: RealField> TimestepManager<N> {
     pub fn new() -> Self {
         Self {
             cfl_coeff: na::convert(0.4),
-            min_substep_coeff: na::convert(1.0),
+            min_substep_coeff: na::convert(1.0), // 0.2),
         }
     }
 

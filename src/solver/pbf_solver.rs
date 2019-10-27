@@ -77,8 +77,7 @@ where
         fluid_boundary_contacts: &mut [ParticlesContacts<N>],
         fluids: &[Fluid<N>],
         boundaries: &[Boundary<N>],
-    )
-    {
+    ) {
         for contacts in fluid_fluid_contacts.iter_mut() {
             par_iter_mut!(contacts.contacts_mut()).for_each(|c| {
                 let fluid1 = &fluids[c.i_model];
@@ -111,14 +110,13 @@ where
         kernel_radius: N,
         boundary_boundary_contacts: &mut [ParticlesContacts<N>],
         boundaries: &[Boundary<N>],
-    )
-    {
+    ) {
         for contacts in boundary_boundary_contacts.iter_mut() {
             par_iter_mut!(contacts.contacts_mut()).for_each(|c| {
-                let fluid1 = &boundaries[c.i_model];
+                let bound1 = &boundaries[c.i_model];
                 let bound2 = &boundaries[c.j_model];
 
-                let pi = fluid1.positions[c.i];
+                let pi = bound1.positions[c.i];
                 let pj = bound2.positions[c.j];
 
                 c.weight = KernelDensity::points_apply(&pi, &pj, kernel_radius);
@@ -181,18 +179,15 @@ where
         kernel_radius: N,
         boundary_boundary_contacts: &[ParticlesContacts<N>],
         boundaries: &[Boundary<N>],
-    )
-    {
+    ) {
         for boundary_id in 0..boundaries.len() {
             par_iter_mut!(self.boundaries_volumes[boundary_id])
                 .enumerate()
                 .for_each(|(i, volume)| {
                     let mut denominator = N::zero();
-                    let pi = boundaries[boundary_id].positions[i];
 
                     for c in boundary_boundary_contacts[boundary_id].particle_contacts(i) {
-                        let pj = boundaries[c.j_model].positions[c.j];
-                        denominator += KernelDensity::points_apply(&pi, &pj, kernel_radius);
+                        denominator += c.weight;
                     }
 
                     assert!(!denominator.is_zero());
@@ -207,8 +202,7 @@ where
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
         boundaries: &[Boundary<N>],
-    )
-    {
+    ) {
         let boundaries_volumes = &self.boundaries_volumes;
 
         for fluid_id in 0..fluids.len() {
@@ -216,7 +210,6 @@ where
                 .enumerate()
                 .for_each(|(i, density)| {
                     *density = N::zero();
-                    let mut nnz_weights = 0;
 
                     for c in fluid_fluid_contacts[fluid_id].particle_contacts(i) {
                         *density += fluids[c.j_model].volumes[c.j] * c.weight;
@@ -249,8 +242,7 @@ where
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
         boundaries: &[Boundary<N>],
-    )
-    {
+    ) {
         let boundaries_volumes = &self.boundaries_volumes;
 
         for fluid_id in 0..fluids.len() {
@@ -298,8 +290,7 @@ where
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
         boundaries: &[Boundary<N>],
-    )
-    {
+    ) {
         let densities = &self.densities;
         let lambdas = &self.lambdas;
         let boundaries_volumes = &self.boundaries_volumes;
@@ -373,8 +364,7 @@ where
         inv_dt: N,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluids: &mut [Fluid<N>],
-    )
-    {
+    ) {
         // Add XSPH viscosity
         for (fluid_id, fluid_i) in fluids.iter().enumerate() {
             let contacts = &fluid_fluid_contacts[fluid_id];
@@ -402,8 +392,7 @@ where
         contact_manager: &mut ContactManager<N>,
         fluids: &mut [Fluid<N>],
         boundaries: &[Boundary<N>],
-    )
-    {
+    ) {
         let niters = 10;
 
         for loop_i in 0..niters {
@@ -452,8 +441,7 @@ where
         inv_dt: N,
         contact_manager: &mut ContactManager<N>,
         fluids: &mut [Fluid<N>],
-    )
-    {
+    ) {
         // Nonpressure forces.
         self.clear_nonpressure_forces(fluids);
         self.apply_viscosity(inv_dt, &contact_manager.fluid_fluid_contacts, fluids);
@@ -471,8 +459,7 @@ where
         fluids: &mut [Fluid<N>],
         boundaries: &[Boundary<N>],
         hgrid: &mut HGrid<N, HGridEntry>,
-    )
-    {
+    ) {
         let inv_dt = N::one() / dt;
 
         // Init boundary-related data.
