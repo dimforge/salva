@@ -22,8 +22,7 @@ impl<N: RealField> TimestepManager<N> {
         fluids: &[Fluid<N>],
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
-    ) -> N
-    {
+    ) -> N {
         let mut max_sq_vel = N::zero();
         for v in fluids.iter().flat_map(|f| f.velocities.iter()) {
             max_sq_vel = max_sq_vel.max(v.norm_squared());
@@ -40,8 +39,7 @@ impl<N: RealField> TimestepManager<N> {
         fluids: &[Fluid<N>],
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
-    ) -> N
-    {
+    ) -> N {
         let min_substep = total_step_size * self.min_substep_coeff;
         let max_substep = self.max_substep(
             particle_radius,
