@@ -1,3 +1,5 @@
+//! Smoothing kernels.
+
 pub use self::cubic_spline::CubicSplineKernel;
 pub use self::kernel::Kernel;
 pub use self::poly6_kernel::Poly6Kernel;

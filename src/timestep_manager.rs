@@ -1,13 +1,15 @@
 use na::RealField;
 
-use crate::fluid::Fluid;
+use crate::object::Fluid;
 
+/// Structure responsible for regulatin the timestep length of the simulation.
 pub struct TimestepManager<N: RealField> {
     cfl_coeff: N,
     min_substep_coeff: N,
 }
 
 impl<N: RealField> TimestepManager<N> {
+    /// Initialize a new timestep manager with default parameters.
     pub fn new() -> Self {
         Self {
             cfl_coeff: na::convert(0.4),
@@ -24,7 +26,7 @@ impl<N: RealField> TimestepManager<N> {
         particle_radius * na::convert(2.0) / max_sq_vel.sqrt() * self.cfl_coeff
     }
 
-    pub fn compute_substep(
+    pub(crate) fn compute_substep(
         &self,
         total_step_size: N,
         remaining_time: N,

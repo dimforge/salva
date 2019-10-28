@@ -1,7 +1,7 @@
-use crate::boundary::{Boundary, BoundaryHandle};
-use crate::fluid::Fluid;
 use crate::geometry::{HGrid, HGridEntry};
 use crate::math::{Point, Vector};
+use crate::object::Fluid;
+use crate::object::{Boundary, BoundaryHandle};
 use na::{RealField, Unit};
 use ncollide::bounding_volume::BoundingVolume;
 use ncollide::query::PointQuery;
@@ -10,28 +10,37 @@ use nphysics::math::ForceType;
 use nphysics::object::{Body, BodyHandle, BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
 use std::collections::HashMap;
 
+/// The way a collider is coupled to a boundary object.
 pub enum CouplingMethod<N: RealField> {
+    /// The collider shape is approximated with the given sample points in local-space.
+    ///
+    /// It is recommanded that those points are separated by a distance smaller or equal to twice
+    /// the particle radius used to initialize the LiquidWorld.
     StaticSampling(Vec<Point<N>>),
+    /// The colliser shape is approximated by a dynamic set of points automatically computed based on contacts with fluid particles.
     DynamicContactSampling,
 }
 
-pub struct ColliderCoupling<N: RealField> {
+struct ColliderCoupling<N: RealField> {
     coupling_method: CouplingMethod<N>,
     boundary: BoundaryHandle,
     features: Vec<FeatureId>,
 }
 
+/// Structure managing all the couplings between colliders from nphysics with boundaries and fluids from salva.
 pub struct ColliderCouplingManager<N: RealField, CollHandle: ColliderHandle> {
     entries: HashMap<CollHandle, ColliderCoupling<N>>,
 }
 
 impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHandle> {
+    /// Create a new collider coupling manager.
     pub fn new() -> Self {
         Self {
             entries: HashMap::new(),
         }
     }
 
+    /// Register a coupling between a boundary and a collider.
     pub fn register_coupling(
         &mut self,
         boundary: BoundaryHandle,
@@ -48,7 +57,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
         );
     }
 
-    pub fn update_boundaries<Handle, Colliders>(
+    pub(crate) fn update_boundaries<Handle, Colliders>(
         &mut self,
         h: N,
         colliders: &Colliders,
@@ -142,7 +151,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
         });
     }
 
-    pub fn transmit_forces<Bodies, Colliders>(
+    pub(crate) fn transmit_forces<Bodies, Colliders>(
         &self,
         boundaries: &mut [Boundary<N>],
         bodies: &mut Bodies,

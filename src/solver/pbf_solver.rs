@@ -3,15 +3,12 @@ use std::marker::PhantomData;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-#[cfg(feature = "dim3")]
-use na::Vector2;
 use na::{self, RealField};
 
-use crate::boundary::Boundary;
-use crate::fluid::Fluid;
 use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{Kernel, Poly6Kernel, SpikyKernel};
 use crate::math::Vector;
+use crate::object::{Boundary, Fluid};
 
 macro_rules! par_iter {
     ($t: expr) => {{
@@ -35,6 +32,7 @@ macro_rules! par_iter_mut {
     }};
 }
 
+/// A Position Based Fluid solver.
 pub struct PBFSolver<
     N: RealField,
     KernelDensity: Kernel = Poly6Kernel,
@@ -54,6 +52,7 @@ where
     KernelDensity: Kernel,
     KernelGradient: Kernel,
 {
+    /// Initialize a new Position Based Fluid solver.
     pub fn new() -> Self {
         Self {
             lambdas: Vec::new(),
@@ -120,14 +119,18 @@ where
         }
     }
 
+    /// Gets the set of fluid particle position changes resulting from pressure resolution.
     pub fn position_changes(&self) -> &[Vec<Vector<N>>] {
         &self.position_changes
     }
 
+    /// Gets a mutable reference to the set of fluid particle position changes resulting from
+    /// pressure resolution.
     pub fn position_changes_mut(&mut self) -> &mut [Vec<Vector<N>>] {
         &mut self.position_changes
     }
 
+    /// Initialize this solver with the given fluids.
     pub fn init_with_fluids(&mut self, fluids: &[Fluid<N>]) {
         // Resize every buffer.
         self.lambdas.resize(fluids.len(), Vec::new());
@@ -151,6 +154,7 @@ where
         }
     }
 
+    /// Initialize this solver with the given boundaries.
     pub fn init_with_boundaries(&mut self, boundaries: &[Boundary<N>]) {
         self.boundaries_volumes.resize(boundaries.len(), Vec::new());
 
@@ -159,6 +163,7 @@ where
         }
     }
 
+    /// Predicts advection with the given gravity.
     pub fn predict_advection(&mut self, dt: N, gravity: &Vector<N>, fluids: &[Fluid<N>]) {
         for (fluid, position_changes) in fluids.iter().zip(self.position_changes.iter_mut()) {
             par_iter_mut!(position_changes)
@@ -432,6 +437,10 @@ where
         self.integrate_nonpressure_forces(dt, fluids);
     }
 
+    /// Solves pressure and non-pressure force for the given fluids and boundaries.
+    ///
+    /// Both `self.init_with_fluids` and `self.init_with_boundaries` must be called before this
+    /// method.
     pub fn step(
         &mut self,
         dt: N,

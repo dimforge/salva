@@ -23,13 +23,12 @@ extern crate nphysics2d as nphysics;
 #[cfg(all(feature = "dim3", feature = "nphysics"))]
 extern crate nphysics3d as nphysics;
 
-pub mod boundary;
 #[cfg(feature = "nphysics")]
 pub mod coupling;
-pub mod fluid;
 pub mod geometry;
 pub mod kernel;
 mod liquid_world;
+pub mod object;
 pub mod solver;
 mod timestep_manager;
 
@@ -51,7 +50,7 @@ pub mod math {
     /// The maximum number of possible translations of a rigid body.
     pub const DIM: usize = 3;
 
-    /// The dimension of the ambiant space.
+    /// The dimension of the ambient space.
     pub type Dim = U3;
 
     /// The dimension of a spatial vector.

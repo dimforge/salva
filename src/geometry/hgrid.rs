@@ -1,9 +1,9 @@
 use na::RealField;
 use std::collections::HashMap;
 
-//use crate::bounding_volume::AABB;
 use crate::math::{Point, Vector, DIM};
 
+/// A grid based on spacial hashing.
 #[derive(PartialEq, Debug, Clone)]
 pub struct HGrid<N: RealField, T> {
     cells: HashMap<Point<i64>, Vec<T>>,
@@ -11,6 +11,7 @@ pub struct HGrid<N: RealField, T> {
 }
 
 impl<N: RealField, T> HGrid<N, T> {
+    /// Initialize a grid where each cell has the width `cell_width`.
     pub fn new(cell_width: N) -> Self {
         Self {
             cells: HashMap::new(),
@@ -26,24 +27,35 @@ impl<N: RealField, T> HGrid<N, T> {
         Point::from(point.coords.map(|e| Self::quantify(e, cell_width)))
     }
 
+    /// Removes all elements from this grid.
     pub fn clear(&mut self) {
         self.cells.clear();
     }
 
-    pub fn insert(&mut self, point: &Point<N>, elt: T) {
+    /// Inserts the given `element` into the cell containing the given `point`.
+    pub fn insert(&mut self, point: &Point<N>, element: T) {
         let key = Self::key(point, self.cell_width);
-        self.cells.entry(key).or_insert(Vec::new()).push(elt)
+        self.cells.entry(key).or_insert(Vec::new()).push(element)
     }
 
+    /// Returns the element attached to the cell containing the given `point`.
+    ///
+    /// Returns `None` if the cell is empty.
     pub fn cell_containing_point(&self, point: &Point<N>) -> Option<&Vec<T>> {
         let key = Self::key(point, self.cell_width);
         self.cells.get(&key)
     }
 
+    /// An iterator through all the non-empty cells of this grid.
+    ///
+    /// The returned tuple include the cell indentifier, and the elements attached to this cell.
     pub fn cells(&self) -> impl Iterator<Item = (&Point<i64>, &Vec<T>)> {
         self.cells.iter()
     }
 
+    /// An iterator through all the neighbors of the given cell.
+    ///
+    /// The given cell itself will be yielded by this iterator too.
     pub fn neighbor_cells(
         &self,
         cell: &Point<i64>,
@@ -72,6 +84,7 @@ impl<N: RealField, T> HGrid<N, T> {
     //            .flat_map(|cells| cells.iter())
     //    }
 
+    /// An iterator through all the cells intersecting the given AABB.
     pub fn cells_intersecting_aabb(
         &self,
         mins: &Point<N>,

@@ -1,7 +1,7 @@
-use crate::boundary::{Boundary, BoundaryHandle};
-use crate::fluid::{Fluid, FluidHandle};
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
 use crate::math::Vector;
+use crate::object::{Boundary, BoundaryHandle};
+use crate::object::{Fluid, FluidHandle};
 use crate::solver::PBFSolver;
 use crate::TimestepManager;
 use na::RealField;
@@ -13,6 +13,7 @@ use {
     nphysics::world::GeometricalWorld,
 };
 
+/// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld<N: RealField> {
     particle_radius: N,
     h: N,
@@ -25,6 +26,13 @@ pub struct LiquidWorld<N: RealField> {
 }
 
 impl<N: RealField> LiquidWorld<N> {
+    /// Initialize a new liquid world.
+    ///
+    /// # Parameters
+    ///
+    /// - `particle_radius`: the radius of every particle on this world.
+    /// - `smoothing_factor`: the smoothing factor used to compute the SPH kernel radius.
+    ///    The kernel radius will be computed as `particle_radius * smoothing_factor * 2.0.
     pub fn new(particle_radius: N, smoothing_factor: N) -> Self {
         let h = particle_radius * smoothing_factor * na::convert(2.0);
         Self {
@@ -39,6 +47,9 @@ impl<N: RealField> LiquidWorld<N> {
         }
     }
 
+    /// Advances the simulation by `dt` milliseconds.
+    ///
+    /// All the fluid particles will be affected by an acceleration equal to `gravity`.
     pub fn step(&mut self, dt: N, gravity: &Vector<N>) {
         let mut remaining_time = dt;
 
@@ -86,6 +97,9 @@ impl<N: RealField> LiquidWorld<N> {
         }
     }
 
+    /// Advances the simulation by `dt` milliseconds, taking into account coupling with nphysic's colliders.
+    ///
+    /// All the fluid particles will be affected by an acceleration equal to `gravity`.
     #[cfg(feature = "nphysics")]
     pub fn step_with_coupling<Bodies, Colliders>(
         &mut self,
@@ -157,27 +171,36 @@ impl<N: RealField> LiquidWorld<N> {
         }
     }
 
+    /// Add a fluid to the liquid world.
     pub fn add_fluid(&mut self, fluid: Fluid<N>) -> FluidHandle {
         let handle = self.fluids.len();
         self.fluids.push(fluid);
         handle
     }
+
+    /// Add a boundary to the liquid world.
     pub fn add_boundary(&mut self, boundary: Boundary<N>) -> BoundaryHandle {
         let handle = self.boundaries.len();
         self.boundaries.push(boundary);
         handle
     }
 
+    /// The set of fluids on this liquid world.
     pub fn fluids(&self) -> &[Fluid<N>] {
         &self.fluids
     }
+
+    /// The set of boundaries on this liquid world.
     pub fn boundaries(&self) -> &[Boundary<N>] {
         &self.boundaries
     }
 
+    /// The SPH kernel radius.
     pub fn h(&self) -> N {
         self.h
     }
+
+    /// The radius of every particle on this liquid world.
     pub fn particle_radius(&self) -> N {
         self.particle_radius
     }

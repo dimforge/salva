@@ -1,7 +1,7 @@
-use crate::boundary::Boundary;
-use crate::fluid::Fluid;
 use crate::geometry::HGrid;
 use crate::math::Vector;
+use crate::object::Boundary;
+use crate::object::Fluid;
 use na::RealField;
 use std::ops::Range;
 
