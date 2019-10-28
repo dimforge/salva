@@ -1,6 +1,20 @@
 /*!
-salva
-========
+**salva** is a 2 and 3-dimensional particle-based fluid simulation engine for games and animations.
+It uses [nalgebra](https://nalgebra.org) for vector/matrix math and can optionally interface with
+[nphysics](https://nphysics.org) for two-way coupling with rigid bodies, multibodies, and deformable bodies.
+2D and 3D implementations both share (mostly) the same code!
+
+
+Examples are available in the `examples2d` and `examples3d` directories.  Because those demos are based on
+WASM and WebGl 1.0 they should work on most modern browsers. Feel free to ask for help
+and discuss features on the official [user forum](https://discourse.nphysics.org).
+
+## Features
+- PBF pressure resolution.
+- XSPH viscosity.
+- Multiphase fluids.
+- Optional two-way coupling with bodies from **nphysics**.
+- WASM support
 */
 #![deny(non_camel_case_types)]
 #![deny(unused_parens)]
@@ -11,7 +25,8 @@ salva
 #![allow(type_alias_bounds)]
 #![warn(non_camel_case_types)]
 #![allow(missing_copy_implementations)]
-#![doc(html_root_url = "http://nphysics.org/rustdoc/")]
+#![doc(html_root_url = "https://salva.rs/rustdoc/")]
+#![doc(html_logo_url = "https://salva.rs/img/logo_salva_rustdoc.svg")]
 
 extern crate nalgebra as na;
 #[cfg(all(feature = "dim2", feature = "nphysics"))]
