@@ -1,7 +1,9 @@
 use crate::kernel::Kernel;
 use na::RealField;
 
-/// Particle-Based Fluid Simulation for Interactive Applications, Müller et al.
+/// The Spiky smoothing kernel.
+///
+/// Refer to "Particle-Based Fluid Simulation for Interactive Applications", Müller et al.pub struct SpikyKernel;
 pub struct SpikyKernel;
 
 impl Kernel for SpikyKernel {

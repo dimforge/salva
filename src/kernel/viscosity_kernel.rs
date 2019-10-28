@@ -1,7 +1,9 @@
 use crate::kernel::Kernel;
 use na::RealField;
 
-/// Particle-Based Fluid Simulation for Interactive Applications, Müller et al.
+/// The Viscosity smoothing kernel.
+///
+/// Refer to "Particle-Based Fluid Simulation for Interactive Applications", Müller et al.pub struct ViscosityKernel;
 pub struct ViscosityKernel;
 
 impl Kernel for ViscosityKernel {

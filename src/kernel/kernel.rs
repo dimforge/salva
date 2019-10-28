@@ -1,7 +1,7 @@
 use crate::math::{Point, Vector};
 use na::{RealField, Unit};
 
-/// Kernel functions for performing approximations within the PBF method.
+/// Kernel functions for performing approximations within the PBF/SPH methods.
 pub trait Kernel: Send + Sync {
     /// Evaluates the kernel for the given scalar `r` and the reference support length `h`.
     fn scalar_apply<N: RealField>(r: N, h: N) -> N;

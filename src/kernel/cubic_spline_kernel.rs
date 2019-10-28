@@ -1,7 +1,7 @@
 use crate::kernel::Kernel;
 use na::RealField;
 
-/// The cubic spline SPH kernel.
+/// The cubic spline smoothing kernel.
 ///
 /// See https://pysph.readthedocs.io/en/latest/reference/kernels.html
 pub struct CubicSplineKernel;

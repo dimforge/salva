@@ -1,7 +1,9 @@
 use crate::kernel::Kernel;
 use na::RealField;
 
-/// Particle-Based Fluid Simulation for Interactive Applications, Müller et al.
+/// The Poly6 smoothing kernel.
+///
+/// Refer to "Particle-Based Fluid Simulation for Interactive Applications", Müller et al.
 pub struct Poly6Kernel;
 
 impl Kernel for Poly6Kernel {
