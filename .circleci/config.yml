@@ -1,0 +1,72 @@
+version: 2.1
+
+executors:
+  rust-executor:
+    docker:
+      - image: rust:latest
+
+jobs:
+  check-fmt:
+    executor: rust-executor
+    steps:
+      - checkout
+      - run:
+          name: install rustfmt
+          command: rustup component add rustfmt
+      - run:
+          name: check formatting
+          command: cargo fmt -- --check
+  build-native:
+    executor: rust-executor
+    steps:
+      - checkout
+      - run:
+          name: build salva2d
+          command: cargo build --verbose -p salva2d;
+      - run:
+          name: build salva3d
+          command: cargo build --verbose -p salva3d;
+      - run:
+          name: build salva-examples-2d
+          command: cargo build -j 1 --verbose -p salva-examples-2d;
+      - run:
+          name: build salva-examples-3d
+          command: cargo build -j 1 --verbose -p salva-examples-3d;
+      - run:
+          name: test salva2d
+          command: cargo test --verbose -p salva2d;
+      - run:
+          name: test salva3d
+          command: cargo test --verbose -p salva3d;
+  build-wasm:
+    executor: rust-executor
+    steps:
+      - checkout
+      - run:
+          name: install cargo-web
+          command: cargo install -f cargo-web;
+      - run:
+          name: build salva2d
+          command: cargo web build --verbose --target wasm32-unknown-unknown -p salva2d;
+      - run:
+          name: build salva3d
+          command: cargo web build --verbose --target wasm32-unknown-unknown -p salva3d;
+      - run:
+          name: build salva-examples-2d
+          command: cargo web build --verbose --target wasm32-unknown-unknown -p salva-examples-2d;
+      - run:
+          name: build salva-examples-3d
+          command: cargo web build --verbose --target wasm32-unknown-unknown -p salva-examples-3d;
+
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - check-fmt
+      - build-native:
+          requires:
+            - check-fmt
+      - build-wasm:
+          requires:
+            - check-fmt
