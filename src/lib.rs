@@ -1,5 +1,5 @@
 /*!
-**salva** is a 2 and 3-dimensional particle-based fluid simulation engine for games and animations.
+**Salva** is a 2 and 3-dimensional particle-based fluid simulation engine for games and animations.
 It uses [nalgebra](https://nalgebra.org) for vector/matrix math and can optionally interface with
 [nphysics](https://nphysics.org) for two-way coupling with rigid bodies, multibodies, and deformable bodies.
 2D and 3D implementations both share (mostly) the same code!
@@ -8,6 +8,11 @@ It uses [nalgebra](https://nalgebra.org) for vector/matrix math and can optional
 Examples are available in the `examples2d` and `examples3d` directories.  Because those demos are based on
 WASM and WebGl 1.0 they should work on most modern browsers. Feel free to ask for help
 and discuss features on the official [user forum](https://discourse.nphysics.org).
+
+## Why the name Salva?
+
+The name of this library is inspired from the famous surrealist artist `Salvador Dalì`. The logo of `Salva`
+ is inspired from its renown painting [The Persistence of Memory](https://en.wikipedia.org/wiki/The_Persistence_of_Memory).
 
 ## Features
 - PBF pressure resolution.
