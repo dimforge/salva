@@ -14,7 +14,7 @@ nalgebra   = "0.19"
 ncollide3d = "0.21"
 kiss3d     = "0.22"
 nphysics3d = "0.13"
-nphysics_testbed3d = { version = "0.6", features = [ "fluids" ] }
+nphysics_testbed3d = { version = "0.7", features = [ "fluids" ] }
 
 [dependencies.salva3d]
 path = "../build/salva3d"

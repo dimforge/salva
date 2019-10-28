@@ -8,7 +8,7 @@ members = [ "build/salva2d", "build/salva3d", "examples2d", "examples3d" ]
 [patch.crates-io]
 salva2d = { path = "./build/salva2d" }
 salva3d = { path = "./build/salva3d" }
-nphysics2d = { path = "../nphysics-dev/build/nphysics2d" }
-nphysics3d = { path = "../nphysics-dev/build/nphysics3d" }
-nphysics_testbed2d = { path = "../nphysics-dev/build/nphysics_testbed2d" }
-nphysics_testbed3d = { path = "../nphysics-dev/build/nphysics_testbed3d" }
+#nphysics2d = { path = "../nphysics-dev/build/nphysics2d" }
+#nphysics3d = { path = "../nphysics-dev/build/nphysics3d" }
+#nphysics_testbed2d = { path = "../nphysics-dev/build/nphysics_testbed2d" }
+#nphysics_testbed3d = { path = "../nphysics-dev/build/nphysics_testbed3d" }

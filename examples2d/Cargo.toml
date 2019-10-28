@@ -13,7 +13,7 @@ alga       = "0.9"
 nalgebra   = "0.19"
 ncollide2d = "0.21"
 nphysics2d = "0.13"
-nphysics_testbed2d = { version = "0.6", features = [ "fluids" ] }
+nphysics_testbed2d = { version = "0.7", features = [ "fluids" ] }
 
 [dependencies.salva2d]
 path = "../build/salva2d"
