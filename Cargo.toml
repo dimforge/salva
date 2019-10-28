@@ -1,12 +1,14 @@
 [workspace]
-members = [ "build/salva2d", "build/salva3d" ]
+members = [ "build/salva2d", "build/salva3d", "examples2d", "examples3d" ]
 
 [profile.release]
 #lto = true
 #codegen-units = 1
 
 [patch.crates-io]
-ncollide2d = { path = "../ncollide-dev/build/ncollide2d" }
-ncollide3d = { path = "../ncollide-dev/build/ncollide3d" }
+salva2d = { path = "./build/salva2d" }
+salva3d = { path = "./build/salva3d" }
 nphysics2d = { path = "../nphysics-dev/build/nphysics2d" }
 nphysics3d = { path = "../nphysics-dev/build/nphysics3d" }
+nphysics_testbed2d = { path = "../nphysics-dev/build/nphysics_testbed2d" }
+nphysics_testbed3d = { path = "../nphysics-dev/build/nphysics_testbed3d" }
