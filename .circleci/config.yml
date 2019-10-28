@@ -28,10 +28,10 @@ jobs:
           command: cargo build --verbose -p salva3d;
       - run:
           name: build examples-2d
-          command: cargo build -j 1 --verbose -p examples-2d;
+          command: cargo build -j 1 --verbose -p examples2d;
       - run:
           name: build examples-3d
-          command: cargo build -j 1 --verbose -p examples-3d;
+          command: cargo build -j 1 --verbose -p examples3d;
       - run:
           name: test salva2d
           command: cargo test --verbose -p salva2d;
@@ -53,10 +53,10 @@ jobs:
           command: cargo web build --verbose --target wasm32-unknown-unknown -p salva3d;
       - run:
           name: build examples-2d
-          command: cargo web build --verbose --target wasm32-unknown-unknown -p examples-2d;
+          command: cargo web build --verbose --target wasm32-unknown-unknown -p examples2d;
       - run:
           name: build examples-3d
-          command: cargo web build --verbose --target wasm32-unknown-unknown -p examples-3d;
+          command: cargo web build --verbose --target wasm32-unknown-unknown -p examples3d;
 
 
 workflows:
