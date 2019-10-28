@@ -1,0 +1,38 @@
+[package]
+name    = "examples3d"
+version = "0.1.0"
+authors = [ "Sébastien Crozet <developer@crozet.re>" ]
+edition = "2018"
+
+[features]
+parallel = [ "nphysics_testbed3d/parallel"]
+
+[dependencies]
+num-traits = "0.2"
+Inflector  = "0.11"
+nalgebra   = "0.19"
+ncollide3d = "0.21"
+kiss3d     = "0.22"
+nphysics3d = "0.13"
+nphysics_testbed3d = { version = "0.6", features = [ "fluids" ] }
+
+[dependencies.salva3d]
+path = "../build/salva3d"
+features = [ "nphysics" ]
+
+[target.wasm32-unknown-unknown.dependencies]
+stdweb = "0.4"
+
+[target.wasm32-unknown-emscripten.dependencies]
+stdweb = "0.4"
+
+[target.asmjs-unknown-emscripten.dependencies]
+stdweb = "0.4"
+
+[[bin]]
+name = "all_examples3"
+path = "./all_examples3.rs"
+
+[[bin]]
+name = "fluids3"
+path = "./fluids3.rs"

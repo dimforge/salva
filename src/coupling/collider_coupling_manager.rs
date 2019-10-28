@@ -7,7 +7,7 @@ use ncollide::bounding_volume::BoundingVolume;
 use ncollide::query::PointQuery;
 use ncollide::shape::FeatureId;
 use nphysics::math::ForceType;
-use nphysics::object::{Body, BodyHandle, BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
+use nphysics::object::{BodyHandle, BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
 use std::collections::HashMap;
 
 /// The way a collider is coupled to a boundary object.

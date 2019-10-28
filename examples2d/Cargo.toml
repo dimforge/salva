@@ -1,0 +1,37 @@
+[package]
+name    = "examples2d"
+version = "0.1.0"
+authors = [ "Sébastien Crozet <developer@crozet.re>" ]
+edition = "2018"
+
+[features]
+parallel = [ "nphysics_testbed2d/parallel"]
+
+[dependencies]
+Inflector  = "0.11"
+alga       = "0.9"
+nalgebra   = "0.19"
+ncollide2d = "0.21"
+nphysics2d = "0.13"
+nphysics_testbed2d = { version = "0.6", features = [ "fluids" ] }
+
+[dependencies.salva2d]
+path = "../build/salva2d"
+features = [ "nphysics" ]
+
+[target.wasm32-unknown-unknown.dependencies]
+stdweb = "0.4"
+
+[target.wasm32-unknown-emscripten.dependencies]
+stdweb = "0.4"
+
+[target.asmjs-unknown-emscripten.dependencies]
+stdweb = "0.4"
+
+[[bin]]
+name = "all_examples2"
+path = "./all_examples2.rs"
+
+[[bin]]
+name = "fluids2"
+path = "./fluids2.rs"
