@@ -2,7 +2,7 @@ use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
 use crate::math::Vector;
 use crate::object::{Boundary, BoundaryHandle};
 use crate::object::{Fluid, FluidHandle};
-use crate::solver::PBFSolver;
+use crate::solver::{DFSPHSolver, PBFSolver};
 use crate::TimestepManager;
 use na::RealField;
 
@@ -19,7 +19,7 @@ pub struct LiquidWorld<N: RealField> {
     h: N,
     fluids: Vec<Fluid<N>>,
     boundaries: Vec<Boundary<N>>,
-    solver: PBFSolver<N>,
+    solver: DFSPHSolver<N>, // , crate::kernel::Poly6Kernel, crate::kernel::SpikyKernel>,
     contact_manager: ContactManager<N>,
     timestep_manager: TimestepManager<N>,
     hgrid: HGrid<N, HGridEntry>,
@@ -40,7 +40,7 @@ impl<N: RealField> LiquidWorld<N> {
             h,
             fluids: Vec::new(),
             boundaries: Vec::new(),
-            solver: PBFSolver::new(),
+            solver: DFSPHSolver::new(),
             contact_manager: ContactManager::new(),
             timestep_manager: TimestepManager::new(),
             hgrid: HGrid::new(h),
