@@ -9,7 +9,7 @@ use nphysics3d::object::{
 };
 use nphysics3d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed3d::Testbed;
-use salva3d::coupling::{ColliderCouplingManager, CouplingMethod};
+use salva3d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva3d::object::{Boundary, Fluid};
 use salva3d::LiquidWorld;
 use std::f32;
@@ -30,7 +30,7 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     let particle_rad = 0.1;
     let mut liquid_world = LiquidWorld::new(particle_rad, 1.5);
-    let mut coupling_manager = ColliderCouplingManager::new();
+    let mut coupling_manager = ColliderCouplingSet::new();
 
     // Liquid.
     let mut points1 = Vec::new();
@@ -116,6 +116,7 @@ pub fn init_world(testbed: &mut Testbed) {
     // Build the rigid body.
     let rb = RigidBodyDesc::new().translation(Vector3::y() * 7.0).build();
     let rb_handle = bodies.insert(rb);
+    testbed.set_body_color(rb_handle, Point3::new(0.3, 0.3, 0.7));
 
     // Build the collider.
     let co = ColliderDesc::new(cuboid.clone())

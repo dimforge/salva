@@ -25,6 +25,7 @@ impl<N: RealField> ContactManager<N> {
 
     pub fn update_contacts(
         &mut self,
+        dt: N,
         h: N,
         fluids: &[Fluid<N>],
         boundaries: &[Boundary<N>],
@@ -32,6 +33,7 @@ impl<N: RealField> ContactManager<N> {
         hgrid: &HGrid<N, HGridEntry>,
     ) {
         geometry::compute_contacts(
+            dt,
             h,
             &fluids,
             &boundaries,

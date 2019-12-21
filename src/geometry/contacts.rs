@@ -66,17 +66,23 @@ impl<N: RealField> ParticlesContacts<N> {
 }
 
 pub fn insert_fluids_to_grid<N: RealField>(
+    dt: N,
     fluids: &[Fluid<N>],
-    fluids_delta_pos: Option<&[Vec<Vector<N>>]>,
+    fluids_delta_vel: Option<&[Vec<Vector<N>>]>,
     grid: &mut HGrid<N, HGridEntry>,
 ) {
     for (fluid_id, fluid) in fluids.iter().enumerate() {
-        if let Some(deltas) = fluids_delta_pos {
+        if let Some(deltas) = fluids_delta_vel {
             let fluid_deltas = &deltas[fluid_id];
 
-            for (particle_id, point) in fluid.positions.iter().enumerate() {
+            for (particle_id, (point, vel)) in fluid
+                .positions
+                .iter()
+                .zip(fluid.velocities.iter())
+                .enumerate()
+            {
                 grid.insert(
-                    &(point + fluid_deltas[particle_id]),
+                    &(point + (vel + fluid_deltas[particle_id]) * dt),
                     HGridEntry::FluidParticle(fluid_id, particle_id),
                 );
             }
@@ -103,10 +109,11 @@ pub fn insert_boundaries_to_grid<N: RealField>(
 }
 
 pub fn compute_contacts<N: RealField>(
+    dt: N,
     h: N,
     fluids: &[Fluid<N>],
     boundaries: &[Boundary<N>],
-    fluids_delta_pos: Option<&[Vec<Vector<N>>]>,
+    fluids_delta_vel: Option<&[Vec<Vector<N>>]>,
     fluid_fluid_contacts: &mut Vec<ParticlesContacts<N>>,
     fluid_boundary_contacts: &mut Vec<ParticlesContacts<N>>,
     boundary_boundary_contacts: &mut Vec<ParticlesContacts<N>>,
@@ -182,19 +189,26 @@ pub fn compute_contacts<N: RealField>(
                         for entry in *nbh_particles {
                             let (fluid_j, particle_j, is_boundary_j) = entry.into_tuple();
                             let mut pi = fluids[*fluid_i].positions[*particle_i];
-                            let mut pj = if is_boundary_j {
-                                boundaries[fluid_j].positions[particle_j]
+                            let mut vi = fluids[*fluid_i].velocities[*particle_i];
+                            let (mut pj, mut vj) = if is_boundary_j {
+                                (boundaries[fluid_j].positions[particle_j], Vector::zeros())
                             } else {
-                                fluids[fluid_j].positions[particle_j]
+                                (
+                                    fluids[fluid_j].positions[particle_j],
+                                    fluids[fluid_j].velocities[particle_j],
+                                )
                             };
 
-                            if let Some(deltas) = fluids_delta_pos {
-                                pi += deltas[*fluid_i][*particle_i];
+                            if let Some(deltas) = fluids_delta_vel {
+                                vi += deltas[*fluid_i][*particle_i];
 
                                 if !is_boundary_j {
-                                    pj += deltas[fluid_j][particle_j];
+                                    vj += deltas[fluid_j][particle_j];
                                 }
                             }
+
+                            pi += vi * dt;
+                            pj += vj * dt;
 
                             if na::distance_squared(&pi, &pj) <= h * h {
                                 let contact = Contact {

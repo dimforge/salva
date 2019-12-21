@@ -10,7 +10,7 @@ use nphysics2d::object::{
 };
 use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed2d::Testbed;
-use salva2d::coupling::{ColliderCouplingManager, CouplingMethod};
+use salva2d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva2d::object::{Boundary, Fluid};
 use salva2d::LiquidWorld;
 
@@ -30,13 +30,13 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     let particle_rad = 0.1;
     let mut liquid_world = LiquidWorld::new(particle_rad, 1.5);
-    let mut coupling_manager = ColliderCouplingManager::new();
+    let mut coupling_set = ColliderCouplingSet::new();
 
     // Liquid.
     let mut points1 = Vec::new();
     let mut points2 = Vec::new();
-    let ni = 30;
-    let nj = 30;
+    let ni = 25;
+    let nj = 25;
 
     let shift2 = (nj as f32) * particle_rad * 2.0 + 2.0;
 
@@ -53,7 +53,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
-    let fluid = Fluid::new(points2, particle_rad, 1.0, 0.001);
+    let fluid = Fluid::new(points2, particle_rad, 2.0, 0.001);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
@@ -71,11 +71,7 @@ pub fn init_world(testbed: &mut Testbed) {
         .build(BodyPartHandle(ground_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-    coupling_manager.register_coupling(
-        bo_handle,
-        co_handle,
-        CouplingMethod::DynamicContactSampling,
-    );
+    coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
 
     let co = ColliderDesc::new(ground_shape.clone())
         .position(Isometry2::new(
@@ -85,11 +81,7 @@ pub fn init_world(testbed: &mut Testbed) {
         .build(BodyPartHandle(ground_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-    coupling_manager.register_coupling(
-        bo_handle,
-        co_handle,
-        CouplingMethod::DynamicContactSampling,
-    );
+    coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
 
     let co = ColliderDesc::new(ground_shape)
         .position(Isometry2::new(
@@ -99,11 +91,7 @@ pub fn init_world(testbed: &mut Testbed) {
         .build(BodyPartHandle(ground_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-    coupling_manager.register_coupling(
-        bo_handle,
-        co_handle,
-        CouplingMethod::DynamicContactSampling,
-    );
+    coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
 
     /*
      * Create a dynamic box.
@@ -116,6 +104,7 @@ pub fn init_world(testbed: &mut Testbed) {
         .translation(Vector2::y() * 20.0)
         .build();
     let rb_handle = bodies.insert(rb);
+    testbed.set_body_color(rb_handle, Point3::new(0.3, 0.3, 0.7));
 
     // Build the collider.
     let co = ColliderDesc::new(cuboid)
@@ -123,11 +112,7 @@ pub fn init_world(testbed: &mut Testbed) {
         .build(BodyPartHandle(rb_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-    coupling_manager.register_coupling(
-        bo_handle,
-        co_handle,
-        CouplingMethod::DynamicContactSampling,
-    );
+    coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
 
     /*
      * Create the deformable body and a collider for its boundary.
@@ -141,15 +126,12 @@ pub fn init_world(testbed: &mut Testbed) {
         .build();
     let collider_desc = deformable.boundary_collider_desc();
     let deformable_handle = bodies.insert(deformable);
+    testbed.set_body_color(deformable_handle, Point3::new(0.2, 0.2, 0.2));
 
     let co = collider_desc.build(deformable_handle);
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-    coupling_manager.register_coupling(
-        bo_handle,
-        co_handle,
-        CouplingMethod::DynamicContactSampling,
-    );
+    coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
 
     /*
      * Create a multibody.
@@ -183,7 +165,7 @@ pub fn init_world(testbed: &mut Testbed) {
         let co = collider_desc.build(BodyPartHandle(multibody_handle, i));
         let co_handle = colliders.insert(co);
         let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-        coupling_manager.register_coupling(
+        coupling_set.register_coupling(
             bo_handle,
             co_handle,
             CouplingMethod::DynamicContactSampling,
@@ -202,7 +184,7 @@ pub fn init_world(testbed: &mut Testbed) {
         joint_constraints,
         force_generators,
     );
-    testbed.set_liquid_world(liquid_world, coupling_manager);
+    testbed.set_liquid_world(liquid_world, coupling_set);
     testbed.look_at(Point2::new(0.0, -2.5), 95.0);
 }
 

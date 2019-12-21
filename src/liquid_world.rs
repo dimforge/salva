@@ -1,3 +1,4 @@
+use crate::coupling::CouplingManager;
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
 use crate::math::Vector;
 use crate::object::{Boundary, BoundaryHandle};
@@ -51,69 +52,16 @@ impl<N: RealField> LiquidWorld<N> {
     ///
     /// All the fluid particles will be affected by an acceleration equal to `gravity`.
     pub fn step(&mut self, dt: N, gravity: &Vector<N>) {
-        let mut remaining_time = dt;
-
-        // Perform substeps.
-        while remaining_time > N::zero() {
-            // Substep length.
-            let substep_dt = self.timestep_manager.compute_substep(
-                dt,
-                remaining_time,
-                self.particle_radius,
-                &self.fluids,
-            );
-
-            self.solver.init_with_fluids(&self.fluids);
-            self.solver
-                .predict_advection(substep_dt, gravity, &self.fluids);
-
-            self.hgrid.clear();
-            geometry::insert_fluids_to_grid(
-                &self.fluids,
-                Some(self.solver.position_changes()),
-                &mut self.hgrid,
-            );
-
-            geometry::insert_boundaries_to_grid(&self.boundaries, &mut self.hgrid);
-            self.solver.init_with_boundaries(&self.boundaries);
-
-            self.contact_manager.update_contacts(
-                self.h,
-                &self.fluids,
-                &self.boundaries,
-                Some(self.solver.position_changes()),
-                &self.hgrid,
-            );
-
-            self.solver.step(
-                dt,
-                &mut self.contact_manager,
-                self.h,
-                &mut self.fluids,
-                &self.boundaries,
-            );
-
-            remaining_time -= substep_dt;
-        }
+        self.step_with_coupling(dt, gravity, &mut ())
     }
 
-    /// Advances the simulation by `dt` milliseconds, taking into account coupling with nphysic's colliders.
-    ///
-    /// All the fluid particles will be affected by an acceleration equal to `gravity`.
-    #[cfg(feature = "nphysics")]
-    pub fn step_with_coupling<Bodies, Colliders>(
+    /// Advances the simulation by `dt` milliseconds, taking into account coupling with an external rigid-body engine.
+    pub fn step_with_coupling(
         &mut self,
         dt: N,
         gravity: &Vector<N>,
-        // We keep this here because it is very likely to become useful in the future.
-        _geometrical_world: &GeometricalWorld<N, Bodies::Handle, Colliders::Handle>,
-        coupling: &mut ColliderCouplingManager<N, Colliders::Handle>,
-        bodies: &mut Bodies,
-        colliders: &mut Colliders,
-    ) where
-        Bodies: BodySet<N>,
-        Colliders: ColliderSet<N, Bodies::Handle>,
-    {
+        coupling: &mut impl CouplingManager<N>,
+    ) {
         let mut remaining_time = dt;
 
         // Perform substeps.
@@ -132,40 +80,42 @@ impl<N: RealField> LiquidWorld<N> {
 
             self.hgrid.clear();
             geometry::insert_fluids_to_grid(
+                substep_dt,
                 &self.fluids,
-                Some(self.solver.position_changes()),
+                Some(self.solver.velocity_changes()),
                 &mut self.hgrid,
             );
 
             coupling.update_boundaries(
+                substep_dt,
                 self.h,
-                colliders,
-                &mut self.boundaries,
-                &self.fluids,
-                self.solver.position_changes_mut(),
                 &self.hgrid,
+                &mut self.fluids,
+                self.solver.velocity_changes_mut(),
+                &mut self.boundaries,
             );
 
             geometry::insert_boundaries_to_grid(&self.boundaries, &mut self.hgrid);
             self.solver.init_with_boundaries(&self.boundaries);
 
             self.contact_manager.update_contacts(
+                substep_dt,
                 self.h,
                 &self.fluids,
                 &self.boundaries,
-                Some(self.solver.position_changes()),
+                Some(self.solver.velocity_changes()),
                 &self.hgrid,
             );
 
             self.solver.step(
-                dt,
+                substep_dt,
                 &mut self.contact_manager,
                 self.h,
                 &mut self.fluids,
                 &self.boundaries,
             );
 
-            coupling.transmit_forces(&mut self.boundaries, bodies, colliders);
+            coupling.transmit_forces(&self.boundaries);
 
             remaining_time -= substep_dt;
         }

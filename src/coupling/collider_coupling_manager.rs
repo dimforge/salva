@@ -1,3 +1,4 @@
+use crate::coupling::CouplingManager;
 use crate::geometry::{HGrid, HGridEntry};
 use crate::math::{Point, Vector};
 use crate::object::Fluid;
@@ -21,18 +22,18 @@ pub enum CouplingMethod<N: RealField> {
     DynamicContactSampling,
 }
 
-struct ColliderCoupling<N: RealField> {
+struct ColliderCouplingEntry<N: RealField> {
     coupling_method: CouplingMethod<N>,
     boundary: BoundaryHandle,
     features: Vec<FeatureId>,
 }
 
-/// Structure managing all the couplings between colliders from nphysics with boundaries and fluids from salva.
-pub struct ColliderCouplingManager<N: RealField, CollHandle: ColliderHandle> {
-    entries: HashMap<CollHandle, ColliderCoupling<N>>,
+/// Structure managing all the coupling between colliders from nphysics with boundaries and fluids from salva.
+pub struct ColliderCouplingSet<N: RealField, CollHandle: ColliderHandle> {
+    entries: HashMap<CollHandle, ColliderCouplingEntry<N>>,
 }
 
-impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHandle> {
+impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle> {
     /// Create a new collider coupling manager.
     pub fn new() -> Self {
         Self {
@@ -49,7 +50,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
     ) {
         let _ = self.entries.insert(
             collider,
-            ColliderCoupling {
+            ColliderCouplingEntry {
                 coupling_method,
                 boundary,
                 features: Vec::new(),
@@ -57,23 +58,55 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
         );
     }
 
-    pub(crate) fn update_boundaries<Handle, Colliders>(
-        &mut self,
-        h: N,
-        colliders: &Colliders,
-        boundaries: &mut [Boundary<N>],
-        fluids: &[Fluid<N>],
-        fluids_delta_pos: &mut [Vec<Vector<N>>],
-        hgrid: &HGrid<N, HGridEntry>,
-    ) where
-        Handle: BodyHandle,
-        Colliders: ColliderSet<N, Handle, Handle = CollHandle>,
+    pub fn as_manager_mut<'a, Colliders, Bodies>(
+        &'a mut self,
+        colliders: &'a Colliders,
+        bodies: &'a mut Bodies,
+    ) -> ColliderCouplingManager<N, Colliders, Bodies>
+    where
+        Colliders: ColliderSet<N, Bodies::Handle, Handle = CollHandle>,
+        Bodies: BodySet<N>,
     {
+        ColliderCouplingManager {
+            coupling: self,
+            colliders,
+            bodies,
+        }
+    }
+}
+
+pub struct ColliderCouplingManager<'a, N: RealField, Colliders, Bodies>
+where
+    N: RealField,
+    Colliders: ColliderSet<N, Bodies::Handle>,
+    Bodies: BodySet<N>,
+{
+    coupling: &'a mut ColliderCouplingSet<N, Colliders::Handle>,
+    colliders: &'a Colliders,
+    bodies: &'a mut Bodies,
+}
+
+impl<'a, N, Colliders, Bodies> CouplingManager<N>
+    for ColliderCouplingManager<'a, N, Colliders, Bodies>
+where
+    N: RealField,
+    Colliders: ColliderSet<N, Bodies::Handle>,
+    Bodies: BodySet<N>,
+{
+    fn update_boundaries(
+        &mut self,
+        dt: N,
+        h: N,
+        hgrid: &HGrid<N, HGridEntry>,
+        fluids: &mut [Fluid<N>],
+        fluids_delta_vels: &mut [Vec<Vector<N>>],
+        boundaries: &mut [Boundary<N>],
+    ) {
         let mut num_boundary_particles = 0;
 
-        self.entries.retain(|collider, coupling| {
+        for (collider, coupling) in &mut self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
-                colliders.get(*collider),
+                self.colliders.get(*collider),
                 boundaries.get_mut(coupling.boundary),
             ) {
                 boundary.positions.clear();
@@ -102,11 +135,11 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                         {
                             match particle {
                                 HGridEntry::FluidParticle(fluid_id, particle_id) => {
-                                    let fluid = &fluids[*fluid_id];
+                                    let fluid = &mut fluids[*fluid_id];
                                     let particle_delta =
-                                        &mut fluids_delta_pos[*fluid_id][*particle_id];
-                                    let particle_pos =
-                                        fluid.positions[*particle_id] + *particle_delta;
+                                        &mut fluids_delta_vels[*fluid_id][*particle_id];
+                                    let particle_pos = fluid.positions[*particle_id]
+                                        + (fluid.velocities[*particle_id] + *particle_delta) * dt;
 
                                     if aabb.contains_local_point(&particle_pos) {
                                         let (proj, feature) =
@@ -121,7 +154,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                                             Unit::try_new_and_get(dpt, N::default_epsilon())
                                         {
                                             if proj.is_inside {
-                                                *particle_delta -=
+                                                fluid.positions[*particle_id] -=
                                                     *normal * (depth + na::convert(0.0001));
                                             } else if depth > h + prediction {
                                                 continue;
@@ -143,27 +176,15 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                 }
 
                 boundary.clear_forces(true);
-
-                true
-            } else {
-                false
             }
-        });
+        }
     }
 
-    pub(crate) fn transmit_forces<Bodies, Colliders>(
-        &self,
-        boundaries: &mut [Boundary<N>],
-        bodies: &mut Bodies,
-        colliders: &Colliders,
-    ) where
-        Colliders: ColliderSet<N, Bodies::Handle, Handle = CollHandle>,
-        Bodies: BodySet<N>,
-    {
-        for (collider, coupling) in &self.entries {
+    fn transmit_forces(&mut self, boundaries: &[Boundary<N>]) {
+        for (collider, coupling) in &self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
-                colliders.get(*collider),
-                boundaries.get_mut(coupling.boundary),
+                self.colliders.get(*collider),
+                boundaries.get(coupling.boundary),
             ) {
                 if boundary.positions.is_empty() {
                     continue;
@@ -173,7 +194,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
 
                 match collider.anchor() {
                     ColliderAnchor::OnBodyPart { body_part, .. } => {
-                        if let Some(body) = bodies.get_mut(body_part.0) {
+                        if let Some(body) = self.bodies.get_mut(body_part.0) {
                             for (pos, force) in
                                 boundary.positions.iter().zip(forces.iter().cloned())
                             {
@@ -200,7 +221,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                         }
                     }
                     ColliderAnchor::OnDeformableBody { body, body_parts } => {
-                        if let Some(body) = bodies.get_mut(*body) {
+                        if let Some(body) = self.bodies.get_mut(*body) {
                             for (feature, pos, force) in itertools::multizip((
                                 coupling.features.iter(),
                                 boundary.positions.iter(),
