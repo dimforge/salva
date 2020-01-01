@@ -92,7 +92,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
     coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
-
+    /*
     /*
      * Create a dynamic box.
      */
@@ -171,6 +171,7 @@ pub fn init_world(testbed: &mut Testbed) {
             CouplingMethod::DynamicContactSampling,
         );
     }
+    */
 
     /*
      * Set up the testbed.

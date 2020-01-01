@@ -20,7 +20,7 @@ pub struct LiquidWorld<N: RealField> {
     h: N,
     fluids: Vec<Fluid<N>>,
     boundaries: Vec<Boundary<N>>,
-    solver: DFSPHSolver<N>, // , crate::kernel::Poly6Kernel, crate::kernel::SpikyKernel>,
+    solver: DFSPHSolver<N>,
     contact_manager: ContactManager<N>,
     timestep_manager: TimestepManager<N>,
     hgrid: HGrid<N, HGridEntry>,
