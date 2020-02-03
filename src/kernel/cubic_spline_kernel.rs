@@ -10,15 +10,17 @@ impl Kernel for CubicSplineKernel {
     fn scalar_apply<N: RealField>(r: N, h: N) -> N {
         assert!(r >= N::zero());
 
-        let q = r / h;
         #[cfg(feature = "dim2")]
         let normalizer = na::convert::<_, N>(40.0 / 7.0) / (N::pi() * h * h);
         #[cfg(feature = "dim3")]
         let normalizer = na::convert::<_, N>(8.0) / (N::pi() * h * h * h);
 
         let _2: N = na::convert(2.0);
+        let q = r / h;
+
         let rhs = if q <= na::convert(0.5) {
-            N::one() + (q * q * q - q * q) * na::convert(6.0)
+            let q2 = q * q;
+            N::one() + (q2 * q - q2) * na::convert(6.0)
         } else if q <= N::one() {
             (N::one() - q).powi(3) * _2
         } else {
@@ -51,7 +53,6 @@ impl Kernel for CubicSplineKernel {
     fn scalar_apply_diff<N: RealField>(r: N, h: N) -> N {
         assert!(r >= N::zero());
 
-        let q = r / h;
         #[cfg(feature = "dim2")]
         let normalizer = na::convert::<_, N>(40.0 / 7.0) / (N::pi() * h * h);
         #[cfg(feature = "dim3")]
@@ -59,15 +60,18 @@ impl Kernel for CubicSplineKernel {
 
         let _2: N = na::convert(2.0);
         let _3: N = na::convert(3.0);
+        let q = r / h;
+
         let rhs = if q <= na::convert(0.5) {
-            (q * q * _3 - q * _2) * na::convert(6.0)
+            (q * _3 - _2) * q * na::convert(6.0)
         } else if q <= N::one() {
-            -(N::one() - q).powi(2) * na::convert(6.0)
+            let one_q = N::one() - q;
+            -one_q * one_q * na::convert(6.0)
         } else {
             N::zero()
         };
 
-        normalizer * rhs
+        normalizer * rhs / h
 
         /*
         let q = r / h;

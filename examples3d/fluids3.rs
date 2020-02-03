@@ -62,6 +62,7 @@ pub fn init_world(testbed: &mut Testbed) {
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
     /*
+    /*
      * Ground.
      */
     let ground_thickness = 0.1;
@@ -135,6 +136,7 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     testbed.set_body_wireframe(ground_handle, true);
     testbed.set_ground_handle(Some(ground_handle));
+    */
     testbed.set_world(
         mechanical_world,
         geometrical_world,
