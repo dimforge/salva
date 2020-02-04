@@ -49,11 +49,11 @@ pub fn init_world(testbed: &mut Testbed) {
         }
     }
 
-    let fluid = Fluid::new(points1, particle_rad, 1.0e3, 0.01);
+    let fluid = Fluid::new(points1, particle_rad, 1.0, 0.5);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
-    let fluid = Fluid::new(points2, particle_rad, 1.0e3, 0.001);
+    let fluid = Fluid::new(points2, particle_rad, 1.0, 0.5);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
@@ -94,7 +94,6 @@ pub fn init_world(testbed: &mut Testbed) {
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
     coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
 
-    /*
     /*
      * Create a dynamic box.
      */
@@ -173,12 +172,11 @@ pub fn init_world(testbed: &mut Testbed) {
             CouplingMethod::DynamicContactSampling,
         );
     }
-    */
 
     /*
      * Set up the testbed.
      */
-    //    testbed.set_ground_handle(Some(ground_handle));
+    testbed.set_ground_handle(Some(ground_handle));
     testbed.set_world(
         mechanical_world,
         geometrical_world,
