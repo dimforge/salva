@@ -58,7 +58,7 @@ where
     /// Initialize a new Position Based Fluid solver.
     pub fn new() -> Self {
         Self {
-            divergence_enabled: false,
+            divergence_enabled: true, // false,
             alphas: Vec::new(),
             densities: Vec::new(),
             predicted_densities: Vec::new(),
@@ -365,7 +365,7 @@ where
 
                     for c in fluid_fluid_contacts.particle_contacts(i) {
                         let fluid_j = &fluids[c.j_model];
-                        let grad_i = c.gradient * fluid_j.particle_mass(c.j);
+                        let grad_i = c.gradient * fluid_j.volumes[c.j];
                         let v_i = fluid_i.velocities[c.i] + velocity_changes[c.i_model][c.i];
                         let v_j = fluid_j.velocities[c.j] + velocity_changes[c.j_model][c.j];
                         let dvel = v_i - v_j;
@@ -421,7 +421,8 @@ where
 
                             // Apply the force to the boundary too.
                             let particle_mass = fluid1.volumes[c.i] * fluid1.density0;
-                            boundaries[c.j_model].apply_force(c.j, delta * (dt * particle_mass));
+                            boundaries[c.j_model]
+                                .apply_force(c.j, delta * (inv_dt * particle_mass));
                         }
                     }
                 })
@@ -452,7 +453,7 @@ where
                         let kj = divergences[c.j_model][c.j] * alphas[c.j_model][c.j];
 
                         // Compute velocity change.
-                        let coeff = -(ki + kj) * fluid2.particle_mass(c.j);
+                        let coeff = -(ki + kj) * fluid2.volumes[c.j];
                         *velocity_change += c.gradient * coeff;
                     }
 
@@ -556,7 +557,7 @@ where
         boundaries: &[Boundary<N>],
     ) {
         println!("loop");
-        let niters = 100;
+        let niters = 10;
 
         for _ in 0..niters {
             self.compute_predicted_densities(
@@ -589,7 +590,7 @@ where
         fluids: &mut [Fluid<N>],
         boundaries: &[Boundary<N>],
     ) {
-        let niters = 100;
+        let niters = 10;
 
         for _ in 0..niters {
             self.compute_divergences(
