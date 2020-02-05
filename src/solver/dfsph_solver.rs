@@ -7,7 +7,7 @@ use na::{self, RealField};
 
 use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
-use crate::math::{Vector, DIM};
+use crate::math::{Vector, DIM, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
 
 macro_rules! par_iter {
@@ -58,6 +58,50 @@ impl<N: RealField> StrainRates<N> {
             error: StrainRate::zeros(),
         }
     }
+}
+
+fn compute_strain_rate<N: RealField>(gradient: &Vector<N>, v_ji: &Vector<N>) -> StrainRate<N> {
+    let _2: N = na::convert(2.0f64);
+
+    #[cfg(feature = "dim3")]
+    return StrainRate::new(
+        _2 * v_ji.x * gradient.x,
+        _2 * v_ji.y * gradient.y,
+        _2 * v_ji.z * gradient.z,
+        v_ji.x * gradient.y + v_ji.y * gradient.x,
+        v_ji.x * gradient.z + v_ji.z * gradient.x,
+        v_ji.y * gradient.z + v_ji.z * gradient.y,
+    );
+
+    #[cfg(feature = "dim2")]
+    return StrainRate::new(
+        _2 * v_ji.x * gradient.x,
+        _2 * v_ji.y * gradient.y,
+        v_ji.x * gradient.y + v_ji.y * gradient.x,
+    );
+}
+
+fn compute_gradient_matrix<N: RealField>(gradient: &Vector<N>) -> BetaGradientMatrix<N> {
+    let _2: N = na::convert(2.0f64);
+
+    #[cfg(feature = "dim2")]
+    #[rustfmt::skip]
+    return BetaGradientMatrix::new(
+        gradient.x * _2, N::zero(),
+        N::zero(), gradient.y * _2,
+        gradient.y, gradient.x,
+    );
+
+    #[cfg(feature = "dim3")]
+    #[rustfmt::skip]
+    return BetaGradientMatrix::new(
+        gradient.x * _2, N::zero(), N::zero(),
+        N::zero(), gradient.y * _2, N::zero(),
+        N::zero(), N::zero(), gradient.z * _2,
+        gradient.y, gradient.x, N::zero(),
+        gradient.z, N::zero(), gradient.x,
+        N::zero(), gradient.z, gradient.y,
+    );
 }
 
 /// A Position Based Fluid solver.
@@ -724,40 +768,43 @@ where
                 let mut squared_grad_sum = BetaMatrix::zeros();
 
                 for c in fluid_fluid_contacts.particle_contacts(i) {
-                    #[cfg(feature = "dim2")]
-                    #[rustfmt::skip]
-                    let mat = BetaGradientMatrix::new(
-                        c.gradient.x * _2, N::zero(),
-                        N::zero(), c.gradient.y * _2,
-                        c.gradient.y, c.gradient.x,
-                    );
-
-                    #[cfg(feature = "dim3")]
-                    #[rustfmt::skip]
-                    let mat = BetaGradientMatrix::new(
-                        c.gradient.x * _2, N::zero(), N::zero(),
-                        N::zero(), c.gradient.y * _2, N::zero(),
-                        N::zero(), N::zero(), c.gradient.z,
-                        c.gradient.y, c.gradient.x, N::zero(),
-                        c.gradient.z, N::zero(), c.gradient.x,
-                        N::zero(), c.gradient.z, c.gradient.y,
-                    );
-
-                    let grad_i = mat * (fluids[c.j_model].volumes[c.j] / _2);
+                    let mat = compute_gradient_matrix(&c.gradient);
+                    let grad_i = mat * (fluids[c.j_model].particle_mass(c.j) / _2);
                     squared_grad_sum += grad_i * grad_i.transpose();
                     grad_sum += grad_i;
                 }
 
                 //                for c in fluid_boundary_contacts.particle_contacts(i) {
-                //                    let grad_i = c.gradient * boundaries_volumes[c.j_model][c.j];
-                //                    squared_grad_sum += grad_i.norm_squared();
+                //                    let mat = compute_gradient_matrix(&c.gradient);
+                //                    let grad_i = mat * (boundaries_volumes[c.j_model][c.j] * fluid_i.density0 / _2);
+                //                    squared_grad_sum += grad_i * grad_i.transpose();
                 //                    grad_sum += grad_i;
                 //                }
 
-                let denominator = squared_grad_sum + grad_sum * grad_sum.transpose();
+                let mut denominator = squared_grad_sum + grad_sum * grad_sum.transpose();
+
+                // Preconditionner.
+                let mut inv_diag = denominator.diagonal();
+                inv_diag.apply(|n| {
+                    if n.abs() < na::convert(1.0e-6) {
+                        N::one()
+                    } else {
+                        N::one() / n
+                    }
+                });
+
+                for i in 0..SPATIAL_DIM {
+                    denominator.column_mut(i).component_mul_mut(&inv_diag);
+                }
+
                 *beta_i = denominator
                     .try_inverse()
                     .unwrap_or_else(|| BetaMatrix::zeros());
+
+                for i in 0..SPATIAL_DIM {
+                    let mut col = beta_i.column_mut(i);
+                    col *= inv_diag[i];
+                }
             })
         }
     }
@@ -781,57 +828,41 @@ where
             let fluid_fluid_contacts = &fluid_fluid_contacts[fluid_id];
             let fluid_boundary_contacts = &fluid_boundary_contacts[fluid_id];
             let strain_rates_i = &mut self.strain_rates[fluid_id];
+            let boundary_volumes = &self.boundaries_volumes;
             let fluid_i = &fluids[fluid_id];
 
             let err = par_iter_mut!(strain_rates_i).enumerate().fold(
                 N::zero(),
                 |curr_err, (i, strain_rates_i)| {
-                    let out_rate = if compute_error {
-                        &mut strain_rates_i.error
-                    } else {
-                        &mut strain_rates_i.target
-                    };
-
-                    *out_rate = StrainRate::zeros();
+                    let mut boundary_rate = StrainRate::zeros();
+                    let mut fluid_rate = StrainRate::zeros();
 
                     for c in fluid_fluid_contacts.particle_contacts(i) {
                         let fluid_j = &fluids[c.j_model];
                         let v_i = fluid_i.velocities[c.i] + velocity_changes[c.i_model][c.i];
                         let v_j = fluid_j.velocities[c.j] + velocity_changes[c.j_model][c.j];
                         let v_ji = v_j - v_i;
-                        #[cfg(feature = "dim3")]
-                        let rate = StrainRate::new(
-                            _2 * v_ji.x * c.gradient.x,
-                            _2 * v_ji.y * c.gradient.y,
-                            _2 * v_ji.z * c.gradient.z,
-                            v_ji.x * c.gradient.y + v_ji.y * c.gradient.x,
-                            v_ji.x * c.gradient.z + v_ji.z * c.gradient.x,
-                            v_ji.y * c.gradient.z + v_ji.z * c.gradient.y,
-                        );
-                        #[cfg(feature = "dim2")]
-                        let rate = StrainRate::new(
-                            _2 * v_ji.x * c.gradient.x,
-                            _2 * v_ji.y * c.gradient.y,
-                            v_ji.x * c.gradient.y + v_ji.y * c.gradient.x,
-                        );
+                        let rate = compute_strain_rate(&c.gradient, &v_ji);
 
-                        *out_rate += rate * (fluid_j.volumes[c.j] / _2);
+                        fluid_rate += rate * (fluid_j.particle_mass(c.j) / _2);
                     }
 
                     //                    for c in fluid_boundary_contacts.particle_contacts(i) {
                     //                        let v_i = fluid_i.velocities[c.i] + velocity_changes[c.i_model][c.i];
-                    //                        // FIXME: take the velocity of j too?
+                    //                        // FIXME: take the boundary velocity into account?
+                    //                        let v_ji = -v_i;
+                    //                        let rate = compute_strain_rate(&c.gradient, &v_ji);
                     //
-                    //                        let dvel = v_i;
-                    //                        *strain_rates_i +=
-                    //                            dvel.dot(&c.gradient) * boundaries_volumes[c.j_model][c.j];
+                    //                        boundary_rate +=
+                    //                            rate * (boundary_volumes[c.j_model][c.j] * fluid_i.density0 / _2);
                     //                    }
 
                     if compute_error {
-                        strain_rates_i.error -= strain_rates_i.target;
+                        strain_rates_i.error = fluid_rate + boundary_rate - strain_rates_i.target;
                         curr_err + strain_rates_i.error.norm_squared()
                     } else {
-                        strain_rates_i.target *= fluid_i.viscosity;
+                        strain_rates_i.target = fluid_rate * fluid_i.viscosity
+                            + boundary_rate * fluid_i.boundary_viscosity;
                         N::zero()
                     }
                 },
@@ -872,42 +903,28 @@ where
                         let uj = betas[c.j_model][c.j]
                             * strain_rates[c.j_model][c.j].error
                             * (fluid2.density0 / fluid1.density0);
-
-                        #[cfg(feature = "dim2")]
-                        #[rustfmt::skip]
-                        let gradient = BetaGradientMatrix::new(
-                            c.gradient.x * _2, N::zero(),
-                            N::zero(), c.gradient.y * _2,
-                            c.gradient.y, c.gradient.x,
-                        );
-
-                        #[cfg(feature = "dim3")]
-                        #[rustfmt::skip]
-                        let gradient = BetaGradientMatrix::new(
-                            c.gradient.x * _2, N::zero(), N::zero(),
-                            N::zero(), c.gradient.y * _2, N::zero(),
-                            N::zero(), N::zero(), c.gradient.z,
-                            c.gradient.y, c.gradient.x, N::zero(),
-                            c.gradient.z, N::zero(), c.gradient.x,
-                            N::zero(), c.gradient.z, c.gradient.y,
-                        );
+                        let gradient = compute_gradient_matrix(&c.gradient);
 
                         // Compute velocity change.
-                        let coeff = -(ui + uj) * (fluid2.volumes[c.j] / _2);
-                        *velocity_change += gradient.tr_mul(&coeff);
+                        let coeff = (ui + uj) * (fluid1.particle_mass(c.i) / _2);
+                        *velocity_change += gradient.tr_mul(&coeff) * fluid1.particle_mass(c.i);
                     }
 
                     //                    for c in fluid_boundary_contacts[fluid_id].particle_contacts(i) {
                     //                        let boundary2 = &boundaries[c.j_model];
                     //
                     //                        // Compute velocity change.
-                    //                        let coeff = -ui * boundaries_volumes[c.j_model][c.j];
-                    //                        let delta = c.gradient * coeff;
+                    //                        let gradient = compute_gradient_matrix(&c.gradient);
+                    //
+                    //                        // Compute velocity change.
+                    //                        let coeff =
+                    //                            ui * (boundaries_volumes[c.j_model][c.j] * fluid1.density0 / _2);
+                    //                        let delta = gradient.tr_mul(&coeff) * fluid1.particle_mass(c.i);
                     //                        *velocity_change += delta;
                     //
                     //                        // Apply the force to the boundary too.
                     //                        let particle_mass = fluid1.volumes[c.i] * fluid1.density0;
-                    //                        boundary2.apply_force(c.j, delta * (-inv_dt * particle_mass));
+                    //                        boundary2.apply_force(c.j, delta * (inv_dt * particle_mass));
                     //                    }
                 })
         }

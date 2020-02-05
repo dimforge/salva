@@ -53,11 +53,11 @@ pub fn init_world(testbed: &mut Testbed) {
         }
     }
 
-    let fluid = Fluid::new(points1, particle_rad, 1.2, 0.001);
+    let fluid = Fluid::new(points1, particle_rad, 1.2, 0.1, 1.0);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
-    let fluid = Fluid::new(points2, particle_rad, 1.0, 0.001);
+    let fluid = Fluid::new(points2, particle_rad, 1.0, 0.1, 1.0);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
