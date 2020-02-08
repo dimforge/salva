@@ -17,7 +17,7 @@ nphysics_testbed2d = { version = "0.7", features = [ "fluids" ] }
 
 [dependencies.salva2d]
 path = "../build/salva2d"
-features = [ "nphysics" ]
+features = [ "nphysics", "sampling" ]
 
 [target.wasm32-unknown-unknown.dependencies]
 stdweb = "0.4"

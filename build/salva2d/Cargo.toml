@@ -16,6 +16,7 @@ default = [ "dim2" ]
 dim2    = [ ]
 parallel = [ "rayon" ]
 nphysics = [ "ncollide2d", "nphysics2d" ]
+sampling = [ "ncollide2d" ]
 
 [lib]
 name = "salva2d"

@@ -18,7 +18,7 @@ nphysics_testbed3d = { version = "0.7", features = [ "fluids" ] }
 
 [dependencies.salva3d]
 path = "../build/salva3d"
-features = [ "nphysics" ]
+features = [ "nphysics", "sampling" ]
 
 [target.wasm32-unknown-unknown.dependencies]
 stdweb = "0.4"

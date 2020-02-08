@@ -16,6 +16,7 @@ default = [ "dim3" ]
 dim3    = [ ]
 parallel = [ "rayon" ]
 nphysics = [ "ncollide3d", "nphysics3d" ]
+sampling = [ "ncollide3d" ]
 
 [lib]
 name = "salva3d"
