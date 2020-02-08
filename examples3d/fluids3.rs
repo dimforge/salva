@@ -1,7 +1,7 @@
 extern crate nalgebra as na;
 
 use na::{Isometry3, Point3, Vector3};
-use ncollide3d::shape::{Cuboid, ShapeHandle};
+use ncollide3d::shape::{Capsule, Cuboid, ShapeHandle};
 use nphysics3d::force_generator::DefaultForceGeneratorSet;
 use nphysics3d::joint::DefaultJointConstraintSet;
 use nphysics3d::object::{
@@ -53,11 +53,20 @@ pub fn init_world(testbed: &mut Testbed) {
         }
     }
 
-    let fluid = Fluid::new(points1, particle_rad, 1.2, 0.1, 1.0);
-    let fluid_handle = liquid_world.add_fluid(fluid);
-    testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
+    //    let fluid = Fluid::new(points1, particle_rad, 1.2, 0.1, 1.0, 0.5);
+    //    let fluid_handle = liquid_world.add_fluid(fluid);
+    //    testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
+    //
+    //    let fluid = Fluid::new(points2, particle_rad, 1.0, 0.1, 1.0, 0.5);
+    //    let fluid_handle = liquid_world.add_fluid(fluid);
+    //    testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
-    let fluid = Fluid::new(points2, particle_rad, 1.0, 0.1, 1.0);
+    let shape = Capsule::new(1.0, 0.5); // Cuboid::new(Vector3::repeat(0.5));
+    let aabb = ncollide3d::bounding_volume::local_aabb(&shape);
+    let samples = salva3d::sampling::volume_ray_sample(&shape, &aabb, particle_rad * 2.0);
+    println!("Num samples: {}", samples.len());
+    let mut fluid = Fluid::new(samples, particle_rad, 1.0, 0.01, 1.0, 0.5);
+    fluid.positions.iter_mut().for_each(|p| p.y += 2.0);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
