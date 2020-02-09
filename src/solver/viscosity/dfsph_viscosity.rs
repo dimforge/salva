@@ -94,7 +94,7 @@ impl<N: RealField> DFSPHViscosity<N> {
     pub fn new() -> Self {
         Self {
             min_viscosity_iter: 1,
-            max_viscosity_iter: 1000,
+            max_viscosity_iter: 50,
             max_viscosity_error: na::convert(0.01),
             betas: Vec::new(),
             strain_rates: Vec::new(),
@@ -163,7 +163,8 @@ impl<N: RealField> DFSPHViscosity<N> {
                 }
 
                 *beta_i = denominator
-                    .try_inverse()
+                    .cholesky()
+                    .map(|chol| chol.inverse())
                     .unwrap_or_else(|| BetaMatrix::zeros());
 
                 for i in 0..SPATIAL_DIM {
@@ -254,6 +255,15 @@ impl<N: RealField> DFSPHViscosity<N> {
 
                             // Compute velocity change.
                             let coeff = (ui + uj) * (fluid1.particle_mass(c.i) / _2);
+                            //                            println!(
+                            //                                "Gradient: {:?}, coeff: {:?}, ui: {:?}, uj: {:?}, betai: {:?}, errori: {:?}",
+                            //                                gradient,
+                            //                                coeff,
+                            //                                ui,
+                            //                                uj,
+                            //                                betas[fluid_id][i],
+                            //                                strain_rates[fluid_id][i],
+                            //                            );
                             *velocity_change += gradient.tr_mul(&coeff) * fluid1.particle_mass(c.i);
                         }
                     }
@@ -297,16 +307,16 @@ impl<N: RealField> DFSPHViscosity<N> {
                 velocity_changes,
                 true,
             );
+            println!(
+                "Average viscosity error: {}, break after niters: {}, unstable: {}",
+                avg_err,
+                i,
+                avg_err > last_err
+            );
 
             if avg_err > last_err
                 || (avg_err <= self.max_viscosity_error && i >= self.min_viscosity_iter)
             {
-                println!(
-                    "Average viscosity error: {}, break after niters: {}, unstable: {}",
-                    avg_err,
-                    i,
-                    avg_err > last_err
-                );
                 break;
             }
 
@@ -321,5 +331,6 @@ impl<N: RealField> DFSPHViscosity<N> {
                 velocity_changes,
             );
         }
+        println!("exit");
     }
 }

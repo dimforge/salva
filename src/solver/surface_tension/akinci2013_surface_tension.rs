@@ -46,7 +46,6 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
             par_iter_mut!(normals_i)
                 .enumerate()
                 .for_each(|(i, normal_i)| {
-                    let mut squared_grad_sum = N::zero();
                     let mut normal = Vector::zeros();
 
                     for c in fluid_fluid_contacts.particle_contacts(i) {
@@ -91,7 +90,6 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
                 .enumerate()
                 .for_each(|(i, velocity_change_i)| {
                     let mi = fluid_i.particle_mass(i);
-                    let coeff = -fluid_i.surface_tension * mi;
 
                     for c in fluid_fluid_contacts.particle_contacts(i) {
                         if c.j_model == fluid_id {
@@ -104,18 +102,18 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
                                 Vector::zeros()
                             };
 
-                            let cohesion_force =
-                                cohesion_vec * (coeff * fluid_i.particle_mass(c.j));
-                            let curvature_force = (normals_i[c.i] - normals_i[c.j]) * coeff;
+                            let cohesion_acc = cohesion_vec
+                                * (-fluid_i.surface_tension * fluid_i.particle_mass(c.j));
+                            let curvature_acc =
+                                (normals_i[c.i] - normals_i[c.j]) * -fluid_i.surface_tension;
                             let kij = _2 * fluid_i.density0 / (densities_i[c.i] + densities_i[c.j]);
 
                             //                            println!(
                             //                                "Surface tension velocity change. {}",
-                            //                                (cohesion_force + curvature_force) * (kij * dt / mi)
+                            //                                (cohesion_acc + curvature_acc) * (kij * dt / mi)
                             //                            );
 
-                            *velocity_change_i +=
-                                (cohesion_force + curvature_force) * (kij * dt / mi);
+                            *velocity_change_i += (cohesion_acc + curvature_acc) * (kij * dt);
                         }
                     }
                 })
@@ -124,7 +122,7 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
 }
 
 fn cohesion_kernel<N: RealField>(r: N, h: N) -> N {
-    #[cfg(feature = "dim3")]
+    //    #[cfg(feature = "dim3")]
     let normalizer = na::convert::<_, N>(32.0f64) / (N::pi() * h.powi(9));
     let _2: N = na::convert(2.0f64);
 

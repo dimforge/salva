@@ -18,7 +18,7 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * World
      */
-    let mechanical_world = DefaultMechanicalWorld::new(Vector3::new(0.0, -9.81, 0.0));
+    let mechanical_world = DefaultMechanicalWorld::new(Vector3::new(0.0, 0.0, 0.0));
     let geometrical_world = DefaultGeometricalWorld::new();
     let mut bodies = DefaultBodySet::new();
     let mut colliders = DefaultColliderSet::new();
@@ -61,15 +61,16 @@ pub fn init_world(testbed: &mut Testbed) {
     //    let fluid_handle = liquid_world.add_fluid(fluid);
     //    testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
-    let shape = Capsule::new(1.0, 0.5); // Cuboid::new(Vector3::repeat(0.5));
+    let shape = Cuboid::new(Vector3::repeat(0.5));
     let aabb = ncollide3d::bounding_volume::local_aabb(&shape);
     let samples = salva3d::sampling::volume_ray_sample(&shape, &aabb, particle_rad * 2.0);
     println!("Num samples: {}", samples.len());
-    let mut fluid = Fluid::new(samples, particle_rad, 1.0, 0.01, 1.0, 0.5);
+    let mut fluid = Fluid::new(samples, particle_rad, 1.0, 0.5, 1.0, 0.5);
     fluid.positions.iter_mut().for_each(|p| p.y += 2.0);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
+    /*
     /*
      * Ground.
      */
@@ -138,12 +139,13 @@ pub fn init_world(testbed: &mut Testbed) {
         co_handle,
         CouplingMethod::DynamicContactSampling,
     );
+    */
 
     /*
      * Set up the testbed.
      */
-    testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_ground_handle(Some(ground_handle));
+    //    testbed.set_body_wireframe(ground_handle, true);
+    //    testbed.set_ground_handle(Some(ground_handle));
 
     testbed.set_world(
         mechanical_world,
