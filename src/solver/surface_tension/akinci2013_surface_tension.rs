@@ -47,10 +47,18 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
                 .enumerate()
                 .for_each(|(i, normal_i)| {
                     let mut normal = Vector::zeros();
+                    let mut num = N::zero();
 
                     for c in fluid_fluid_contacts.particle_contacts(i) {
                         if c.j_model == fluid_id {
-                            normal += c.gradient * (fluid_i.particle_mass(c.j) / densities_i[c.j])
+                            // NOTE: there is no normalization on the original paper.
+                            // However, this seems to gives much more stable results.
+                            normal += c
+                                .gradient
+                                .try_normalize(na::convert(1.0e-6))
+                                .unwrap_or(c.gradient)
+                                * (fluid_i.particle_mass(c.j) / densities_i[c.j]);
+                            num += N::one();
                         }
                     }
 
@@ -113,7 +121,7 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
                             //                                (cohesion_acc + curvature_acc) * (kij * dt / mi)
                             //                            );
 
-                            *velocity_change_i += (cohesion_acc + curvature_acc) * (kij * dt);
+                            *velocity_change_i += (curvature_acc + cohesion_acc) * (kij * dt);
                         }
                     }
                 })

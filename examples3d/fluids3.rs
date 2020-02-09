@@ -28,8 +28,8 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * Liquid world.
      */
-    let particle_rad = 0.1;
-    let mut liquid_world = LiquidWorld::new(particle_rad, 1.5);
+    let particle_rad = 0.04;
+    let mut liquid_world = LiquidWorld::new(particle_rad, 2.0);
     let mut coupling_manager = ColliderCouplingSet::new();
 
     // Liquid.
@@ -65,7 +65,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let aabb = ncollide3d::bounding_volume::local_aabb(&shape);
     let samples = salva3d::sampling::volume_ray_sample(&shape, &aabb, particle_rad * 2.0);
     println!("Num samples: {}", samples.len());
-    let mut fluid = Fluid::new(samples, particle_rad, 1.0, 0.5, 1.0, 0.5);
+    let mut fluid = Fluid::new(samples, particle_rad, 1.0, 0.5, 1.0, 10.0);
     fluid.positions.iter_mut().for_each(|p| p.y += 2.0);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
