@@ -22,8 +22,8 @@ pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
 
     let volume = volume.loosened(subdivision_size);
     let maxs = volume.maxs();
-    let origin = volume.mins();
-    let mut curr = *origin;
+    let origin = volume.mins() + Vector::repeat(subdivision_size / na::convert(2.0));
+    let mut curr = origin;
 
     for i in 0..DIM {
         let j = (i + 1) % DIM;
@@ -40,7 +40,7 @@ pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
                 while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, false) {
                     if let Some(prev) = prev_impact {
                         sample_segment(
-                            origin,
+                            &origin,
                             &curr,
                             prev,
                             ray.origin[i] + toi,
@@ -63,7 +63,7 @@ pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
         }
     }
 
-    unquantize_points(origin, subdivision_size, &quantized_points)
+    unquantize_points(&origin, subdivision_size, &quantized_points)
 }
 
 fn sample_segment<N: RealField>(
