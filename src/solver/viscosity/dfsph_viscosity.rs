@@ -163,8 +163,9 @@ impl<N: RealField> DFSPHViscosity<N> {
                 }
 
                 *beta_i = denominator
-                    .cholesky()
-                    .map(|chol| chol.inverse())
+                    .try_inverse()
+                    //                    .cholesky()
+                    //                    .map(|chol| chol.inverse())
                     .unwrap_or_else(|| BetaMatrix::zeros());
 
                 for i in 0..SPATIAL_DIM {

@@ -9,8 +9,10 @@ use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
 use crate::math::{Vector, DIM, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
-use crate::solver::Akinci2013SurfaceTension;
 use crate::solver::DFSPHViscosity;
+use crate::solver::{Akinci2013SurfaceTension, He2014SurfaceTension};
+
+type SurfaceTension<N> = Akinci2013SurfaceTension<N>;
 
 /// A Position Based Fluid solver.
 pub struct DFSPHSolver<
@@ -26,7 +28,7 @@ pub struct DFSPHSolver<
     max_divergence_error: N,
     min_neighbors_for_divergence_solve: usize,
     viscosity: DFSPHViscosity<N>,
-    surface_tension: Akinci2013SurfaceTension<N>,
+    surface_tension: SurfaceTension<N>,
     alphas: Vec<Vec<N>>,
     densities: Vec<Vec<N>>,
     predicted_densities: Vec<Vec<N>>,
@@ -54,7 +56,7 @@ where
             max_divergence_error: na::convert(0.1),
             min_neighbors_for_divergence_solve: if DIM == 2 { 6 } else { 20 },
             viscosity: DFSPHViscosity::new(),
-            surface_tension: Akinci2013SurfaceTension::new(),
+            surface_tension: SurfaceTension::new(),
             alphas: Vec::new(),
             densities: Vec::new(),
             predicted_densities: Vec::new(),
@@ -680,16 +682,6 @@ where
             fluids,
         );
 
-        self.surface_tension.solve(
-            dt,
-            inv_dt,
-            kernel_radius,
-            contact_manager,
-            fluids,
-            &self.densities,
-            &mut self.velocity_changes,
-        );
-
         self.compute_alphas(
             inv_dt,
             &contact_manager.fluid_fluid_contacts,
@@ -711,6 +703,16 @@ where
             .iter_mut()
             .for_each(|vs| vs.iter_mut().for_each(|v| v.fill(N::zero())));
 
+        self.surface_tension.solve(
+            dt,
+            inv_dt,
+            kernel_radius,
+            contact_manager,
+            fluids,
+            &self.densities,
+            &mut self.velocity_changes,
+        );
+
         self.pressure_solve(
             dt,
             inv_dt,
@@ -720,15 +722,18 @@ where
             boundaries,
         );
 
-        self.viscosity.solve(
-            dt,
-            inv_dt,
-            kernel_radius,
-            contact_manager,
-            fluids,
-            &mut self.velocity_changes,
-        );
+        //        self.viscosity.solve(
+        //            dt,
+        //            inv_dt,
+        //            kernel_radius,
+        //            contact_manager,
+        //            fluids,
+        //            &mut self.velocity_changes,
+        //        );
 
         self.update_positions(dt, fluids);
+        //        for fluid in fluids {
+        //            println!("{:?}", fluid.positions);
+        //        }
     }
 }
