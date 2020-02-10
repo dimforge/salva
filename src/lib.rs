@@ -65,6 +65,16 @@ macro_rules! par_iter_mut {
     }};
 }
 
+macro_rules! par_reduce_sum {
+    ($identity: expr, $t: expr) => {{
+        #[cfg(not(feature = "parallel"))]
+        let res = $t.fold($identity, |a, b| a + b);
+        #[cfg(feature = "parallel")]
+        let res = $t.reduce(|| $identity, |a, b| a + b);
+        res
+    }};
+}
+
 #[cfg(feature = "nphysics")]
 pub mod coupling;
 pub mod geometry;

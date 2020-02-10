@@ -63,9 +63,12 @@ impl<N: RealField> LiquidWorld<N> {
         coupling: &mut impl CouplingManager<N>,
     ) {
         let mut remaining_time = dt;
+        let mut solve_time = 0.0;
+        let mut non_solve_time = 0.0;
 
         // Perform substeps.
         while remaining_time > N::zero() {
+            let time = instant::now();
             // Substep length.
             let substep_dt = self.timestep_manager.compute_substep(
                 dt,
@@ -106,7 +109,8 @@ impl<N: RealField> LiquidWorld<N> {
                 Some(self.solver.velocity_changes()),
                 &self.hgrid,
             );
-
+            non_solve_time += instant::now() - time;
+            let time = instant::now();
             self.solver.step(
                 substep_dt,
                 &mut self.contact_manager,
@@ -114,11 +118,18 @@ impl<N: RealField> LiquidWorld<N> {
                 &mut self.fluids,
                 &self.boundaries,
             );
+            solve_time += instant::now() - time;
 
+            let time = instant::now();
             coupling.transmit_forces(&self.boundaries);
+            non_solve_time += instant::now() - time;
 
             remaining_time -= substep_dt;
         }
+        println!(
+            "Solve time: {}, Not solve time: {}",
+            solve_time, non_solve_time
+        );
     }
 
     /// Add a fluid to the liquid world.

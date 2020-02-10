@@ -18,94 +18,122 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * World
      */
-    let mechanical_world = DefaultMechanicalWorld::new(Vector3::new(0.0, 0.0, 0.0));
+    let mechanical_world = DefaultMechanicalWorld::new(Vector3::new(0.0, -9.81, 0.0));
     let geometrical_world = DefaultGeometricalWorld::new();
     let mut bodies = DefaultBodySet::new();
     let mut colliders = DefaultColliderSet::new();
     let joint_constraints = DefaultJointConstraintSet::new();
     let force_generators = DefaultForceGeneratorSet::new();
 
+    // Parameters of the ground.
+    let ground_thickness = 0.2;
+    let ground_half_width = 1.5;
+    let ground_half_height = 0.7;
+
     /*
      * Liquid world.
      */
-    let particle_rad = 0.08;
-    let mut liquid_world = LiquidWorld::new(particle_rad, 4.0);
+    let particle_rad = 0.025;
+    let mut liquid_world = LiquidWorld::new(particle_rad, 2.0);
     let mut coupling_manager = ColliderCouplingSet::new();
 
     // Liquid.
     let mut points1 = Vec::new();
-    let mut points2 = Vec::new();
-    let ni = 8;
-    let nj = 8;
-    let nk = 8;
+    //    let mut points2 = Vec::new();
+    let ni = 13;
+    let nj = 13;
+    let nk = 13;
 
-    let shift2 = (nj as f32) * particle_rad * 2.0 + particle_rad;
+    let half_extents = Vector3::new(ni as f32, nj as f32, nk as f32) * particle_rad;
+    let shift1 = Vector3::new(
+        ground_half_width - half_extents.x - ColliderDesc::<f32>::default_margin() * 2.0,
+        ground_thickness,
+        ground_half_width - half_extents.z - ColliderDesc::<f32>::default_margin() * 2.0,
+    );
+    let shift2 = Vector3::new(-shift1.x, ground_thickness, -shift1.z);
 
     for i in 0..ni {
         for j in 0..nj {
             for k in 0..nk {
-                let x = (i as f32) * particle_rad * 2.0 - ni as f32 * particle_rad;
-                let y = (j as f32 + 1.0) * particle_rad * 2.0;
-                let z = (k as f32) * particle_rad * 2.0 - nk as f32 * particle_rad;
-                points1.push(Point3::new(x, y, z));
-                points2.push(Point3::new(x, y + shift2, z));
+                let x = (i as f32) * particle_rad * 2.0 - half_extents.x;
+                let y = (j as f32) * particle_rad * 2.0;
+                let z = (k as f32) * particle_rad * 2.0 - half_extents.z;
+                points1.push(Point3::new(x, y, z) + shift1 + Vector3::repeat(particle_rad));
+                points1.push(Point3::new(x, y, z) + shift2 + Vector3::repeat(particle_rad));
             }
         }
     }
 
-    //    let fluid = Fluid::new(points1, particle_rad, 1.2, 0.1, 1.0, 0.5);
+    let fluid = Fluid::new(points1, particle_rad, 1000.0, 0.9, 1.0, 1.0);
+    let fluid_handle = liquid_world.add_fluid(fluid);
+    testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
+
+    //    let fluid = Fluid::new(points2, particle_rad, 1000.0, 0.9, 1.0, 1.02);
     //    let fluid_handle = liquid_world.add_fluid(fluid);
     //    testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
-    //
+
+    //    testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
+
     //    let fluid = Fluid::new(points2, particle_rad, 1.0, 0.1, 1.0, 0.5);
     //    let fluid_handle = liquid_world.add_fluid(fluid);
     //    testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
-    let shape = Cuboid::new(Vector3::repeat(0.5));
-    let aabb = ncollide3d::bounding_volume::local_aabb(&shape);
-    let samples = salva3d::sampling::volume_ray_sample(&shape, &aabb, particle_rad * 2.0);
-    println!("Num samples: {}", samples.len());
-    let mut fluid = Fluid::new(samples, particle_rad, 1.0, 0.5, 1.0, 1.015);
-    fluid.positions.iter_mut().for_each(|p| p.y += 2.0);
-    let fluid_handle = liquid_world.add_fluid(fluid);
-    testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
+    //    let shape = Cuboid::new(Vector3::repeat(0.2));
+    //    let aabb = ncollide3d::bounding_volume::local_aabb(&shape);
+    //    let samples = salva3d::sampling::volume_ray_sample(&shape, &aabb, particle_rad * 2.0);
+    //    println!("Num samples: {}", samples.len());
+    //    let mut fluid = Fluid::new(samples, particle_rad, 1000.0, 0.5, 1.0, 1.015);
+    //    fluid.positions.iter_mut().for_each(|p| p.y += 2.0);
+    //    let fluid_handle = liquid_world.add_fluid(fluid);
+    //    testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
-    /*
     /*
      * Ground.
      */
-    let ground_thickness = 0.1;
-    let ground_half_width = 1.15;
     let ground_shape = ShapeHandle::new(Cuboid::new(Vector3::new(
         ground_half_width,
         ground_thickness,
+        ground_half_width,
+    )));
+    let wall_shape = ShapeHandle::new(Cuboid::new(Vector3::new(
+        ground_thickness,
+        ground_half_height,
         ground_half_width,
     )));
 
     let ground_handle = bodies.insert(Ground::new());
 
     let wall_poses = [
-        Isometry3::translation(0.0, -ground_thickness, 0.0),
         Isometry3::new(
-            Vector3::new(ground_half_width, ground_half_width, 0.0),
-            Vector3::z() * (f32::consts::PI / 2.0),
+            Vector3::new(
+                0.0,
+                ground_half_height,
+                ground_half_width + ground_thickness,
+            ),
+            Vector3::y() * (f32::consts::PI / 2.0),
         ),
         Isometry3::new(
-            Vector3::new(-ground_half_width, ground_half_width, 0.0),
-            Vector3::z() * (f32::consts::PI / 2.0),
+            Vector3::new(
+                0.0,
+                ground_half_height,
+                -ground_half_width - ground_thickness,
+            ),
+            Vector3::y() * (f32::consts::PI / 2.0),
         ),
-        Isometry3::new(
-            Vector3::new(0.0, ground_half_width, ground_half_width),
-            Vector3::x() * (f32::consts::PI / 2.0),
+        Isometry3::translation(
+            ground_half_width + ground_thickness,
+            ground_half_height,
+            0.0,
         ),
-        Isometry3::new(
-            Vector3::new(0.0, ground_half_width, -ground_half_width),
-            Vector3::x() * (f32::consts::PI / 2.0),
+        Isometry3::translation(
+            -ground_half_width - ground_thickness,
+            ground_half_height,
+            0.0,
         ),
     ];
 
     for pose in wall_poses.into_iter() {
-        let co = ColliderDesc::new(ground_shape.clone())
+        let co = ColliderDesc::new(wall_shape.clone())
             .position(*pose)
             .build(BodyPartHandle(ground_handle, 0));
         let co_handle = colliders.insert(co);
@@ -117,6 +145,16 @@ pub fn init_world(testbed: &mut Testbed) {
         );
     }
 
+    let co = ColliderDesc::new(ground_shape).build(BodyPartHandle(ground_handle, 0));
+    let co_handle = colliders.insert(co);
+    let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
+    coupling_manager.register_coupling(
+        bo_handle,
+        co_handle,
+        CouplingMethod::DynamicContactSampling,
+    );
+
+    /*
     /*
      * Create a cuboid.
      */
@@ -144,8 +182,8 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * Set up the testbed.
      */
-    //    testbed.set_body_wireframe(ground_handle, true);
-    //    testbed.set_ground_handle(Some(ground_handle));
+    testbed.set_body_wireframe(ground_handle, true);
+    testbed.set_ground_handle(Some(ground_handle));
 
     testbed.set_world(
         mechanical_world,

@@ -18,7 +18,7 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * World
      */
-    let mechanical_world = DefaultMechanicalWorld::new(Vector2::new(0.0, -9.81));
+    let mechanical_world = DefaultMechanicalWorld::new(Vector2::new(0.0, -0.0));
     let geometrical_world = DefaultGeometricalWorld::new();
     let mut bodies = DefaultBodySet::new();
     let mut colliders = DefaultColliderSet::new();
@@ -28,8 +28,8 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * Liquid world.
      */
-    let particle_rad = 0.1;
-    let mut liquid_world = LiquidWorld::new(particle_rad, 1.5);
+    let particle_rad = 0.025;
+    let mut liquid_world = LiquidWorld::new(particle_rad, 2.0);
     let mut coupling_set = ColliderCouplingSet::new();
 
     // Liquid.
@@ -49,11 +49,11 @@ pub fn init_world(testbed: &mut Testbed) {
         }
     }
 
-    let fluid = Fluid::new(points1, particle_rad, 1.0, 0.5, 1.0, 1.0);
+    let fluid = Fluid::new(points1, particle_rad, 1000.0, 0.5, 1.0, 0.0);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
-    let fluid = Fluid::new(points2, particle_rad, 1.0, 0.5, 1.0, 1.0);
+    let fluid = Fluid::new(points2, particle_rad, 1000.0, 0.5, 1.0, 0.0);
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
