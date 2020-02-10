@@ -117,6 +117,7 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
                             //                                (cohesion_acc + curvature_acc) * (kij * dt / mi)
                             //                            );
 
+                            //                            println!("kij: {} curvature_acc: {:?}", kij, curvature_acc);
                             *velocity_change_i += (curvature_acc + cohesion_acc) * (kij * dt);
                         }
                     }
@@ -126,7 +127,6 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
 }
 
 fn cohesion_kernel<N: RealField>(r: N, h: N) -> N {
-    //    #[cfg(feature = "dim3")]
     let normalizer = na::convert::<_, N>(32.0f64) / (N::pi() * h.powi(9));
     let _2: N = na::convert(2.0f64);
 
@@ -138,5 +138,5 @@ fn cohesion_kernel<N: RealField>(r: N, h: N) -> N {
         N::zero()
     };
 
-    normalizer * coeff * h
+    normalizer * coeff
 }
