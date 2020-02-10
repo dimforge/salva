@@ -162,11 +162,13 @@ impl<N: RealField> DFSPHViscosity<N> {
                     denominator.column_mut(i).component_mul_mut(&inv_diag);
                 }
 
-                *beta_i = denominator
-                    .try_inverse()
-                    //                    .cholesky()
-                    //                    .map(|chol| chol.inverse())
-                    .unwrap_or_else(|| BetaMatrix::zeros());
+                let lu = denominator.lu();
+
+                if lu.determinant().abs() < na::convert(1.0e-6) {
+                    *beta_i = BetaMatrix::zeros();
+                } else {
+                    *beta_i = lu.try_inverse().unwrap_or_else(|| BetaMatrix::zeros());
+                }
 
                 for i in 0..SPATIAL_DIM {
                     let mut col = beta_i.column_mut(i);
@@ -195,9 +197,9 @@ impl<N: RealField> DFSPHViscosity<N> {
             let strain_rates_i = &mut self.strain_rates[fluid_id];
             let fluid_i = &fluids[fluid_id];
 
-            let err = par_iter_mut!(strain_rates_i).enumerate().fold(
-                N::zero(),
-                |curr_err, (i, strain_rates_i)| {
+            let it = par_iter_mut!(strain_rates_i)
+                .enumerate()
+                .map(|(i, strain_rates_i)| {
                     let mut fluid_rate = StrainRate::zeros();
 
                     for c in fluid_fluid_contacts.particle_contacts(i) {
@@ -213,13 +215,13 @@ impl<N: RealField> DFSPHViscosity<N> {
 
                     if compute_error {
                         strain_rates_i.error = fluid_rate - strain_rates_i.target;
-                        curr_err + strain_rates_i.error.lp_norm(1) / na::convert(6.0f64)
+                        strain_rates_i.error.lp_norm(1) / na::convert(6.0f64)
                     } else {
                         strain_rates_i.target = fluid_rate * fluid_i.viscosity;
                         N::zero()
                     }
-                },
-            );
+                });
+            let err = par_reduce_sum!(N::zero(), it);
 
             let nparts = fluids[fluid_id].num_particles();
             if nparts != 0 {
@@ -255,16 +257,7 @@ impl<N: RealField> DFSPHViscosity<N> {
                             let gradient = compute_gradient_matrix(&c.gradient);
 
                             // Compute velocity change.
-                            let coeff = (ui + uj) * (fluid1.particle_mass(c.i) / _2);
-                            //                            println!(
-                            //                                "Gradient: {:?}, coeff: {:?}, ui: {:?}, uj: {:?}, betai: {:?}, errori: {:?}",
-                            //                                gradient,
-                            //                                coeff,
-                            //                                ui,
-                            //                                uj,
-                            //                                betas[fluid_id][i],
-                            //                                strain_rates[fluid_id][i],
-                            //                            );
+                            let coeff = (ui + uj) * (fluid1.particle_mass(c.j) / _2);
                             *velocity_change += gradient.tr_mul(&coeff) * fluid1.particle_mass(c.i);
                         }
                     }
@@ -308,16 +301,14 @@ impl<N: RealField> DFSPHViscosity<N> {
                 velocity_changes,
                 true,
             );
-            println!(
-                "Average viscosity error: {}, break after niters: {}, unstable: {}",
-                avg_err,
-                i,
-                avg_err > last_err
-            );
 
-            if avg_err > last_err
-                || (avg_err <= self.max_viscosity_error && i >= self.min_viscosity_iter)
-            {
+            if avg_err <= self.max_viscosity_error && i >= self.min_viscosity_iter {
+                println!(
+                    "Average viscosity error: {}, break after niters: {}, unstable: {}",
+                    avg_err,
+                    i,
+                    avg_err > last_err
+                );
                 break;
             }
 
@@ -332,6 +323,5 @@ impl<N: RealField> DFSPHViscosity<N> {
                 velocity_changes,
             );
         }
-        println!("exit");
     }
 }
