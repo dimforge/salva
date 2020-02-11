@@ -36,7 +36,7 @@ pub struct ParticlesContacts<N: RealField> {
     // All the particle contact for one model.
     // Contacts involving the same particle `i` are adjascent.
     contacts: Vec<Contact<N>>,
-    // There is one range per perticle.
+    // There is one range per particle.
     contact_ranges: Vec<Range<usize>>,
 }
 
