@@ -50,11 +50,7 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
 
                     for c in fluid_fluid_contacts.particle_contacts(i) {
                         if c.j_model == fluid_id {
-                            normal += c
-                                .gradient
-//                                .try_normalize(na::convert(0.01))
-//                                .unwrap_or(c.gradient)
-                                * (fluid_i.particle_mass(c.j) / densities_i[c.j]);
+                            normal += c.gradient * (fluid_i.particle_mass(c.j) / densities_i[c.j]);
                         }
                     }
 
@@ -93,8 +89,6 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
             par_iter_mut!(velocity_changes_i)
                 .enumerate()
                 .for_each(|(i, velocity_change_i)| {
-                    let mi = fluid_i.particle_mass(i);
-
                     for c in fluid_fluid_contacts.particle_contacts(i) {
                         if c.j_model == fluid_id {
                             let dpos = fluid_i.positions[c.i] - fluid_i.positions[c.j];
@@ -111,13 +105,6 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
                             let curvature_acc =
                                 (normals_i[c.i] - normals_i[c.j]) * -fluid_i.surface_tension;
                             let kij = _2 * fluid_i.density0 / (densities_i[c.i] + densities_i[c.j]);
-
-                            //                            println!(
-                            //                                "Surface tension velocity change. {}",
-                            //                                (cohesion_acc + curvature_acc) * (kij * dt / mi)
-                            //                            );
-
-                            //                            println!("kij: {} curvature_acc: {:?}", kij, curvature_acc);
                             *velocity_change_i += (curvature_acc + cohesion_acc) * (kij * dt);
                         }
                     }

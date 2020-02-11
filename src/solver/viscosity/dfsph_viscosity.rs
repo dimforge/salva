@@ -117,13 +117,13 @@ impl<N: RealField> DFSPHViscosity<N> {
         }
     }
 
-    // NOTE: this actually computes beta / density_i^3
     fn compute_betas(
         &mut self,
         inv_dt: N,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
+        densities: &[Vec<N>],
     ) {
         let _2: N = na::convert(2.0f64);
 
@@ -132,6 +132,7 @@ impl<N: RealField> DFSPHViscosity<N> {
             let fluid_boundary_contacts = &fluid_boundary_contacts[fluid_id];
             let betas_i = &mut self.betas[fluid_id];
             let fluid_i = &fluids[fluid_id];
+            let densities_i = &densities[fluid_id];
 
             par_iter_mut!(betas_i).enumerate().for_each(|(i, beta_i)| {
                 let mut grad_sum = BetaGradientMatrix::zeros();
@@ -140,13 +141,14 @@ impl<N: RealField> DFSPHViscosity<N> {
                 for c in fluid_fluid_contacts.particle_contacts(i) {
                     if c.j_model == fluid_id {
                         let mat = compute_gradient_matrix(&c.gradient);
-                        let grad_i = mat * (fluid_i.particle_mass(c.j) / _2);
-                        squared_grad_sum += grad_i * grad_i.transpose();
+                        let grad_i = mat * (fluid_i.particle_mass(c.j) / (_2 * densities_i[c.i]));
+                        squared_grad_sum += grad_i * grad_i.transpose() / densities_i[c.i];
                         grad_sum += grad_i;
                     }
                 }
 
-                let mut denominator = squared_grad_sum + grad_sum * grad_sum.transpose();
+                let mut denominator =
+                    squared_grad_sum + grad_sum * grad_sum.transpose() / densities_i[i];
 
                 // Preconditionner.
                 let mut inv_diag = denominator.diagonal();
@@ -162,6 +164,15 @@ impl<N: RealField> DFSPHViscosity<N> {
                     denominator.column_mut(i).component_mul_mut(&inv_diag);
                 }
 
+                if SPATIAL_DIM == 3 {
+                    if denominator.determinant().abs() < na::convert(1.0e-6) {
+                        *beta_i = BetaMatrix::zeros()
+                    } else {
+                        *beta_i = denominator
+                            .try_inverse()
+                            .unwrap_or_else(|| BetaMatrix::zeros())
+                    }
+                }
                 let lu = denominator.lu();
 
                 if lu.determinant().abs() < na::convert(1.0e-6) {
@@ -178,13 +189,13 @@ impl<N: RealField> DFSPHViscosity<N> {
         }
     }
 
-    // NOTE: this actually computes the strain rates * density_i
     fn compute_strain_rates(
         &mut self,
         dt: N,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
+        densities: &[Vec<N>],
         velocity_changes: &mut [Vec<Vector<N>>],
         compute_error: bool,
     ) -> N {
@@ -196,6 +207,7 @@ impl<N: RealField> DFSPHViscosity<N> {
             let fluid_boundary_contacts = &fluid_boundary_contacts[fluid_id];
             let strain_rates_i = &mut self.strain_rates[fluid_id];
             let fluid_i = &fluids[fluid_id];
+            let densities_i = &densities[fluid_id];
 
             let it = par_iter_mut!(strain_rates_i)
                 .enumerate()
@@ -209,7 +221,8 @@ impl<N: RealField> DFSPHViscosity<N> {
                             let v_ji = v_j - v_i;
                             let rate = compute_strain_rate(&c.gradient, &v_ji);
 
-                            fluid_rate += rate * (fluid_i.particle_mass(c.j) / _2);
+                            fluid_rate +=
+                                rate * (fluid_i.particle_mass(c.j) / (_2 * densities_i[c.i]));
                         }
                     }
 
@@ -239,6 +252,7 @@ impl<N: RealField> DFSPHViscosity<N> {
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
+        densities: &[Vec<N>],
         velocity_changes: &mut [Vec<Vector<N>>],
     ) {
         let strain_rates = &self.strain_rates;
@@ -249,11 +263,13 @@ impl<N: RealField> DFSPHViscosity<N> {
             par_iter_mut!(velocity_changes[fluid_id])
                 .enumerate()
                 .for_each(|(i, velocity_change)| {
-                    let ui = betas[fluid_id][i] * strain_rates[fluid_id][i].error;
+                    let ui = betas[fluid_id][i] * strain_rates[fluid_id][i].error
+                        / (densities[fluid_id][i] * densities[fluid_id][i]);
 
                     for c in fluid_fluid_contacts[fluid_id].particle_contacts(i) {
                         if c.j_model == fluid_id {
-                            let uj = betas[fluid_id][c.j] * strain_rates[fluid_id][c.j].error;
+                            let uj = betas[fluid_id][c.j] * strain_rates[fluid_id][c.j].error
+                                / (densities[fluid_id][c.j] * densities[fluid_id][c.j]);
                             let gradient = compute_gradient_matrix(&c.gradient);
 
                             // Compute velocity change.
@@ -272,6 +288,7 @@ impl<N: RealField> DFSPHViscosity<N> {
         kernel_radius: N,
         contact_manager: &mut ContactManager<N>,
         fluids: &mut [Fluid<N>],
+        densities: &[Vec<N>],
         velocity_changes: &mut [Vec<Vector<N>>],
     ) {
         let _ = self.compute_betas(
@@ -279,6 +296,7 @@ impl<N: RealField> DFSPHViscosity<N> {
             &contact_manager.fluid_fluid_contacts,
             &contact_manager.fluid_boundary_contacts,
             fluids,
+            densities,
         );
 
         let _ = self.compute_strain_rates(
@@ -286,6 +304,7 @@ impl<N: RealField> DFSPHViscosity<N> {
             &contact_manager.fluid_fluid_contacts,
             &contact_manager.fluid_boundary_contacts,
             fluids,
+            densities,
             velocity_changes,
             false,
         );
@@ -298,17 +317,17 @@ impl<N: RealField> DFSPHViscosity<N> {
                 &contact_manager.fluid_fluid_contacts,
                 &contact_manager.fluid_boundary_contacts,
                 fluids,
+                densities,
                 velocity_changes,
                 true,
             );
-
+            println!(
+                "Average viscosity error: {}, break after niters: {}, unstable: {}",
+                avg_err,
+                i,
+                avg_err > last_err
+            );
             if avg_err <= self.max_viscosity_error && i >= self.min_viscosity_iter {
-                println!(
-                    "Average viscosity error: {}, break after niters: {}, unstable: {}",
-                    avg_err,
-                    i,
-                    avg_err > last_err
-                );
                 break;
             }
 
@@ -320,6 +339,7 @@ impl<N: RealField> DFSPHViscosity<N> {
                 &contact_manager.fluid_fluid_contacts,
                 &contact_manager.fluid_boundary_contacts,
                 fluids,
+                densities,
                 velocity_changes,
             );
         }

@@ -737,6 +737,7 @@ where
             kernel_radius,
             contact_manager,
             fluids,
+            &self.densities,
             &mut self.velocity_changes,
         );
 
