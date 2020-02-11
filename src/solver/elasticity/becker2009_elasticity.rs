@@ -9,6 +9,7 @@ use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
 use crate::math::{Matrix, Point, RotationMatrix, SpatialVector, Vector, DIM, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
+use crate::solver::NonPressureForce;
 use itertools::Itertools;
 
 fn elasticity_coefficients<N: RealField>(young_modulus: N, poisson_ratio: N) -> (N, N, N) {
@@ -105,8 +106,8 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
             self.d1, self.d1, self.d0,
         );
         #[rustfmt::skip]
-        #[cfg(feature = "dim2")]
-        let c_top_left = Matrix::new(
+            #[cfg(feature = "dim2")]
+            let c_top_left = Matrix::new(
             self.d0, self.d1,
             self.d1, self.d0,
         );
@@ -174,8 +175,12 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
                 }
             })
     }
+}
 
-    pub fn solve(
+impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureForce<N>
+    for Becker2009Elasticity<N, KernelDensity, KernelGradient>
+{
+    fn solve(
         &mut self,
         dt: N,
         kernel_radius: N,

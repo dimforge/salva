@@ -712,6 +712,16 @@ where
             .iter_mut()
             .for_each(|vs| vs.iter_mut().for_each(|v| v.fill(N::zero())));
 
+        for (fluid, velocity_changes) in fluids.iter_mut().zip(self.velocity_changes.iter_mut()) {
+            let mut forces = std::mem::replace(&mut fluid.nonpressure_forces, Vec::new());
+
+            for np_force in &mut forces {
+                np_force.solve(dt, kernel_radius, fluid, velocity_changes);
+            }
+
+            fluid.nonpressure_forces = forces;
+        }
+
         self.surface_tension.solve(
             dt,
             inv_dt,

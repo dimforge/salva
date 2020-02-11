@@ -1,4 +1,5 @@
 use crate::math::{Point, Vector};
+use crate::solver::NonPressureForce;
 use na::{self, DVector, RealField};
 
 /// The unique identifier of a fluid.
@@ -8,6 +9,8 @@ pub type FluidHandle = usize;
 ///
 /// A fluid object is composed of movable particles with additional properties like viscosity.
 pub struct Fluid<N: RealField> {
+    /// Nonpressure forces this fluid is subject to.
+    pub nonpressure_forces: Vec<Box<NonPressureForce<N>>>,
     /// The world-space position of the fluid particles.
     pub positions: Vec<Point<N>>,
     /// The velocities of the fluid particles.
@@ -20,7 +23,7 @@ pub struct Fluid<N: RealField> {
     pub viscosity: N,
     /// The viscosity coefficient between this fluid and boundaries.
     pub boundary_viscosity: N,
-    /// The surface tension coeficient.
+    /// The surface tension coefficient.
     pub surface_tension: N,
 }
 
@@ -50,6 +53,7 @@ impl<N: RealField> Fluid<N> {
             particle_radius * particle_radius * particle_radius * na::convert(8.0 * 0.8);
 
         Self {
+            nonpressure_forces: Vec::new(),
             positions: particle_positions,
             velocities,
             volumes: DVector::repeat(num_particles, particle_volume),
