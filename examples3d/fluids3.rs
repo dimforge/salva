@@ -11,7 +11,9 @@ use nphysics3d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed3d::Testbed;
 use salva3d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva3d::object::{Boundary, Fluid};
-use salva3d::solver::{Akinci2013SurfaceTension, Becker2009Elasticity, He2014SurfaceTension};
+use salva3d::solver::{
+    Akinci2013SurfaceTension, Becker2009Elasticity, DFSPHViscosity, He2014SurfaceTension,
+};
 use salva3d::LiquidWorld;
 use std::f32;
 
@@ -67,9 +69,11 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(100_000.0, 0.3, false);
     let surface_tension = Akinci2013SurfaceTension::new(1.0);
-    let mut fluid = Fluid::new(points1, particle_rad, 1000.0, 0.5, 1.0);
+    let viscosity = DFSPHViscosity::new(0.9);
+    let mut fluid = Fluid::new(points1, particle_rad, 1000.0);
     //    fluid.nonpressure_forces.push(Box::new(elasticity));
-    fluid.nonpressure_forces.push(Box::new(surface_tension));
+    //    fluid.nonpressure_forces.push(Box::new(surface_tension));
+    fluid.nonpressure_forces.push(Box::new(viscosity));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 

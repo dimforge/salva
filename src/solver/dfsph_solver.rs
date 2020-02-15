@@ -9,7 +9,6 @@ use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
 use crate::math::{Vector, DIM, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
-use crate::solver::DFSPHViscosity;
 
 /// A Position Based Fluid solver.
 pub struct DFSPHSolver<
@@ -24,7 +23,6 @@ pub struct DFSPHSolver<
     max_divergence_iter: usize,
     max_divergence_error: N,
     min_neighbors_for_divergence_solve: usize,
-    viscosity: DFSPHViscosity<N>,
     alphas: Vec<Vec<N>>,
     densities: Vec<Vec<N>>,
     predicted_densities: Vec<Vec<N>>,
@@ -51,7 +49,6 @@ where
             max_divergence_iter: 50,
             max_divergence_error: na::convert(0.1),
             min_neighbors_for_divergence_solve: if DIM == 2 { 6 } else { 20 },
-            viscosity: DFSPHViscosity::new(),
             alphas: Vec::new(),
             densities: Vec::new(),
             predicted_densities: Vec::new(),
@@ -164,8 +161,6 @@ where
             velocity_changes.resize(fluid.num_particles(), Vector::zeros());
             nonpressure_forces.resize(fluid.num_particles(), Vector::zeros());
         }
-
-        self.viscosity.init_with_fluids(fluids);
     }
 
     /// Initialize this solver with the given boundaries.
@@ -538,29 +533,6 @@ where
         }
     }
 
-    fn apply_viscosity(
-        &mut self,
-        inv_dt: N,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluids: &mut [Fluid<N>],
-    ) {
-        // Add XSPH viscosity
-        for (fluid_id, fluid_i) in fluids.iter().enumerate() {
-            let contacts = &fluid_fluid_contacts[fluid_id];
-            let forces = &mut self.nonpressure_forces[fluid_id];
-
-            par_iter_mut!(forces).enumerate().for_each(|(i, f)| {
-                for c in contacts.particle_contacts(i) {
-                    let fluid_j = &fluids[c.j_model];
-                    let dvel = fluid_j.velocities[c.j] - fluid_i.velocities[c.i];
-                    let extra_vel = dvel * (c.weight * fluid_i.viscosity);
-
-                    *f += extra_vel * inv_dt;
-                }
-            })
-        }
-    }
-
     fn pressure_solve(
         &mut self,
         dt: N,
@@ -632,19 +604,6 @@ where
                 boundaries,
             );
         }
-    }
-
-    fn nonpressure_solve(
-        &mut self,
-        dt: N,
-        inv_dt: N,
-        contact_manager: &mut ContactManager<N>,
-        fluids: &mut [Fluid<N>],
-    ) {
-        // Nonpressure forces.
-        self.clear_nonpressure_forces();
-        self.apply_viscosity(inv_dt, &contact_manager.fluid_fluid_contacts, fluids);
-        self.integrate_nonpressure_forces(dt, fluids);
     }
 
     /// Solves pressure and non-pressure force for the given fluids and boundaries.
@@ -736,16 +695,6 @@ where
             fluids,
             boundaries,
         );
-
-        //        self.viscosity.solve(
-        //            dt,
-        //            inv_dt,
-        //            kernel_radius,
-        //            contact_manager,
-        //            fluids,
-        //            &self.densities,
-        //            &mut self.velocity_changes,
-        //        );
 
         self.update_positions(dt, fluids);
         //        for fluid in fluids {

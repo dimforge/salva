@@ -19,10 +19,6 @@ pub struct Fluid<N: RealField> {
     pub volumes: DVector<N>,
     /// The rest density of this fluid.
     pub density0: N,
-    /// The viscosity coefficient of this fluid.
-    pub viscosity: N,
-    /// The viscosity coefficient between this fluid and boundaries.
-    pub boundary_viscosity: N,
 }
 
 impl<N: RealField> Fluid<N> {
@@ -33,8 +29,6 @@ impl<N: RealField> Fluid<N> {
         particle_positions: Vec<Point<N>>,
         particle_radius: N, // XXX: remove this parameter since it is already defined by the liquid world.
         density0: N,
-        viscosity: N,
-        boundary_viscosity: N,
     ) -> Self {
         let num_particles = particle_positions.len();
         let velocities = std::iter::repeat(Vector::zeros())
@@ -55,8 +49,6 @@ impl<N: RealField> Fluid<N> {
             velocities,
             volumes: DVector::repeat(num_particles, particle_volume),
             density0,
-            viscosity,
-            boundary_viscosity,
         }
     }
 

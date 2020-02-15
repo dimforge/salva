@@ -9,6 +9,7 @@ use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
 use crate::math::{Vector, DIM, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
+use crate::solver::NonPressureForce;
 
 #[cfg(feature = "dim2")]
 type BetaMatrix<N> = na::Matrix3<N>;
@@ -83,72 +84,65 @@ fn compute_gradient_matrix<N: RealField>(gradient: &Vector<N>) -> BetaGradientMa
 }
 
 pub struct DFSPHViscosity<N: RealField> {
-    min_viscosity_iter: usize,
-    max_viscosity_iter: usize,
-    max_viscosity_error: N,
-    betas: Vec<Vec<BetaMatrix<N>>>,
-    strain_rates: Vec<Vec<StrainRates<N>>>, // Contains (target rate, error rate)
+    pub min_viscosity_iter: usize,
+    pub max_viscosity_iter: usize,
+    pub max_viscosity_error: N,
+    viscosity_coefficient: N,
+    betas: Vec<BetaMatrix<N>>,
+    strain_rates: Vec<StrainRates<N>>,
 }
 
 impl<N: RealField> DFSPHViscosity<N> {
-    pub fn new() -> Self {
+    pub fn new(viscosity_coefficient: N) -> Self {
+        assert!(
+            viscosity_coefficient >= N::zero() && viscosity_coefficient <= N::one(),
+            "The viscosity coefficient must be between 0.0 and 1.0."
+        );
+
         Self {
             min_viscosity_iter: 1,
             max_viscosity_iter: 50,
             max_viscosity_error: na::convert(0.01),
+            viscosity_coefficient,
             betas: Vec::new(),
             strain_rates: Vec::new(),
         }
     }
 
-    /// Initialize this solver with the given fluids.
-    pub fn init_with_fluids(&mut self, fluids: &[Fluid<N>]) {
-        // Resize every buffer.
-        self.betas.resize(fluids.len(), Vec::new());
-        self.strain_rates.resize(fluids.len(), Vec::new());
-
-        for (fluid, betas, strain_rates) in itertools::multizip((
-            fluids.iter(),
-            self.betas.iter_mut(),
-            self.strain_rates.iter_mut(),
-        )) {
-            betas.resize(fluid.num_particles(), BetaMatrix::zeros());
-            strain_rates.resize(fluid.num_particles(), StrainRates::new());
+    fn init(&mut self, fluid: &Fluid<N>) {
+        if self.betas.len() != fluid.num_particles() {
+            self.betas
+                .resize(fluid.num_particles(), BetaMatrix::zeros());
+            self.strain_rates
+                .resize(fluid.num_particles(), StrainRates::new());
         }
     }
 
     fn compute_betas(
         &mut self,
-        inv_dt: N,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluid_boundary_contacts: &[ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-        densities: &[Vec<N>],
+        fluid_fluid_contacts: &ParticlesContacts<N>,
+        fluid: &Fluid<N>,
+        densities: &[N],
     ) {
         let _2: N = na::convert(2.0f64);
 
-        for fluid_id in 0..fluids.len() {
-            let fluid_fluid_contacts = &fluid_fluid_contacts[fluid_id];
-            let fluid_boundary_contacts = &fluid_boundary_contacts[fluid_id];
-            let betas_i = &mut self.betas[fluid_id];
-            let fluid_i = &fluids[fluid_id];
-            let densities_i = &densities[fluid_id];
-
-            par_iter_mut!(betas_i).enumerate().for_each(|(i, beta_i)| {
+        par_iter_mut!(self.betas)
+            .enumerate()
+            .for_each(|(i, beta_i)| {
                 let mut grad_sum = BetaGradientMatrix::zeros();
                 let mut squared_grad_sum = BetaMatrix::zeros();
 
                 for c in fluid_fluid_contacts.particle_contacts(i) {
-                    if c.j_model == fluid_id {
+                    if c.i_model == c.j_model {
                         let mat = compute_gradient_matrix(&c.gradient);
-                        let grad_i = mat * (fluid_i.particle_mass(c.j) / (_2 * densities_i[c.i]));
-                        squared_grad_sum += grad_i * grad_i.transpose() / densities_i[c.i];
+                        let grad_i = mat * (fluid.particle_mass(c.j) / (_2 * densities[c.i]));
+                        squared_grad_sum += grad_i * grad_i.transpose() / densities[c.i];
                         grad_sum += grad_i;
                     }
                 }
 
                 let mut denominator =
-                    squared_grad_sum + grad_sum * grad_sum.transpose() / densities_i[i];
+                    squared_grad_sum + grad_sum * grad_sum.transpose() / densities[i];
 
                 // Preconditionner.
                 let mut inv_diag = denominator.diagonal();
@@ -186,60 +180,51 @@ impl<N: RealField> DFSPHViscosity<N> {
                     col *= inv_diag[i];
                 }
             })
-        }
     }
 
     fn compute_strain_rates(
         &mut self,
         dt: N,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluid_boundary_contacts: &[ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-        densities: &[Vec<N>],
-        velocity_changes: &mut [Vec<Vector<N>>],
+        fluid_fluid_contacts: &ParticlesContacts<N>,
+        fluid: &Fluid<N>,
+        densities: &[N],
+        velocity_changes: &mut [Vector<N>],
         compute_error: bool,
     ) -> N {
         let mut max_error = N::zero();
+        let viscosity_coefficient = self.viscosity_coefficient;
         let _2: N = na::convert(2.0f64);
 
-        for fluid_id in 0..fluids.len() {
-            let fluid_fluid_contacts = &fluid_fluid_contacts[fluid_id];
-            let fluid_boundary_contacts = &fluid_boundary_contacts[fluid_id];
-            let strain_rates_i = &mut self.strain_rates[fluid_id];
-            let fluid_i = &fluids[fluid_id];
-            let densities_i = &densities[fluid_id];
+        let it = par_iter_mut!(self.strain_rates)
+            .enumerate()
+            .map(|(i, strain_rates_i)| {
+                let mut fluid_rate = StrainRate::zeros();
 
-            let it = par_iter_mut!(strain_rates_i)
-                .enumerate()
-                .map(|(i, strain_rates_i)| {
-                    let mut fluid_rate = StrainRate::zeros();
+                for c in fluid_fluid_contacts.particle_contacts(i) {
+                    if c.i_model == c.j_model {
+                        let v_i = fluid.velocities[c.i] + velocity_changes[c.i];
+                        let v_j = fluid.velocities[c.j] + velocity_changes[c.j];
+                        let v_ji = v_j - v_i;
+                        let rate = compute_strain_rate(&c.gradient, &v_ji);
 
-                    for c in fluid_fluid_contacts.particle_contacts(i) {
-                        if c.j_model == fluid_id {
-                            let v_i = fluid_i.velocities[c.i] + velocity_changes[fluid_id][c.i];
-                            let v_j = fluid_i.velocities[c.j] + velocity_changes[fluid_id][c.j];
-                            let v_ji = v_j - v_i;
-                            let rate = compute_strain_rate(&c.gradient, &v_ji);
-
-                            fluid_rate +=
-                                rate * (fluid_i.particle_mass(c.j) / (_2 * densities_i[c.i]));
-                        }
+                        fluid_rate += rate * (fluid.particle_mass(c.j) / (_2 * densities[c.i]));
                     }
+                }
 
-                    if compute_error {
-                        strain_rates_i.error = fluid_rate - strain_rates_i.target;
-                        strain_rates_i.error.lp_norm(1) / na::convert(6.0f64)
-                    } else {
-                        strain_rates_i.target = fluid_rate * fluid_i.viscosity;
-                        N::zero()
-                    }
-                });
-            let err = par_reduce_sum!(N::zero(), it);
+                if compute_error {
+                    strain_rates_i.error = fluid_rate - strain_rates_i.target;
+                    strain_rates_i.error.lp_norm(1) / na::convert(6.0f64)
+                } else {
+                    strain_rates_i.target = fluid_rate * (N::one() - viscosity_coefficient);
+                    N::zero()
+                }
+            });
 
-            let nparts = fluids[fluid_id].num_particles();
-            if nparts != 0 {
-                max_error = max_error.max(err / na::convert(nparts as f64));
-            }
+        let err = par_reduce_sum!(N::zero(), it);
+
+        let nparts = fluid.num_particles();
+        if nparts != 0 {
+            max_error = max_error.max(err / na::convert(nparts as f64));
         }
 
         max_error
@@ -248,62 +233,53 @@ impl<N: RealField> DFSPHViscosity<N> {
     fn compute_velocity_changes_for_viscosity(
         &self,
         dt: N,
-        inv_dt: N,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluid_boundary_contacts: &[ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-        densities: &[Vec<N>],
-        velocity_changes: &mut [Vec<Vector<N>>],
+        fluid_fluid_contacts: &ParticlesContacts<N>,
+        fluid: &Fluid<N>,
+        densities: &[N],
+        velocity_changes: &mut [Vector<N>],
     ) {
         let strain_rates = &self.strain_rates;
         let betas = &self.betas;
         let _2: N = na::convert(2.0);
 
-        for (fluid_id, fluid1) in fluids.iter().enumerate() {
-            par_iter_mut!(velocity_changes[fluid_id])
-                .enumerate()
-                .for_each(|(i, velocity_change)| {
-                    let ui = betas[fluid_id][i] * strain_rates[fluid_id][i].error
-                        / (densities[fluid_id][i] * densities[fluid_id][i]);
+        par_iter_mut!(velocity_changes)
+            .enumerate()
+            .for_each(|(i, velocity_change)| {
+                let ui = betas[i] * strain_rates[i].error / (densities[i] * densities[i]);
 
-                    for c in fluid_fluid_contacts[fluid_id].particle_contacts(i) {
-                        if c.j_model == fluid_id {
-                            let uj = betas[fluid_id][c.j] * strain_rates[fluid_id][c.j].error
-                                / (densities[fluid_id][c.j] * densities[fluid_id][c.j]);
-                            let gradient = compute_gradient_matrix(&c.gradient);
+                for c in fluid_fluid_contacts.particle_contacts(i) {
+                    if c.i_model == c.j_model {
+                        let uj = betas[c.j] * strain_rates[c.j].error
+                            / (densities[c.j] * densities[c.j]);
+                        let gradient = compute_gradient_matrix(&c.gradient);
 
-                            // Compute velocity change.
-                            let coeff = (ui + uj) * (fluid1.particle_mass(c.j) / _2);
-                            *velocity_change += gradient.tr_mul(&coeff) * fluid1.particle_mass(c.i);
-                        }
+                        // Compute velocity change.
+                        let coeff = (ui + uj) * (fluid.particle_mass(c.j) / _2);
+                        *velocity_change += gradient.tr_mul(&coeff) * fluid.particle_mass(c.i);
                     }
-                })
-        }
+                }
+            })
     }
+}
 
-    pub fn solve(
+impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
+    fn solve(
         &mut self,
         dt: N,
-        inv_dt: N,
         kernel_radius: N,
-        contact_manager: &mut ContactManager<N>,
-        fluids: &mut [Fluid<N>],
-        densities: &[Vec<N>],
-        velocity_changes: &mut [Vec<Vector<N>>],
+        fluid_fluid_contacts: &ParticlesContacts<N>,
+        fluid: &Fluid<N>,
+        densities: &[N],
+        velocity_changes: &mut [Vector<N>],
     ) {
-        let _ = self.compute_betas(
-            inv_dt,
-            &contact_manager.fluid_fluid_contacts,
-            &contact_manager.fluid_boundary_contacts,
-            fluids,
-            densities,
-        );
+        self.init(fluid);
+
+        let _ = self.compute_betas(fluid_fluid_contacts, fluid, densities);
 
         let _ = self.compute_strain_rates(
             dt,
-            &contact_manager.fluid_fluid_contacts,
-            &contact_manager.fluid_boundary_contacts,
-            fluids,
+            fluid_fluid_contacts,
+            fluid,
             densities,
             velocity_changes,
             false,
@@ -314,20 +290,20 @@ impl<N: RealField> DFSPHViscosity<N> {
         for i in 0..self.max_viscosity_iter {
             let avg_err = self.compute_strain_rates(
                 dt,
-                &contact_manager.fluid_fluid_contacts,
-                &contact_manager.fluid_boundary_contacts,
-                fluids,
+                fluid_fluid_contacts,
+                fluid,
                 densities,
                 velocity_changes,
                 true,
             );
-            println!(
-                "Average viscosity error: {}, break after niters: {}, unstable: {}",
-                avg_err,
-                i,
-                avg_err > last_err
-            );
+
             if avg_err <= self.max_viscosity_error && i >= self.min_viscosity_iter {
+                println!(
+                    "Average viscosity error: {}, break after niters: {}, unstable: {}",
+                    avg_err,
+                    i,
+                    avg_err > last_err
+                );
                 break;
             }
 
@@ -335,10 +311,8 @@ impl<N: RealField> DFSPHViscosity<N> {
 
             self.compute_velocity_changes_for_viscosity(
                 dt,
-                inv_dt,
-                &contact_manager.fluid_fluid_contacts,
-                &contact_manager.fluid_boundary_contacts,
-                fluids,
+                fluid_fluid_contacts,
+                fluid,
                 densities,
                 velocity_changes,
             );

@@ -353,29 +353,6 @@ where
         }
     }
 
-    fn apply_viscosity(
-        &mut self,
-        inv_dt: N,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluids: &mut [Fluid<N>],
-    ) {
-        // Add XSPH viscosity
-        for (fluid_id, fluid_i) in fluids.iter().enumerate() {
-            let contacts = &fluid_fluid_contacts[fluid_id];
-            let forces = &mut self.nonpressure_forces[fluid_id];
-
-            par_iter_mut!(forces).enumerate().for_each(|(i, f)| {
-                for c in contacts.particle_contacts(i) {
-                    let fluid_j = &fluids[c.j_model];
-                    let dvel = fluid_j.velocities[c.j] - fluid_i.velocities[c.i];
-                    let extra_vel = dvel * (c.weight * fluid_i.viscosity);
-
-                    *f += extra_vel * inv_dt;
-                }
-            })
-        }
-    }
-
     fn pressure_solve(
         &mut self,
         dt: N,
@@ -433,7 +410,6 @@ where
     ) {
         // Nonpressure forces.
         self.clear_nonpressure_forces();
-        self.apply_viscosity(inv_dt, &contact_manager.fluid_fluid_contacts, fluids);
         self.integrate_nonpressure_forces(dt, fluids);
     }
 

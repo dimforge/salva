@@ -51,13 +51,13 @@ pub fn init_world(testbed: &mut Testbed) {
     }
 
     let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(100_000.0, 0.3, false);
-    let mut fluid = Fluid::new(points1, particle_rad, 10.0, 0.9, 1.0, 1.0);
+    let mut fluid = Fluid::new(points1, particle_rad, 10.0);
     fluid.nonpressure_forces.push(Box::new(elasticity));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
     let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(10_000.0, 0.3, false);
-    let mut fluid = Fluid::new(points2, particle_rad, 10.0, 0.5, 1.0, 1.0);
+    let mut fluid = Fluid::new(points2, particle_rad, 10.0);
     fluid.nonpressure_forces.push(Box::new(elasticity));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
