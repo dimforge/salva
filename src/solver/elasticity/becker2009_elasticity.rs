@@ -11,7 +11,6 @@ use crate::math::{Matrix, Point, RotationMatrix, SpatialVector, Vector, DIM, SPA
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use itertools::Itertools;
-use std::iter;
 
 fn elasticity_coefficients<N: RealField>(young_modulus: N, poisson_ratio: N) -> (N, N, N) {
     let _1 = N::one();
@@ -83,12 +82,12 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
 
         if self.positions0.len() != nparticles {
             self.positions0 = fluid.positions.clone();
-            self.volumes0 = (0..nparticles).map(|_| N::zero()).collect();
-            self.rotations = (0..nparticles)
-                .map(|_| RotationMatrix::identity())
-                .collect();
-            self.deformation_gradient_tr = (0..nparticles).map(|_| Matrix::identity()).collect();
-            self.stress = (0..nparticles).map(|_| SpatialVector::zeros()).collect();
+            self.volumes0.resize(nparticles, N::zero());
+            self.rotations
+                .resize(nparticles, RotationMatrix::identity());
+            self.deformation_gradient_tr
+                .resize(nparticles, Matrix::identity());
+            self.stress.resize(nparticles, SpatialVector::zeros());
             geometry::compute_self_contacts(kernel_radius, fluid, &mut self.contacts0);
 
             for c in self.contacts0.contacts_mut() {
@@ -263,7 +262,9 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
         &mut self,
         dt: N,
         kernel_radius: N,
+        _fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
+        _densities: &[N],
         velocity_changes: &mut [Vector<N>],
     ) {
         self.init(kernel_radius, fluid);

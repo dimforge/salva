@@ -11,7 +11,7 @@ use nphysics3d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed3d::Testbed;
 use salva3d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva3d::object::{Boundary, Fluid};
-use salva3d::solver::Becker2009Elasticity;
+use salva3d::solver::{Akinci2013SurfaceTension, Becker2009Elasticity, He2014SurfaceTension};
 use salva3d::LiquidWorld;
 use std::f32;
 
@@ -66,8 +66,10 @@ pub fn init_world(testbed: &mut Testbed) {
     }
 
     let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(100_000.0, 0.3, false);
-    let mut fluid = Fluid::new(points1, particle_rad, 1000.0, 0.5, 1.0, 1.0);
-    fluid.nonpressure_forces.push(Box::new(elasticity));
+    let surface_tension = Akinci2013SurfaceTension::new(1.0);
+    let mut fluid = Fluid::new(points1, particle_rad, 1000.0, 0.5, 1.0);
+    //    fluid.nonpressure_forces.push(Box::new(elasticity));
+    fluid.nonpressure_forces.push(Box::new(surface_tension));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
@@ -135,7 +137,7 @@ pub fn init_world(testbed: &mut Testbed) {
         ),
     ];
 
-    for pose in wall_poses.into_iter() {
+    for pose in wall_poses.iter() {
         let co = ColliderDesc::new(wall_shape.clone())
             .position(*pose)
             .build(BodyPartHandle(ground_handle, 0));

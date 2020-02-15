@@ -10,9 +10,6 @@ use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
 use crate::math::{Vector, DIM, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
 use crate::solver::DFSPHViscosity;
-use crate::solver::{Akinci2013SurfaceTension, He2014SurfaceTension};
-
-type SurfaceTension<N> = Akinci2013SurfaceTension<N>;
 
 /// A Position Based Fluid solver.
 pub struct DFSPHSolver<
@@ -28,7 +25,6 @@ pub struct DFSPHSolver<
     max_divergence_error: N,
     min_neighbors_for_divergence_solve: usize,
     viscosity: DFSPHViscosity<N>,
-    surface_tension: SurfaceTension<N>,
     alphas: Vec<Vec<N>>,
     densities: Vec<Vec<N>>,
     predicted_densities: Vec<Vec<N>>,
@@ -56,7 +52,6 @@ where
             max_divergence_error: na::convert(0.1),
             min_neighbors_for_divergence_solve: if DIM == 2 { 6 } else { 20 },
             viscosity: DFSPHViscosity::new(),
-            surface_tension: SurfaceTension::new(),
             alphas: Vec::new(),
             densities: Vec::new(),
             predicted_densities: Vec::new(),
@@ -171,7 +166,6 @@ where
         }
 
         self.viscosity.init_with_fluids(fluids);
-        self.surface_tension.init_with_fluids(fluids);
     }
 
     /// Initialize this solver with the given boundaries.
@@ -712,25 +706,27 @@ where
             .iter_mut()
             .for_each(|vs| vs.iter_mut().for_each(|v| v.fill(N::zero())));
 
-        for (fluid, velocity_changes) in fluids.iter_mut().zip(self.velocity_changes.iter_mut()) {
+        for (fluid, fluid_fluid_contacts, densities, velocity_changes) in itertools::multizip((
+            &mut *fluids,
+            &contact_manager.fluid_fluid_contacts,
+            &self.densities,
+            &mut self.velocity_changes,
+        )) {
             let mut forces = std::mem::replace(&mut fluid.nonpressure_forces, Vec::new());
 
             for np_force in &mut forces {
-                np_force.solve(dt, kernel_radius, fluid, velocity_changes);
+                np_force.solve(
+                    dt,
+                    kernel_radius,
+                    fluid_fluid_contacts,
+                    fluid,
+                    densities,
+                    velocity_changes,
+                );
             }
 
             fluid.nonpressure_forces = forces;
         }
-
-        //        self.surface_tension.solve(
-        //            dt,
-        //            inv_dt,
-        //            kernel_radius,
-        //            contact_manager,
-        //            fluids,
-        //            &self.densities,
-        //            &mut self.velocity_changes,
-        //        );
 
         self.pressure_solve(
             dt,

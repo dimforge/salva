@@ -23,8 +23,6 @@ pub struct Fluid<N: RealField> {
     pub viscosity: N,
     /// The viscosity coefficient between this fluid and boundaries.
     pub boundary_viscosity: N,
-    /// The surface tension coefficient.
-    pub surface_tension: N,
 }
 
 impl<N: RealField> Fluid<N> {
@@ -37,7 +35,6 @@ impl<N: RealField> Fluid<N> {
         density0: N,
         viscosity: N,
         boundary_viscosity: N,
-        surface_tension: N,
     ) -> Self {
         let num_particles = particle_positions.len();
         let velocities = std::iter::repeat(Vector::zeros())
@@ -60,7 +57,6 @@ impl<N: RealField> Fluid<N> {
             density0,
             viscosity,
             boundary_viscosity,
-            surface_tension,
         }
     }
 
