@@ -4,6 +4,7 @@ use na::RealField;
 /// The Poly6 smoothing kernel.
 ///
 /// Refer to "Particle-Based Fluid Simulation for Interactive Applications", Müller et al.
+#[derive(Copy, Clone, Debug)]
 pub struct Poly6Kernel;
 
 impl Kernel for Poly6Kernel {

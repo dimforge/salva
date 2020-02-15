@@ -722,15 +722,15 @@ where
             fluid.nonpressure_forces = forces;
         }
 
-        self.surface_tension.solve(
-            dt,
-            inv_dt,
-            kernel_radius,
-            contact_manager,
-            fluids,
-            &self.densities,
-            &mut self.velocity_changes,
-        );
+        //        self.surface_tension.solve(
+        //            dt,
+        //            inv_dt,
+        //            kernel_radius,
+        //            contact_manager,
+        //            fluids,
+        //            &self.densities,
+        //            &mut self.velocity_changes,
+        //        );
 
         self.pressure_solve(
             dt,
@@ -741,15 +741,15 @@ where
             boundaries,
         );
 
-        self.viscosity.solve(
-            dt,
-            inv_dt,
-            kernel_radius,
-            contact_manager,
-            fluids,
-            &self.densities,
-            &mut self.velocity_changes,
-        );
+        //        self.viscosity.solve(
+        //            dt,
+        //            inv_dt,
+        //            kernel_radius,
+        //            contact_manager,
+        //            fluids,
+        //            &self.densities,
+        //            &mut self.velocity_changes,
+        //        );
 
         self.update_positions(dt, fluids);
         //        for fluid in fluids {

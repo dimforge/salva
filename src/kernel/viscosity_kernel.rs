@@ -4,6 +4,7 @@ use na::RealField;
 /// The Viscosity smoothing kernel.
 ///
 /// Refer to "Particle-Based Fluid Simulation for Interactive Applications", Müller et al.pub struct ViscosityKernel;
+#[derive(Copy, Clone, Debug)]
 pub struct ViscosityKernel;
 
 impl Kernel for ViscosityKernel {

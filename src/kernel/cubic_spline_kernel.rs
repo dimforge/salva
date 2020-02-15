@@ -4,6 +4,7 @@ use na::RealField;
 /// The cubic spline smoothing kernel.
 ///
 /// See https://pysph.readthedocs.io/en/latest/reference/kernels.html
+#[derive(Copy, Clone, Debug)]
 pub struct CubicSplineKernel;
 
 impl Kernel for CubicSplineKernel {

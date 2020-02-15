@@ -4,6 +4,7 @@ use na::RealField;
 /// The Spiky smoothing kernel.
 ///
 /// Refer to "Particle-Based Fluid Simulation for Interactive Applications", Müller et al.pub struct SpikyKernel;
+#[derive(Copy, Clone, Debug)]
 pub struct SpikyKernel;
 
 impl Kernel for SpikyKernel {

@@ -5,12 +5,13 @@ use rayon::prelude::*;
 
 use na::{self, RealField};
 
-use crate::geometry::{ContactManager, ParticlesContacts};
+use crate::geometry::{self, ContactManager, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
 use crate::math::{Matrix, Point, RotationMatrix, SpatialVector, Vector, DIM, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use itertools::Itertools;
+use std::iter;
 
 fn elasticity_coefficients<N: RealField>(young_modulus: N, poisson_ratio: N) -> (N, N, N) {
     let _1 = N::one();
@@ -37,6 +38,7 @@ fn sym_mat_mul_vec<N: RealField>(mat: &SpatialVector<N>, v: &Vector<N>) -> Vecto
 }
 
 // https://cg.informatik.uni-freiburg.de/publications/2009_NP_corotatedSPH.pdf
+#[derive(Clone)]
 pub struct Becker2009Elasticity<
     N: RealField,
     KernelDensity: Kernel = CubicSplineKernel,
@@ -46,6 +48,7 @@ pub struct Becker2009Elasticity<
     d1: N,
     d2: N,
     nonlinear_strain: bool,
+    volumes0: Vec<N>,
     positions0: Vec<Point<N>>,
     contacts0: ParticlesContacts<N>,
     rotations: Vec<RotationMatrix<N>>,
@@ -57,6 +60,53 @@ pub struct Becker2009Elasticity<
 impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
     Becker2009Elasticity<N, KernelDensity, KernelGradient>
 {
+    pub fn new(young_modulus: N, poisson_ratio: N, nonlinear_strain: bool) -> Self {
+        let (d0, d1, d2) = elasticity_coefficients(young_modulus, poisson_ratio);
+
+        Self {
+            d0,
+            d1,
+            d2,
+            nonlinear_strain,
+            volumes0: Vec::new(),
+            positions0: Vec::new(),
+            contacts0: ParticlesContacts::new(),
+            rotations: Vec::new(),
+            deformation_gradient_tr: Vec::new(),
+            stress: Vec::new(),
+            phantom: PhantomData,
+        }
+    }
+
+    fn init(&mut self, kernel_radius: N, fluid: &Fluid<N>) {
+        let nparticles = fluid.positions.len();
+
+        if self.positions0.len() != nparticles {
+            self.positions0 = fluid.positions.clone();
+            self.volumes0 = (0..nparticles).map(|_| N::zero()).collect();
+            self.rotations = (0..nparticles)
+                .map(|_| RotationMatrix::identity())
+                .collect();
+            self.deformation_gradient_tr = (0..nparticles).map(|_| Matrix::identity()).collect();
+            self.stress = (0..nparticles).map(|_| SpatialVector::zeros()).collect();
+            geometry::compute_self_contacts(kernel_radius, fluid, &mut self.contacts0);
+
+            for c in self.contacts0.contacts_mut() {
+                let p1 = &self.positions0[c.i];
+                let p2 = &self.positions0[c.j];
+                c.weight = KernelDensity::points_apply(p1, p2, kernel_radius);
+                c.gradient = KernelGradient::points_apply_diff1(p1, p2, kernel_radius);
+
+                self.volumes0[c.i] += fluid.particle_mass(c.j) * c.weight;
+                self.volumes0[c.j] += fluid.particle_mass(c.i) * c.weight;
+            }
+
+            for i in 0..nparticles {
+                self.volumes0[i] = fluid.particle_mass(i) / self.volumes0[i];
+            }
+        }
+    }
+
     fn compute_rotations(&mut self, kernel_radius: N, fluid: &Fluid<N>) {
         let _2: N = na::convert(2.0f64);
 
@@ -114,6 +164,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
         let d2 = self.d2;
 
         let nonlinear_strain = self.nonlinear_strain;
+        let volumes0 = &self.volumes0;
 
         par_iter_mut!(&mut self.deformation_gradient_tr)
             .zip(&mut self.stress)
@@ -125,7 +176,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
                     let p_ji = fluid.positions[c.j] - fluid.positions[c.i];
                     let p0_ji = positions0[c.j] - positions0[c.i];
                     let u_ji = rotations[c.i].inverse_transform_vector(&(p_ji)) - p0_ji;
-                    grad_tr += (c.gradient * fluid.volumes[c.j]) * u_ji.transpose();
+                    grad_tr += (c.gradient * volumes0[c.j]) * u_ji.transpose();
                 }
 
                 *deformation_grad_tr = grad_tr;
@@ -173,6 +224,34 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
                         );
                     }
                 }
+
+                #[cfg(feature = "dim2")]
+                {
+                    if nonlinear_strain {
+                        let j = grad_tr + Matrix::identity();
+                        let jjt = j * j.transpose();
+
+                        let stress01 =
+                            c_top_left * Vector::new(jjt.m11 - N::one(), jjt.m22 - N::one()) * _0_5;
+                        *stress = SpatialVector::new(stress01.x, stress01.y, jjt.m21 * _0_5 * d2);
+                    } else {
+                        // let strain = Vector::new(
+                        //     grad_tr.m11,
+                        //     grad_tr.m22,
+                        //     grad_tr.m33,
+                        //     (grad_tr.m21 + grad_tr.m12) * _0_5,
+                        //     (grad_tr.m31 + grad_tr.m13) * _0_5,
+                        //     (grad_tr.m23 + grad_tr.m32) * _0_5,
+                        // );
+
+                        let stress01 = c_top_left * Vector::new(grad_tr.m11, grad_tr.m22);
+                        *stress = SpatialVector::new(
+                            stress01.x,
+                            stress01.y,
+                            (grad_tr.m21 + grad_tr.m12) * _0_5 * d2,
+                        );
+                    }
+                }
             })
     }
 }
@@ -187,12 +266,15 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
         fluid: &Fluid<N>,
         velocity_changes: &mut [Vector<N>],
     ) {
+        self.init(kernel_radius, fluid);
+
         let _0_5: N = na::convert(0.5f64);
         self.compute_rotations(kernel_radius, fluid);
         self.compute_stresses(kernel_radius, fluid);
 
         // Compute and apply forces.
         let contacts0 = &self.contacts0;
+        let volumes0 = &self.volumes0;
         let deformation_gradient_tr = &self.deformation_gradient_tr;
         let rotations = &self.rotations;
         let stress = &self.stress;
@@ -205,16 +287,16 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
                         let mut force = Vector::zeros();
 
                         let grad_tr_i = &deformation_gradient_tr[c.i];
-                        let d_ij = c.gradient * fluid.volumes[c.j];
+                        let d_ij = c.gradient * volumes0[c.j];
                         let sigma_d_ij = sym_mat_mul_vec(&stress[c.i], &d_ij);
-                        let f_ji = (sigma_d_ij + grad_tr_i * sigma_d_ij) * -fluid.volumes[c.i];
+                        let f_ji = (sigma_d_ij + grad_tr_i * sigma_d_ij) * -volumes0[c.i];
 
                         let grad_tr_j = &deformation_gradient_tr[c.j];
-                        let d_ji = c.gradient * (-fluid.volumes[c.i]);
+                        let d_ji = c.gradient * (-volumes0[c.i]);
                         let sigma_d_ji = sym_mat_mul_vec(&stress[c.j], &d_ji);
-                        let f_ij = (sigma_d_ji + grad_tr_j * sigma_d_ji) * -fluid.volumes[c.j];
+                        let f_ij = (sigma_d_ji + grad_tr_j * sigma_d_ji) * -volumes0[c.j];
 
-                        force += (rotations[c.j] * f_ij - (rotations[c.i] * f_ij)) / _0_5;
+                        force += (rotations[c.j] * f_ij - (rotations[c.i] * f_ji)) * _0_5;
 
                         *velocity_change += force * (dt / fluid.particle_mass(i));
                     }
@@ -226,13 +308,13 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
                     for c in contacts0.particle_contacts(i) {
                         let mut force = Vector::zeros();
 
-                        let d_ij = c.gradient * fluid.volumes[c.j];
-                        let f_ji = sym_mat_mul_vec(&stress[c.i], &d_ij) * -fluid.volumes[c.i];
+                        let d_ij = c.gradient * volumes0[c.j];
+                        let f_ji = sym_mat_mul_vec(&stress[c.i], &d_ij) * -volumes0[c.i];
 
-                        let d_ji = c.gradient * (-fluid.volumes[c.i]);
-                        let f_ij = sym_mat_mul_vec(&stress[c.j], &d_ji) * -fluid.volumes[c.j];
+                        let d_ji = c.gradient * (-volumes0[c.i]);
+                        let f_ij = sym_mat_mul_vec(&stress[c.j], &d_ji) * -volumes0[c.j];
 
-                        force += (rotations[c.j] * f_ij - (rotations[c.i] * f_ij)) / _0_5;
+                        force += (rotations[c.j] * f_ij - (rotations[c.i] * f_ji)) * _0_5;
 
                         *velocity_change += force * (dt / fluid.particle_mass(i));
                     }

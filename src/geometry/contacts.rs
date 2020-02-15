@@ -235,3 +235,48 @@ pub fn compute_contacts<N: RealField>(
         }
     }
 }
+
+pub fn compute_self_contacts<N: RealField>(
+    h: N,
+    fluid: &Fluid<N>,
+    contacts: &mut ParticlesContacts<N>,
+) {
+    contacts.contacts.clear();
+    contacts.contact_ranges.resize(fluid.num_particles(), 0..0);
+
+    let mut grid = HGrid::new(h);
+    for (i, particle) in fluid.positions.iter().enumerate() {
+        grid.insert(particle, i);
+    }
+
+    for (cell, curr_particles) in grid.cells() {
+        let neighbors: Vec<_> = grid.neighbor_cells(cell, h).collect();
+
+        for particle_i in curr_particles {
+            let start = contacts.contacts.len();
+
+            contacts.contact_ranges[*particle_i] = start..start;
+
+            for (_, nbh_particles) in &neighbors {
+                for particle_j in *nbh_particles {
+                    let pi = fluid.positions[*particle_i];
+                    let pj = fluid.positions[*particle_j];
+
+                    if na::distance_squared(&pi, &pj) <= h * h {
+                        let contact = Contact {
+                            i_model: 0,
+                            j_model: 0,
+                            i: *particle_i,
+                            j: *particle_j,
+                            weight: N::zero(),
+                            gradient: Vector::zeros(),
+                        };
+
+                        contacts.contacts.push(contact);
+                        contacts.contact_ranges[*particle_i].end += 1;
+                    }
+                }
+            }
+        }
+    }
+}
