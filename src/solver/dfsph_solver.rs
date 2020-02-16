@@ -697,8 +697,5 @@ where
         );
 
         self.update_positions(dt, fluids);
-        //        for fluid in fluids {
-        //            println!("{:?}", fluid.positions);
-        //        }
     }
 }
