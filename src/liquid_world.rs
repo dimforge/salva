@@ -3,7 +3,7 @@ use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
 use crate::math::Vector;
 use crate::object::{Boundary, BoundaryHandle};
 use crate::object::{Fluid, FluidHandle};
-use crate::solver::{DFSPHSolver, PBFSolver};
+use crate::solver::{DFSPHSolver, IISPHSolver, PBFSolver};
 use crate::TimestepManager;
 use na::RealField;
 
@@ -14,13 +14,15 @@ use {
     nphysics::world::GeometricalWorld,
 };
 
+type PressureSolver<N> = IISPHSolver<N>;
+
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld<N: RealField> {
     particle_radius: N,
     h: N,
     fluids: Vec<Fluid<N>>,
     boundaries: Vec<Boundary<N>>,
-    solver: DFSPHSolver<N>,
+    solver: PressureSolver<N>,
     contact_manager: ContactManager<N>,
     timestep_manager: TimestepManager<N>,
     hgrid: HGrid<N, HGridEntry>,
@@ -41,7 +43,7 @@ impl<N: RealField> LiquidWorld<N> {
             h,
             fluids: Vec::new(),
             boundaries: Vec::new(),
-            solver: DFSPHSolver::new(),
+            solver: PressureSolver::new(),
             contact_manager: ContactManager::new(),
             timestep_manager: TimestepManager::new(),
             hgrid: HGrid::new(h),

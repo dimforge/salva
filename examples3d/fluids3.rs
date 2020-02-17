@@ -51,11 +51,15 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let half_extents = Vector3::new(ni as f32, nj as f32, nk as f32) * particle_rad;
     let shift1 = Vector3::new(
-        ground_half_width - (half_extents.x + ColliderDesc::<f32>::default_margin()) * 2.0,
-        ground_thickness + particle_rad,
-        ground_half_width - (half_extents.z + ColliderDesc::<f32>::default_margin()) * 2.0,
+        ground_half_width
+            - half_extents.x
+            - (particle_rad + ColliderDesc::<f32>::default_margin()) * 2.0,
+        ground_thickness + particle_rad * 2.0,
+        ground_half_width
+            - half_extents.z
+            - (particle_rad + ColliderDesc::<f32>::default_margin()) * 2.0,
     );
-    let shift2 = Vector3::new(-shift1.x, ground_thickness + particle_rad, -shift1.z);
+    let shift2 = Vector3::new(-shift1.x, ground_thickness + particle_rad * 2.0, -shift1.z);
 
     for i in 0..ni {
         for j in 0..nj {
@@ -75,7 +79,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut fluid = Fluid::new(points1, particle_rad, 1000.0);
     //    fluid.nonpressure_forces.push(Box::new(elasticity));
     //    fluid.nonpressure_forces.push(Box::new(surface_tension));
-    fluid.nonpressure_forces.push(Box::new(viscosity));
+    //    fluid.nonpressure_forces.push(Box::new(viscosity));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
