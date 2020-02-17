@@ -8,7 +8,7 @@ use ncollide::bounding_volume::BoundingVolume;
 use ncollide::query::PointQuery;
 use ncollide::shape::FeatureId;
 use nphysics::math::ForceType;
-use nphysics::object::{BodyHandle, BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
+use nphysics::object::{BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
 use std::collections::HashMap;
 
 /// The way a collider is coupled to a boundary object.
@@ -102,8 +102,6 @@ where
         fluids_delta_vels: &mut [Vec<Vector<N>>],
         boundaries: &mut [Boundary<N>],
     ) {
-        let mut num_boundary_particles = 0;
-
         for (collider, coupling) in &mut self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
                 self.colliders.get(*collider),
@@ -160,8 +158,6 @@ where
                                                 continue;
                                             }
                                         }
-
-                                        num_boundary_particles += 1;
 
                                         boundary.positions.push(proj.point);
                                         coupling.features.push(feature);

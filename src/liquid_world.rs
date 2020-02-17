@@ -7,20 +7,13 @@ use crate::solver::PressureSolver;
 use crate::TimestepManager;
 use na::RealField;
 
-#[cfg(feature = "nphysics")]
-use {
-    crate::coupling::ColliderCouplingManager,
-    nphysics::object::{BodySet, ColliderSet},
-    nphysics::world::GeometricalWorld,
-};
-
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld<N: RealField> {
     particle_radius: N,
     h: N,
     fluids: Vec<Fluid<N>>,
     boundaries: Vec<Boundary<N>>,
-    solver: Box<PressureSolver<N>>,
+    solver: Box<dyn PressureSolver<N>>,
     contact_manager: ContactManager<N>,
     timestep_manager: TimestepManager<N>,
     hgrid: HGrid<N, HGridEntry>,

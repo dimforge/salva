@@ -6,8 +6,8 @@ use rayon::prelude::*;
 use na::{self, RealField};
 
 use crate::geometry::{ContactManager, ParticlesContacts};
-use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
-use crate::math::{Vector, DIM, SPATIAL_DIM};
+use crate::kernel::{CubicSplineKernel, Kernel};
+use crate::math::Vector;
 use crate::object::{Boundary, Fluid};
 use crate::solver::PressureSolver;
 
@@ -30,7 +30,6 @@ pub struct IISPHSolver<
     predicted_densities: Vec<Vec<N>>,
     boundaries_volumes: Vec<Vec<N>>,
     velocity_changes: Vec<Vec<Vector<N>>>,
-    nonpressure_forces: Vec<Vec<Vector<N>>>,
     phantoms: PhantomData<(KernelDensity, KernelGradient)>,
 }
 
@@ -56,21 +55,20 @@ where
             predicted_densities: Vec::new(),
             boundaries_volumes: Vec::new(),
             velocity_changes: Vec::new(),
-            nonpressure_forces: Vec::new(),
             phantoms: PhantomData,
         }
     }
 
     fn update_fluid_contacts(
         &mut self,
-        dt: N,
+        _dt: N,
         kernel_radius: N,
         fluid_fluid_contacts: &mut [ParticlesContacts<N>],
         fluid_boundary_contacts: &mut [ParticlesContacts<N>],
         fluids: &[Fluid<N>],
         boundaries: &[Boundary<N>],
     ) {
-        let velocity_changes = &self.velocity_changes;
+        let _velocity_changes = &self.velocity_changes;
         for contacts in fluid_fluid_contacts.iter_mut() {
             par_iter_mut!(contacts.contacts_mut()).for_each(|c| {
                 let fluid1 = &fluids[c.i_model];
@@ -177,10 +175,10 @@ where
         let boundaries_volumes = &self.boundaries_volumes;
         let velocity_changes = &self.velocity_changes;
         let densities = &self.densities;
-        let mut max_error = N::zero();
+        let _max_error = N::zero();
 
         for fluid_id in 0..fluids.len() {
-            let it = par_iter_mut!(self.predicted_densities[fluid_id])
+            let _it = par_iter_mut!(self.predicted_densities[fluid_id])
                 .enumerate()
                 .for_each(|(i, predicted_density)| {
                     let fluid_i = &fluids[fluid_id];
@@ -289,13 +287,13 @@ where
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
     ) {
-        let boundaries_volumes = &self.boundaries_volumes;
+        let _boundaries_volumes = &self.boundaries_volumes;
 
         for fluid_id in 0..fluids.len() {
             let fluid_fluid_contacts = &fluid_fluid_contacts[fluid_id];
-            let fluid_boundary_contacts = &fluid_boundary_contacts[fluid_id];
+            let _fluid_boundary_contacts = &fluid_boundary_contacts[fluid_id];
             let dij_pjl = &mut self.dij_pjl[fluid_id];
-            let fluid_i = &fluids[fluid_id];
+            let _fluid_i = &fluids[fluid_id];
             let densities = &self.densities;
             let pressures = &self.pressures;
 
@@ -390,17 +388,17 @@ where
     fn compute_velocity_changes(
         &mut self,
         dt: N,
-        inv_dt: N,
+        _inv_dt: N,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        _boundaries: &[Boundary<N>],
     ) {
         let boundaries_volumes = &self.boundaries_volumes;
         let densities = &self.densities;
         let pressures = &self.pressures;
 
-        for (fluid_id, fluid1) in fluids.iter().enumerate() {
+        for (fluid_id, _fluid1) in fluids.iter().enumerate() {
             par_iter_mut!(self.velocity_changes[fluid_id])
                 .enumerate()
                 .for_each(|(i, velocity_change)| {
@@ -440,11 +438,11 @@ where
     fn pressure_solve(
         &mut self,
         dt: N,
-        inv_dt: N,
-        kernel_radius: N,
+        _inv_dt: N,
+        _kernel_radius: N,
         contact_manager: &mut ContactManager<N>,
         fluids: &mut [Fluid<N>],
-        boundaries: &[Boundary<N>],
+        _boundaries: &[Boundary<N>],
     ) {
         for i in 0..self.max_pressure_iter {
             self.compute_dij_pjl(
@@ -525,7 +523,7 @@ where
     }
 
     fn predict_advection(&mut self, dt: N, gravity: &Vector<N>, fluids: &[Fluid<N>]) {
-        for (fluid, velocity_changes) in fluids.iter().zip(self.velocity_changes.iter_mut()) {
+        for (_fluid, velocity_changes) in fluids.iter().zip(self.velocity_changes.iter_mut()) {
             par_iter_mut!(velocity_changes).for_each(|velocity_change| {
                 *velocity_change += gravity * dt;
             })

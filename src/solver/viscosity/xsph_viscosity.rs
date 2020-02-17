@@ -1,14 +1,14 @@
-use std::marker::PhantomData;
+
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use na::{self, RealField};
 
-use crate::geometry::{ContactManager, ParticlesContacts};
-use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
-use crate::math::{Vector, DIM, SPATIAL_DIM};
-use crate::object::{Boundary, Fluid};
+use crate::geometry::{ParticlesContacts};
+
+use crate::math::{Vector};
+use crate::object::{Fluid};
 use crate::solver::NonPressureForce;
 
 #[derive(Clone)]
@@ -27,8 +27,8 @@ impl<N: RealField> XSPHViscosity<N> {
 impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
     fn solve(
         &mut self,
-        dt: N,
-        kernel_radius: N,
+        _dt: N,
+        _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],

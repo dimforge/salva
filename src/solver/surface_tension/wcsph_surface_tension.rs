@@ -1,14 +1,14 @@
-use std::marker::PhantomData;
+
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use na::{self, RealField, Unit};
+use na::{self, RealField};
 
-use crate::geometry::{ContactManager, ParticlesContacts};
-use crate::kernel::Kernel;
-use crate::math::{Vector, DIM, SPATIAL_DIM};
-use crate::object::{Boundary, Fluid};
+use crate::geometry::{ParticlesContacts};
+
+use crate::math::{Vector};
+use crate::object::{Fluid};
 use crate::solver::NonPressureForce;
 
 // Surface tension of water: 0.01
@@ -31,10 +31,10 @@ impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
     fn solve(
         &mut self,
         dt: N,
-        kernel_radius: N,
+        _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
-        densities: &[N],
+        _densities: &[N],
         velocity_changes: &mut [Vector<N>],
     ) {
         let tension_coefficient = self.tension_coefficient;

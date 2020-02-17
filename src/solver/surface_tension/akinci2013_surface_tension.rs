@@ -1,14 +1,14 @@
-use std::marker::PhantomData;
+
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use na::{self, RealField, Unit};
 
-use crate::geometry::{ContactManager, ParticlesContacts};
-use crate::kernel::Kernel;
-use crate::math::{Vector, DIM, SPATIAL_DIM};
-use crate::object::{Boundary, Fluid};
+use crate::geometry::{ParticlesContacts};
+
+use crate::math::{Vector};
+use crate::object::{Fluid};
 use crate::solver::NonPressureForce;
 
 #[derive(Clone)]

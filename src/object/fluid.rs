@@ -10,7 +10,7 @@ pub type FluidHandle = usize;
 /// A fluid object is composed of movable particles with additional properties like viscosity.
 pub struct Fluid<N: RealField> {
     /// Nonpressure forces this fluid is subject to.
-    pub nonpressure_forces: Vec<Box<NonPressureForce<N>>>,
+    pub nonpressure_forces: Vec<Box<dyn NonPressureForce<N>>>,
     /// The world-space position of the fluid particles.
     pub positions: Vec<Point<N>>,
     /// The velocities of the fluid particles.

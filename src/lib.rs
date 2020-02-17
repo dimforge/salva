@@ -25,7 +25,7 @@ The name of this library is inspired from the famous surrealist artist `Salvador
 #![deny(unused_parens)]
 #![deny(non_upper_case_globals)]
 #![deny(unused_qualifications)]
-#![warn(missing_docs)] // FIXME: deny this
+#![allow(missing_docs)] // FIXME: deny this
 #![deny(unused_results)]
 #![allow(type_alias_bounds)]
 #![warn(non_camel_case_types)]

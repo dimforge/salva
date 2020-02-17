@@ -49,7 +49,7 @@ pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
 
                 while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, false) {
                     let impact = ray.point_at(toi);
-                    let mut quantized_pt = quantize_point(&origin, &impact, subdivision_size);
+                    let quantized_pt = quantize_point(&origin, &impact, subdivision_size);
                     let _ = quantized_points.insert(quantized_pt);
                     ray.origin[i] += toi + subdivision_size / na::convert(10.0);
                 }

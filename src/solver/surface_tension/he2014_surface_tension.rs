@@ -1,14 +1,14 @@
-use std::marker::PhantomData;
+
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use na::{self, RealField, Unit};
+use na::{self, RealField};
 
-use crate::geometry::{ContactManager, ParticlesContacts};
-use crate::kernel::Kernel;
-use crate::math::{Vector, DIM, SPATIAL_DIM};
-use crate::object::{Boundary, Fluid};
+use crate::geometry::{ParticlesContacts};
+
+use crate::math::{Vector};
+use crate::object::{Fluid};
 use crate::solver::NonPressureForce;
 
 // http://peridynamics.com/publications/2014-He-RSS.pdf
@@ -36,7 +36,7 @@ impl<N: RealField> He2014SurfaceTension<N> {
 
     fn compute_colors(
         &mut self,
-        kernel_radius: N,
+        _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],
@@ -58,7 +58,7 @@ impl<N: RealField> He2014SurfaceTension<N> {
 
     fn compute_gradc(
         &mut self,
-        kernel_radius: N,
+        _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],
@@ -69,7 +69,7 @@ impl<N: RealField> He2014SurfaceTension<N> {
             .enumerate()
             .for_each(|(i, gradc_i)| {
                 let mut gradc = Vector::zeros();
-                let mut denom = N::zero();
+                let _denom = N::zero();
 
                 for c in fluid_fluid_contacts.particle_contacts(i) {
                     if c.i_model == c.j_model {

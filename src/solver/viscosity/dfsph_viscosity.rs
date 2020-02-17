@@ -1,14 +1,11 @@
-use std::marker::PhantomData;
-
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use na::{self, RealField};
 
-use crate::geometry::{ContactManager, ParticlesContacts};
-use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
-use crate::math::{Vector, DIM, SPATIAL_DIM};
-use crate::object::{Boundary, Fluid};
+use crate::geometry::ParticlesContacts;
+use crate::math::{Vector, SPATIAL_DIM};
+use crate::object::Fluid;
 use crate::solver::NonPressureForce;
 
 #[cfg(feature = "dim2")]
@@ -155,7 +152,7 @@ impl<N: RealField> DFSPHViscosity<N> {
                 });
 
                 for i in 0..SPATIAL_DIM {
-                    denominator.column_mut(i).component_mul_mut(&inv_diag);
+                    denominator.column_mut(i).component_mul_assign(&inv_diag);
                 }
 
                 if SPATIAL_DIM == 3 {
@@ -184,7 +181,7 @@ impl<N: RealField> DFSPHViscosity<N> {
 
     fn compute_strain_rates(
         &mut self,
-        dt: N,
+        _dt: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],
@@ -232,7 +229,7 @@ impl<N: RealField> DFSPHViscosity<N> {
 
     fn compute_velocity_changes_for_viscosity(
         &self,
-        dt: N,
+        _dt: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],
@@ -266,7 +263,7 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
     fn solve(
         &mut self,
         dt: N,
-        kernel_radius: N,
+        _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],

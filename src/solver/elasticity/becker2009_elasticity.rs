@@ -5,12 +5,11 @@ use rayon::prelude::*;
 
 use na::{self, RealField};
 
-use crate::geometry::{self, ContactManager, ParticlesContacts};
-use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
-use crate::math::{Matrix, Point, RotationMatrix, SpatialVector, Vector, DIM, SPATIAL_DIM};
-use crate::object::{Boundary, Fluid};
+use crate::geometry::{self, ParticlesContacts};
+use crate::kernel::{CubicSplineKernel, Kernel};
+use crate::math::{Matrix, Point, RotationMatrix, SpatialVector, Vector};
+use crate::object::Fluid;
 use crate::solver::NonPressureForce;
-use itertools::Itertools;
 
 fn elasticity_coefficients<N: RealField>(young_modulus: N, poisson_ratio: N) -> (N, N, N) {
     let _1 = N::one();
@@ -106,7 +105,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
         }
     }
 
-    fn compute_rotations(&mut self, kernel_radius: N, fluid: &Fluid<N>) {
+    fn compute_rotations(&mut self, _kernel_radius: N, fluid: &Fluid<N>) {
         let _2: N = na::convert(2.0f64);
 
         let contacts0 = &self.contacts0;
@@ -130,7 +129,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
             })
     }
 
-    fn compute_stresses(&mut self, kernel_radius: N, fluid: &Fluid<N>) {
+    fn compute_stresses(&mut self, _kernel_radius: N, fluid: &Fluid<N>) {
         let _2: N = na::convert(2.0f64);
         let _0_5: N = na::convert(0.564);
 

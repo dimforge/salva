@@ -404,8 +404,8 @@ where
     fn nonpressure_solve(
         &mut self,
         dt: N,
-        inv_dt: N,
-        contact_manager: &mut ContactManager<N>,
+        _inv_dt: N,
+        _contact_manager: &mut ContactManager<N>,
         fluids: &mut [Fluid<N>],
     ) {
         // Nonpressure forces.
