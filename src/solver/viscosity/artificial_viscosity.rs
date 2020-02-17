@@ -45,6 +45,7 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
         let speed_of_sound = self.speed_of_sound;
         let alpha = self.alpha;
         let beta = self.beta;
+        let _0_5: N = na::convert(0.5);
 
         par_iter_mut!(velocity_changes)
             .enumerate()
@@ -59,12 +60,13 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
                         let vr = r_ij.dot(&v_ij);
 
                         if vr < N::zero() {
+                            let density_average = (densities[c.i] + densities[c.j]) * _0_5;
                             let eta2 = kernel_radius * kernel_radius * na::convert(0.01);
                             let mu_ij = kernel_radius * vr / (r_ij.norm_squared() + eta2);
 
                             added_vel += c.gradient
                                 * ((speed_of_sound * alpha * mu_ij - beta * mu_ij * mu_ij)
-                                    * (dt * fluid.particle_mass(c.j) / densities[c.j]));
+                                    * (dt * fluid.particle_mass(c.j) / density_average));
                         }
                     }
                 }
