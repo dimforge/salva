@@ -3,7 +3,7 @@ use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
 use crate::math::Vector;
 use crate::object::{Boundary, BoundaryHandle};
 use crate::object::{Fluid, FluidHandle};
-use crate::solver::{DFSPHSolver, IISPHSolver, PBFSolver};
+use crate::solver::PressureSolver;
 use crate::TimestepManager;
 use na::RealField;
 
@@ -14,15 +14,13 @@ use {
     nphysics::world::GeometricalWorld,
 };
 
-type PressureSolver<N> = IISPHSolver<N>;
-
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld<N: RealField> {
     particle_radius: N,
     h: N,
     fluids: Vec<Fluid<N>>,
     boundaries: Vec<Boundary<N>>,
-    solver: PressureSolver<N>,
+    solver: Box<PressureSolver<N>>,
     contact_manager: ContactManager<N>,
     timestep_manager: TimestepManager<N>,
     hgrid: HGrid<N, HGridEntry>,
@@ -36,14 +34,18 @@ impl<N: RealField> LiquidWorld<N> {
     /// - `particle_radius`: the radius of every particle on this world.
     /// - `smoothing_factor`: the smoothing factor used to compute the SPH kernel radius.
     ///    The kernel radius will be computed as `particle_radius * smoothing_factor * 2.0.
-    pub fn new(particle_radius: N, smoothing_factor: N) -> Self {
+    pub fn new(
+        solver: impl PressureSolver<N> + 'static,
+        particle_radius: N,
+        smoothing_factor: N,
+    ) -> Self {
         let h = particle_radius * smoothing_factor * na::convert(2.0);
         Self {
             particle_radius,
             h,
             fluids: Vec::new(),
             boundaries: Vec::new(),
-            solver: PressureSolver::new(),
+            solver: Box::new(solver),
             contact_manager: ContactManager::new(),
             timestep_manager: TimestepManager::new(),
             hgrid: HGrid::new(h),

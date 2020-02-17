@@ -9,6 +9,7 @@ use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel, Poly6Kernel, SpikyKernel};
 use crate::math::{Vector, DIM, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
+use crate::solver::PressureSolver;
 
 /// A Position Based Fluid solver.
 pub struct IISPHSolver<
@@ -116,54 +117,6 @@ where
         }
     }
 
-    /// Gets the set of fluid particle velocity changes resulting from pressure resolution.
-    pub fn velocity_changes(&self) -> &[Vec<Vector<N>>] {
-        &self.velocity_changes
-    }
-
-    /// Gets a mutable reference to the set of fluid particle velocity changes resulting from
-    /// pressure resolution.
-    pub fn velocity_changes_mut(&mut self) -> &mut [Vec<Vector<N>>] {
-        &mut self.velocity_changes
-    }
-
-    /// Initialize this solver with the given fluids.
-    pub fn init_with_fluids(&mut self, fluids: &[Fluid<N>]) {
-        // Resize every buffer.
-        self.densities.resize(fluids.len(), Vec::new());
-        self.predicted_densities.resize(fluids.len(), Vec::new());
-        self.velocity_changes.resize(fluids.len(), Vec::new());
-        self.aii.resize(fluids.len(), Vec::new());
-        self.dii.resize(fluids.len(), Vec::new());
-        self.dij_pjl.resize(fluids.len(), Vec::new());
-        self.pressures.resize(fluids.len(), Vec::new());
-        self.next_pressures.resize(fluids.len(), Vec::new());
-
-        for i in 0..fluids.len() {
-            let nparticles = fluids[i].num_particles();
-
-            self.densities[i].resize(nparticles, N::zero());
-            self.predicted_densities[i].resize(nparticles, N::zero());
-            self.velocity_changes[i].resize(nparticles, Vector::zeros());
-            self.aii[i].resize(nparticles, N::zero());
-            self.dii[i].resize(nparticles, Vector::zeros());
-            self.dij_pjl[i].resize(nparticles, Vector::zeros());
-            self.pressures[i].resize(nparticles, N::zero());
-            self.next_pressures[i].resize(nparticles, N::zero());
-        }
-    }
-
-    /// Initialize this solver with the given boundaries.
-    pub fn init_with_boundaries(&mut self, boundaries: &[Boundary<N>]) {
-        self.boundaries_volumes.resize(boundaries.len(), Vec::new());
-
-        for (boundary, boundary_volumes) in
-            boundaries.iter().zip(self.boundaries_volumes.iter_mut())
-        {
-            boundary_volumes.resize(boundary.num_particles(), N::zero())
-        }
-    }
-
     fn compute_boundary_volumes(
         &mut self,
         boundary_boundary_contacts: &[ParticlesContacts<N>],
@@ -253,15 +206,6 @@ where
                     *predicted_density = densities[fluid_id][i] + delta * dt;
                     assert!(!predicted_density.is_zero());
                 });
-        }
-    }
-
-    /// Predicts advection with the given gravity.
-    pub fn predict_advection(&mut self, dt: N, gravity: &Vector<N>, fluids: &[Fluid<N>]) {
-        for (fluid, velocity_changes) in fluids.iter().zip(self.velocity_changes.iter_mut()) {
-            par_iter_mut!(velocity_changes).for_each(|velocity_change| {
-                *velocity_change += gravity * dt;
-            })
         }
     }
 
@@ -528,8 +472,67 @@ where
             }
         }
     }
+}
 
-    pub fn step(
+impl<N, KernelDensity, KernelGradient> PressureSolver<N>
+    for IISPHSolver<N, KernelDensity, KernelGradient>
+where
+    N: RealField,
+    KernelDensity: Kernel,
+    KernelGradient: Kernel,
+{
+    fn velocity_changes(&self) -> &[Vec<Vector<N>>] {
+        &self.velocity_changes
+    }
+
+    fn velocity_changes_mut(&mut self) -> &mut [Vec<Vector<N>>] {
+        &mut self.velocity_changes
+    }
+
+    fn init_with_fluids(&mut self, fluids: &[Fluid<N>]) {
+        // Resize every buffer.
+        self.densities.resize(fluids.len(), Vec::new());
+        self.predicted_densities.resize(fluids.len(), Vec::new());
+        self.velocity_changes.resize(fluids.len(), Vec::new());
+        self.aii.resize(fluids.len(), Vec::new());
+        self.dii.resize(fluids.len(), Vec::new());
+        self.dij_pjl.resize(fluids.len(), Vec::new());
+        self.pressures.resize(fluids.len(), Vec::new());
+        self.next_pressures.resize(fluids.len(), Vec::new());
+
+        for i in 0..fluids.len() {
+            let nparticles = fluids[i].num_particles();
+
+            self.densities[i].resize(nparticles, N::zero());
+            self.predicted_densities[i].resize(nparticles, N::zero());
+            self.velocity_changes[i].resize(nparticles, Vector::zeros());
+            self.aii[i].resize(nparticles, N::zero());
+            self.dii[i].resize(nparticles, Vector::zeros());
+            self.dij_pjl[i].resize(nparticles, Vector::zeros());
+            self.pressures[i].resize(nparticles, N::zero());
+            self.next_pressures[i].resize(nparticles, N::zero());
+        }
+    }
+
+    fn init_with_boundaries(&mut self, boundaries: &[Boundary<N>]) {
+        self.boundaries_volumes.resize(boundaries.len(), Vec::new());
+
+        for (boundary, boundary_volumes) in
+            boundaries.iter().zip(self.boundaries_volumes.iter_mut())
+        {
+            boundary_volumes.resize(boundary.num_particles(), N::zero())
+        }
+    }
+
+    fn predict_advection(&mut self, dt: N, gravity: &Vector<N>, fluids: &[Fluid<N>]) {
+        for (fluid, velocity_changes) in fluids.iter().zip(self.velocity_changes.iter_mut()) {
+            par_iter_mut!(velocity_changes).for_each(|velocity_change| {
+                *velocity_change += gravity * dt;
+            })
+        }
+    }
+
+    fn step(
         &mut self,
         dt: N,
         contact_manager: &mut ContactManager<N>,
