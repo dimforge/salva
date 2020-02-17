@@ -9,7 +9,7 @@ use nphysics2d::object::{
     MultibodyDesc, RigidBodyDesc,
 };
 use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
-use nphysics_testbed2d::Testbed;
+use nphysics_testbed2d::{objects::FluidRenderingMode, Testbed};
 use salva2d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva2d::object::{Boundary, Fluid};
 use salva2d::solver::{ArtificialViscosity, Becker2009Elasticity, XSPHViscosity};
@@ -51,7 +51,7 @@ pub fn init_world(testbed: &mut Testbed) {
     }
 
     let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(100_000.0, 0.3, false);
-    let viscosity = ArtificialViscosity::new(1.0);
+    let viscosity = ArtificialViscosity::new(0.5);
     let mut fluid = Fluid::new(points1, particle_rad, 10.0);
     //    fluid.nonpressure_forces.push(Box::new(elasticity));
     fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
@@ -197,6 +197,7 @@ pub fn init_world(testbed: &mut Testbed) {
     );
     testbed.set_liquid_world(liquid_world, coupling_set);
     testbed.look_at(Point2::new(0.0, -2.5), 95.0);
+    testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
 }
 
 fn main() {

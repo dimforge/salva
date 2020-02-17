@@ -1,4 +1,4 @@
-use crate::math::{Point, Vector};
+use crate::math::{Isometry, Point, Vector};
 use na::{self, RealField};
 use std::sync::RwLock;
 
@@ -35,6 +35,10 @@ impl<N: RealField> Boundary<N> {
     /// The number of particles of this boundary object.
     pub fn num_particles(&self) -> usize {
         self.positions.len()
+    }
+
+    pub fn transform_by(&mut self, pose: &Isometry<N>) {
+        self.positions.iter_mut().for_each(|p| *p = pose * *p);
     }
 
     /// Apply a force `f` to the `i`-th particle of this boundary object.

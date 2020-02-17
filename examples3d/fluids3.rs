@@ -8,11 +8,13 @@ use nphysics3d::object::{
     BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground, RigidBodyDesc,
 };
 use nphysics3d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
+use nphysics_testbed3d::objects::FluidRenderingMode;
 use nphysics_testbed3d::Testbed;
 use salva3d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva3d::object::{Boundary, Fluid};
 use salva3d::solver::{
     Akinci2013SurfaceTension, Becker2009Elasticity, DFSPHViscosity, He2014SurfaceTension,
+    XSPHViscosity,
 };
 use salva3d::LiquidWorld;
 use std::f32;
@@ -49,11 +51,11 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let half_extents = Vector3::new(ni as f32, nj as f32, nk as f32) * particle_rad;
     let shift1 = Vector3::new(
-        ground_half_width - half_extents.x - ColliderDesc::<f32>::default_margin() * 2.0,
-        ground_thickness,
-        ground_half_width - half_extents.z - ColliderDesc::<f32>::default_margin() * 2.0,
+        ground_half_width - (half_extents.x + ColliderDesc::<f32>::default_margin()) * 2.0,
+        ground_thickness + particle_rad,
+        ground_half_width - (half_extents.z + ColliderDesc::<f32>::default_margin()) * 2.0,
     );
-    let shift2 = Vector3::new(-shift1.x, ground_thickness, -shift1.z);
+    let shift2 = Vector3::new(-shift1.x, ground_thickness + particle_rad, -shift1.z);
 
     for i in 0..ni {
         for j in 0..nj {
@@ -69,7 +71,7 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(100_000.0, 0.3, false);
     let surface_tension = Akinci2013SurfaceTension::new(1.0);
-    let viscosity = DFSPHViscosity::new(0.9);
+    let viscosity = XSPHViscosity::new(0.9); // DFSPHViscosity::new(0.9);
     let mut fluid = Fluid::new(points1, particle_rad, 1000.0);
     //    fluid.nonpressure_forces.push(Box::new(elasticity));
     //    fluid.nonpressure_forces.push(Box::new(surface_tension));
@@ -142,25 +144,29 @@ pub fn init_world(testbed: &mut Testbed) {
     ];
 
     for pose in wall_poses.iter() {
+        let samples = salva3d::sampling::shape_surface_ray_sample(&*wall_shape, particle_rad);
         let co = ColliderDesc::new(wall_shape.clone())
             .position(*pose)
             .build(BodyPartHandle(ground_handle, 0));
         let co_handle = colliders.insert(co);
         let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
+
         coupling_manager.register_coupling(
             bo_handle,
             co_handle,
-            CouplingMethod::DynamicContactSampling,
+            CouplingMethod::StaticSampling(samples.unwrap()),
         );
     }
 
+    let samples = salva3d::sampling::shape_surface_ray_sample(&*ground_shape, particle_rad);
     let co = ColliderDesc::new(ground_shape).build(BodyPartHandle(ground_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
+
     coupling_manager.register_coupling(
         bo_handle,
         co_handle,
-        CouplingMethod::DynamicContactSampling,
+        CouplingMethod::StaticSampling(samples.unwrap()),
     );
 
     /*
@@ -203,6 +209,8 @@ pub fn init_world(testbed: &mut Testbed) {
         force_generators,
     );
     testbed.set_liquid_world(liquid_world, coupling_manager);
+    testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
+    //    testbed.enable_boundary_particles_rendering(true);
 }
 
 fn main() {
