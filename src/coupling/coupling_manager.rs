@@ -2,7 +2,7 @@ use na::RealField;
 
 use crate::geometry::{HGrid, HGridEntry};
 use crate::math::Vector;
-use crate::object::{Boundary, Fluid};
+use crate::object::{Boundary, BoundarySet, Fluid};
 
 pub trait CouplingManager<N: RealField> {
     fn update_boundaries(
@@ -12,10 +12,10 @@ pub trait CouplingManager<N: RealField> {
         hgrid: &HGrid<N, HGridEntry>,
         fluids: &mut [Fluid<N>],
         fluids_delta_vel: &mut [Vec<Vector<N>>],
-        boundaries: &mut [Boundary<N>],
+        boundaries: &mut BoundarySet<N>,
     );
 
-    fn transmit_forces(&mut self, boundaries: &[Boundary<N>]);
+    fn transmit_forces(&mut self, boundaries: &BoundarySet<N>);
 }
 
 impl<N: RealField> CouplingManager<N> for () {
@@ -26,9 +26,9 @@ impl<N: RealField> CouplingManager<N> for () {
         _: &HGrid<N, HGridEntry>,
         _: &mut [Fluid<N>],
         _: &mut [Vec<Vector<N>>],
-        _: &mut [Boundary<N>],
+        _: &mut BoundarySet<N>,
     ) {
     }
 
-    fn transmit_forces(&mut self, _: &[Boundary<N>]) {}
+    fn transmit_forces(&mut self, _: &BoundarySet<N>) {}
 }

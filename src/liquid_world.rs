@@ -1,8 +1,8 @@
 use crate::coupling::CouplingManager;
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
 use crate::math::Vector;
-use crate::object::{Boundary, BoundaryHandle};
-use crate::object::{Fluid, FluidHandle};
+use crate::object::{Boundary, BoundaryHandle, BoundarySet};
+use crate::object::{Fluid, FluidHandle, FluidSet};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
 use na::RealField;
@@ -11,8 +11,8 @@ use na::RealField;
 pub struct LiquidWorld<N: RealField> {
     particle_radius: N,
     h: N,
-    fluids: Vec<Fluid<N>>,
-    boundaries: Vec<Boundary<N>>,
+    fluids: FluidSet<N>,
+    boundaries: BoundarySet<N>,
     solver: Box<dyn PressureSolver<N>>,
     contact_manager: ContactManager<N>,
     timestep_manager: TimestepManager<N>,
@@ -36,8 +36,8 @@ impl<N: RealField> LiquidWorld<N> {
         Self {
             particle_radius,
             h,
-            fluids: Vec::new(),
-            boundaries: Vec::new(),
+            fluids: FluidSet::new(),
+            boundaries: BoundarySet::new(),
             solver: Box::new(solver),
             contact_manager: ContactManager::new(),
             timestep_manager: TimestepManager::new(),
@@ -71,17 +71,17 @@ impl<N: RealField> LiquidWorld<N> {
                 dt,
                 remaining_time,
                 self.particle_radius,
-                &self.fluids,
+                self.fluids.as_slice(),
             );
 
-            self.solver.init_with_fluids(&self.fluids);
+            self.solver.init_with_fluids(self.fluids.as_slice());
             self.solver
-                .predict_advection(substep_dt, gravity, &self.fluids);
+                .predict_advection(substep_dt, gravity, self.fluids.as_slice());
 
             self.hgrid.clear();
             geometry::insert_fluids_to_grid(
                 substep_dt,
-                &self.fluids,
+                self.fluids.as_slice(),
                 Some(self.solver.velocity_changes()),
                 &mut self.hgrid,
             );
@@ -90,19 +90,19 @@ impl<N: RealField> LiquidWorld<N> {
                 substep_dt,
                 self.h,
                 &self.hgrid,
-                &mut self.fluids,
+                self.fluids.as_mut_slice(),
                 self.solver.velocity_changes_mut(),
                 &mut self.boundaries,
             );
 
-            geometry::insert_boundaries_to_grid(&self.boundaries, &mut self.hgrid);
-            self.solver.init_with_boundaries(&self.boundaries);
+            geometry::insert_boundaries_to_grid(self.boundaries.as_slice(), &mut self.hgrid);
+            self.solver.init_with_boundaries(self.boundaries.as_slice());
 
             self.contact_manager.update_contacts(
                 substep_dt,
                 self.h,
-                &self.fluids,
-                &self.boundaries,
+                self.fluids.as_slice(),
+                self.boundaries.as_slice(),
                 Some(self.solver.velocity_changes()),
                 &self.hgrid,
             );
@@ -112,8 +112,8 @@ impl<N: RealField> LiquidWorld<N> {
                 substep_dt,
                 &mut self.contact_manager,
                 self.h,
-                &mut self.fluids,
-                &self.boundaries,
+                self.fluids.as_mut_slice(),
+                self.boundaries.as_slice(),
             );
             solve_time += instant::now() - time;
 
@@ -131,25 +131,31 @@ impl<N: RealField> LiquidWorld<N> {
 
     /// Add a fluid to the liquid world.
     pub fn add_fluid(&mut self, fluid: Fluid<N>) -> FluidHandle {
-        let handle = self.fluids.len();
-        self.fluids.push(fluid);
-        handle
+        self.fluids.insert(fluid)
     }
 
     /// Add a boundary to the liquid world.
     pub fn add_boundary(&mut self, boundary: Boundary<N>) -> BoundaryHandle {
-        let handle = self.boundaries.len();
-        self.boundaries.push(boundary);
-        handle
+        self.boundaries.insert(boundary)
+    }
+
+    /// Add a fluid to the liquid world.
+    pub fn remove_fluid(&mut self, handle: FluidHandle) -> Option<Fluid<N>> {
+        self.fluids.remove(handle)
+    }
+
+    /// Add a boundary to the liquid world.
+    pub fn remove_boundary(&mut self, handle: BoundaryHandle) -> Option<Boundary<N>> {
+        self.boundaries.remove(handle)
     }
 
     /// The set of fluids on this liquid world.
-    pub fn fluids(&self) -> &[Fluid<N>] {
+    pub fn fluids(&self) -> &FluidSet<N> {
         &self.fluids
     }
 
     /// The set of boundaries on this liquid world.
-    pub fn boundaries(&self) -> &[Boundary<N>] {
+    pub fn boundaries(&self) -> &BoundarySet<N> {
         &self.boundaries
     }
 

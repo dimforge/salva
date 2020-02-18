@@ -1,9 +1,7 @@
 use crate::math::{Point, Vector};
+use crate::object::{ContiguousArena, ContiguousArenaIndex};
 use crate::solver::NonPressureForce;
 use na::{self, DVector, RealField};
-
-/// The unique identifier of a fluid.
-pub type FluidHandle = usize;
 
 /// A fluid object.
 ///
@@ -78,5 +76,23 @@ impl<N: RealField> Fluid<N> {
         } else {
             N::one() / (self.volumes[i] * self.density0)
         }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct FluidHandle(ContiguousArenaIndex);
+pub type FluidSet<N> = ContiguousArena<FluidHandle, Fluid<N>>;
+
+impl From<ContiguousArenaIndex> for FluidHandle {
+    #[inline]
+    fn from(i: ContiguousArenaIndex) -> Self {
+        FluidHandle(i)
+    }
+}
+
+impl Into<ContiguousArenaIndex> for FluidHandle {
+    #[inline]
+    fn into(self) -> ContiguousArenaIndex {
+        self.0
     }
 }

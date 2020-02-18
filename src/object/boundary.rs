@@ -1,9 +1,7 @@
 use crate::math::{Isometry, Point, Vector};
+use crate::object::{ContiguousArena, ContiguousArenaIndex};
 use na::{self, RealField};
 use std::sync::RwLock;
-
-/// The unique identifiant of a boundary object.
-pub type BoundaryHandle = usize;
 
 /// A boundary object.
 ///
@@ -60,5 +58,23 @@ impl<N: RealField> Boundary<N> {
         for f in forces {
             f.fill(N::zero())
         }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct BoundaryHandle(ContiguousArenaIndex);
+pub type BoundarySet<N> = ContiguousArena<BoundaryHandle, Boundary<N>>;
+
+impl From<ContiguousArenaIndex> for BoundaryHandle {
+    #[inline]
+    fn from(i: ContiguousArenaIndex) -> Self {
+        BoundaryHandle(i)
+    }
+}
+
+impl Into<ContiguousArenaIndex> for BoundaryHandle {
+    #[inline]
+    fn into(self) -> ContiguousArenaIndex {
+        self.0
     }
 }

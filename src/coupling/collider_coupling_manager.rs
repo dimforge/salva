@@ -2,7 +2,7 @@ use crate::coupling::CouplingManager;
 use crate::geometry::{HGrid, HGridEntry};
 use crate::math::{Point, Vector};
 use crate::object::Fluid;
-use crate::object::{Boundary, BoundaryHandle};
+use crate::object::{Boundary, BoundaryHandle, BoundarySet};
 use na::{RealField, Unit};
 use ncollide::bounding_volume::BoundingVolume;
 use ncollide::query::PointQuery;
@@ -100,7 +100,7 @@ where
         hgrid: &HGrid<N, HGridEntry>,
         fluids: &mut [Fluid<N>],
         fluids_delta_vels: &mut [Vec<Vector<N>>],
-        boundaries: &mut [Boundary<N>],
+        boundaries: &mut BoundarySet<N>,
     ) {
         for (collider, coupling) in &mut self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
@@ -176,7 +176,7 @@ where
         }
     }
 
-    fn transmit_forces(&mut self, boundaries: &[Boundary<N>]) {
+    fn transmit_forces(&mut self, boundaries: &BoundarySet<N>) {
         for (collider, coupling) in &self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
                 self.colliders.get(*collider),

@@ -25,6 +25,7 @@ required-features = [ "dim3" ]
 
 [dependencies]
 itertools = "0.8"
+generational-arena = "0.2"
 instant = { version = "0.1", features = [ "now" ] }
 nalgebra   = { version = "0.19" }
 rayon = { version = "1.0", optional = true }
