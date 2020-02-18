@@ -295,12 +295,12 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
             );
 
             if avg_err <= self.max_viscosity_error && i >= self.min_viscosity_iter {
-                println!(
-                    "Average viscosity error: {}, break after niters: {}, unstable: {}",
-                    avg_err,
-                    i,
-                    avg_err > last_err
-                );
+                //                println!(
+                //                    "Average viscosity error: {}, break after niters: {}, unstable: {}",
+                //                    avg_err,
+                //                    i,
+                //                    avg_err > last_err
+                //                );
                 break;
             }
 

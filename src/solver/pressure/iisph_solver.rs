@@ -462,10 +462,10 @@ where
             std::mem::swap(&mut self.pressures, &mut self.next_pressures);
 
             if avg_err <= self.max_density_error && i >= self.min_pressure_iter {
-                println!(
-                    "Average density error: {}, break after niters: {}",
-                    avg_err, i
-                );
+                //                println!(
+                //                    "Average density error: {}, break after niters: {}",
+                //                    avg_err, i
+                //                );
                 break;
             }
         }

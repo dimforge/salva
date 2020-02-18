@@ -457,10 +457,10 @@ where
             );
 
             if avg_err <= self.max_density_error && i >= self.min_pressure_iter {
-                println!(
-                    "Average density error: {}, break after niters: {}",
-                    avg_err, i
-                );
+                //                println!(
+                //                    "Average density error: {}, break after niters: {}",
+                //                    avg_err, i
+                //                );
                 break;
             }
 
@@ -494,10 +494,10 @@ where
 
             let max_err = self.max_divergence_error * inv_dt * na::convert(0.01);
             if avg_err <= max_err && i >= self.min_divergence_iter {
-                println!(
-                    "Average divergence error: {} <= {}, break after niters: {}",
-                    avg_err, max_err, i
-                );
+                //                println!(
+                //                    "Average divergence error: {} <= {}, break after niters: {}",
+                //                    avg_err, max_err, i
+                //                );
                 break;
             }
 

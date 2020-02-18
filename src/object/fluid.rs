@@ -1,4 +1,4 @@
-use crate::math::{Point, Vector};
+use crate::math::{Isometry, Point, Vector};
 use crate::object::{ContiguousArena, ContiguousArenaIndex};
 use crate::solver::NonPressureForce;
 use na::{self, DVector, RealField};
@@ -48,6 +48,10 @@ impl<N: RealField> Fluid<N> {
             volumes: DVector::repeat(num_particles, particle_volume),
             density0,
         }
+    }
+
+    pub fn transform_by(&mut self, t: &Isometry<N>) {
+        self.positions.iter_mut().for_each(|p| *p = t * *p)
     }
 
     /// The number of particles on this fluid.

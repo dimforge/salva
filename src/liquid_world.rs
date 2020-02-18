@@ -62,9 +62,11 @@ impl<N: RealField> LiquidWorld<N> {
         let mut remaining_time = dt;
         let mut solve_time = 0.0;
         let mut non_solve_time = 0.0;
+        let mut nsubsteps = 0;
 
         // Perform substeps.
         while remaining_time > N::zero() {
+            nsubsteps += 1;
             let time = instant::now();
             // Substep length.
             let substep_dt = self.timestep_manager.compute_substep(
@@ -124,8 +126,8 @@ impl<N: RealField> LiquidWorld<N> {
             remaining_time -= substep_dt;
         }
         println!(
-            "Solve time: {}, Not solve time: {}",
-            solve_time, non_solve_time
+            "Num substeps: {}, Solve time: {}, Not solve time: {}",
+            nsubsteps, solve_time, non_solve_time
         );
     }
 
