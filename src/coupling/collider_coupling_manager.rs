@@ -42,13 +42,16 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle
     }
 
     /// Register a coupling between a boundary and a collider.
+    /// There can be only up to one coupling between a collider and a boundary object. If a coupling
+    /// already exists for this collider when calling this function, the handle of the previously coupled
+    /// boundary is returned.
     pub fn register_coupling(
         &mut self,
         boundary: BoundaryHandle,
         collider: CollHandle,
         coupling_method: CouplingMethod<N>,
-    ) {
-        let _ = self.entries.insert(
+    ) -> Option<BoundaryHandle> {
+        let old = self.entries.insert(
             collider,
             ColliderCouplingEntry {
                 coupling_method,
@@ -56,6 +59,16 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle
                 features: Vec::new(),
             },
         );
+
+        old.map(|e| e.boundary)
+    }
+
+    /// Unregister a coupling between a boundary and a collider.
+    /// Note that this does not remove the boundary itself from the liquid world.
+    /// Returns the handle of the boundary this collider was coupled with.
+    pub fn unregister_coupling(&mut self, collider: CollHandle) -> Option<BoundaryHandle> {
+        let deleted = self.entries.remove(&collider);
+        deleted.map(|e| e.boundary)
     }
 
     pub fn as_manager_mut<'a, Colliders, Bodies>(
