@@ -1,14 +1,12 @@
-
-
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use na::{self, RealField};
 
-use crate::geometry::{ParticlesContacts};
+use crate::geometry::ParticlesContacts;
 
-use crate::math::{Vector};
-use crate::object::{Fluid};
+use crate::math::Vector;
+use crate::object::Fluid;
 use crate::solver::NonPressureForce;
 
 // Surface tension of water: 0.01
@@ -45,8 +43,9 @@ impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
                 for c in fluid_fluid_contacts.particle_contacts(i) {
                     if c.i_model == c.j_model {
                         let dpos = fluid.positions[c.i] - fluid.positions[c.j];
-                        let cohesion_acc =
-                            dpos * (-tension_coefficient * fluid.particle_mass(c.j) * c.weight);
+                        let cohesion_acc = dpos
+                            * (-tension_coefficient * c.weight * fluid.particle_mass(c.j)
+                                / fluid.particle_mass(c.i));
                         *velocity_change_i += cohesion_acc * dt;
                     }
                 }
