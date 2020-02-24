@@ -262,11 +262,11 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
     fn solve(
         &mut self,
         dt: N,
+        inv_dt: N,
         kernel_radius: N,
         _fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid: &mut Fluid<N>,
         _densities: &[N],
-        velocity_changes: &mut [Vector<N>],
     ) {
         self.init(kernel_radius, fluid);
 
@@ -280,11 +280,13 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
         let deformation_gradient_tr = &self.deformation_gradient_tr;
         let rotations = &self.rotations;
         let stress = &self.stress;
+        let volumes = &fluid.volumes;
+        let density0 = fluid.density0;
 
         if self.nonlinear_strain {
-            par_iter_mut!(velocity_changes)
+            par_iter_mut!(fluid.accelerations)
                 .enumerate()
-                .for_each(|(i, velocity_change)| {
+                .for_each(|(i, acceleration)| {
                     for c in contacts0.particle_contacts(i).read().unwrap().iter() {
                         let mut force = Vector::zeros();
 
@@ -300,13 +302,13 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
 
                         force += (rotations[c.j] * f_ij - (rotations[c.i] * f_ji)) * _0_5;
 
-                        *velocity_change += force * (dt / fluid.particle_mass(i));
+                        *acceleration += force / (volumes[i] * density0);
                     }
                 })
         } else {
-            par_iter_mut!(velocity_changes)
+            par_iter_mut!(fluid.accelerations)
                 .enumerate()
-                .for_each(|(i, velocity_change)| {
+                .for_each(|(i, acceleration)| {
                     for c in contacts0.particle_contacts(i).read().unwrap().iter() {
                         let mut force = Vector::zeros();
 
@@ -318,7 +320,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
 
                         force += (rotations[c.j] * f_ij - (rotations[c.i] * f_ji)) * _0_5;
 
-                        *velocity_change += force * (dt / fluid.particle_mass(i));
+                        *acceleration += force / (volumes[i] * density0);
                     }
                 })
         }

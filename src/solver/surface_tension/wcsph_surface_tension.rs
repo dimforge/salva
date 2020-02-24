@@ -29,17 +29,20 @@ impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
     fn solve(
         &mut self,
         dt: N,
+        inv_dt: N,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid: &mut Fluid<N>,
         _densities: &[N],
-        velocity_changes: &mut [Vector<N>],
     ) {
         let tension_coefficient = self.tension_coefficient;
+        let positions = &fluid.positions;
+        let volumes = &fluid.volumes;
+        let density0 = fluid.density0;
 
-        par_iter_mut!(velocity_changes)
+        par_iter_mut!(fluid.accelerations)
             .enumerate()
-            .for_each(|(i, velocity_change_i)| {
+            .for_each(|(i, acceleration_i)| {
                 for c in fluid_fluid_contacts
                     .particle_contacts(i)
                     .read()
@@ -47,11 +50,11 @@ impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
                     .iter()
                 {
                     if c.i_model == c.j_model {
-                        let dpos = fluid.positions[c.i] - fluid.positions[c.j];
+                        let dpos = positions[c.i] - positions[c.j];
                         let cohesion_acc = dpos
-                            * (-tension_coefficient * c.weight * fluid.particle_mass(c.j)
-                                / fluid.particle_mass(c.i));
-                        *velocity_change_i += cohesion_acc * dt;
+                            * (-tension_coefficient * c.weight * volumes[c.j] * density0
+                                / (volumes[c.i] * density0));
+                        *acceleration_i += cohesion_acc;
                     }
                 }
             })

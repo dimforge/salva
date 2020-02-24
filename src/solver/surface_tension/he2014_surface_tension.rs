@@ -34,7 +34,6 @@ impl<N: RealField> He2014SurfaceTension<N> {
 
     fn compute_colors(
         &mut self,
-        _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],
@@ -61,7 +60,6 @@ impl<N: RealField> He2014SurfaceTension<N> {
 
     fn compute_gradc(
         &mut self,
-        _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],
@@ -95,26 +93,28 @@ impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
     fn solve(
         &mut self,
         dt: N,
+        inv_dt: N,
         kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid: &mut Fluid<N>,
         densities: &[N],
-        velocity_changes: &mut [Vector<N>],
     ) {
         self.init(fluid);
         let _2: N = na::convert(2.0f64);
 
-        self.compute_colors(kernel_radius, fluid_fluid_contacts, fluid, densities);
-        self.compute_gradc(kernel_radius, fluid_fluid_contacts, fluid, densities);
+        self.compute_colors(fluid_fluid_contacts, fluid, densities);
+        self.compute_gradc(fluid_fluid_contacts, fluid, densities);
 
         // Compute and apply forces.
         let gradcs = &self.gradcs;
         let tension_coefficient = self.tension_coefficient;
+        let density0 = fluid.density0;
+        let volumes = &fluid.volumes;
 
-        par_iter_mut!(velocity_changes)
+        par_iter_mut!(fluid.accelerations)
             .enumerate()
-            .for_each(|(i, velocity_change_i)| {
-                let mi = fluid.particle_mass(i);
+            .for_each(|(i, acceleration_i)| {
+                let mi = volumes[i] * density0;
 
                 for c in fluid_fluid_contacts
                     .particle_contacts(i)
@@ -123,11 +123,11 @@ impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
                     .iter()
                 {
                     if c.i_model == c.j_model {
-                        let mj = fluid.particle_mass(c.j);
+                        let mj = volumes[c.j] * density0;
                         let gradsum = gradcs[c.i] + gradcs[c.j];
                         let f =
                             c.gradient * (mi / densities[c.i] * mj / densities[c.j] * gradsum / _2);
-                        *velocity_change_i += f * (tension_coefficient / _2 * dt / mi);
+                        *acceleration_i += f * (tension_coefficient / (_2 * mi));
                     }
                 }
             })

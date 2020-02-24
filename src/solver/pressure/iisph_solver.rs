@@ -86,45 +86,6 @@ where
         }
     }
 
-    fn compute_densities(
-        &mut self,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluid_boundary_contacts: &[ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-    ) {
-        let boundaries_volumes = &self.boundaries_volumes;
-
-        for fluid_id in 0..fluids.len() {
-            par_iter_mut!(self.densities[fluid_id])
-                .enumerate()
-                .for_each(|(i, density)| {
-                    *density = N::zero();
-
-                    for c in fluid_fluid_contacts[fluid_id]
-                        .particle_contacts(i)
-                        .read()
-                        .unwrap()
-                        .iter()
-                    {
-                        *density += fluids[c.j_model].particle_mass(c.j) * c.weight;
-                    }
-
-                    for c in fluid_boundary_contacts[fluid_id]
-                        .particle_contacts(i)
-                        .read()
-                        .unwrap()
-                        .iter()
-                    {
-                        *density += boundaries_volumes[c.j_model][c.j]
-                            * fluids[c.i_model].density0
-                            * c.weight;
-                    }
-
-                    assert!(!density.is_zero());
-                })
-        }
-    }
-
     fn compute_predicted_densities(
         &mut self,
         dt: N,
@@ -485,6 +446,17 @@ where
             }
         }
     }
+
+    fn integrate_and_clear_accelerations(&mut self, dt: N, fluids: &mut [Fluid<N>]) {
+        for (velocity_changes, fluid) in self.velocity_changes.iter_mut().zip(fluids.iter_mut()) {
+            par_iter_mut!(velocity_changes)
+                .zip(par_iter_mut!(fluid.accelerations))
+                .for_each(|(velocity_change, acceleration)| {
+                    *velocity_change += *acceleration * dt;
+                    acceleration.fill(N::zero());
+                })
+        }
+    }
 }
 
 impl<N, KernelDensity, KernelGradient> PressureSolver<N>
@@ -494,14 +466,6 @@ where
     KernelDensity: Kernel,
     KernelGradient: Kernel,
 {
-    fn velocity_changes(&self) -> &[Vec<Vector<N>>] {
-        &self.velocity_changes
-    }
-
-    fn velocity_changes_mut(&mut self) -> &mut [Vec<Vector<N>>] {
-        &mut self.velocity_changes
-    }
-
     fn init_with_fluids(&mut self, fluids: &[Fluid<N>]) {
         // Resize every buffer.
         self.densities.resize(fluids.len(), Vec::new());
@@ -537,11 +501,102 @@ where
         }
     }
 
-    fn predict_advection(&mut self, dt: N, gravity: &Vector<N>, fluids: &[Fluid<N>]) {
-        for (_fluid, velocity_changes) in fluids.iter().zip(self.velocity_changes.iter_mut()) {
-            par_iter_mut!(velocity_changes).for_each(|velocity_change| {
-                *velocity_change += gravity * dt;
+    fn predict_advection(
+        &mut self,
+        dt: N,
+        inv_dt: N,
+        kernel_radius: N,
+        contact_manager: &ContactManager<N>,
+        gravity: &Vector<N>,
+        fluids: &mut [Fluid<N>],
+    ) {
+        for fluid in fluids.iter_mut() {
+            par_iter_mut!(fluid.accelerations).for_each(|acceleration| {
+                *acceleration += gravity;
             })
+        }
+
+        for (fluid, fluid_fluid_contacts, densities) in itertools::multizip((
+            &mut *fluids,
+            &contact_manager.fluid_fluid_contacts,
+            &self.densities,
+        )) {
+            let mut forces = std::mem::replace(&mut fluid.nonpressure_forces, Vec::new());
+
+            for np_force in &mut forces {
+                np_force.solve(
+                    dt,
+                    inv_dt,
+                    kernel_radius,
+                    fluid_fluid_contacts,
+                    fluid,
+                    densities,
+                );
+            }
+
+            fluid.nonpressure_forces = forces;
+        }
+    }
+
+    fn evaluate_kernels(
+        &mut self,
+        kernel_radius: N,
+        contact_manager: &mut ContactManager<N>,
+        fluids: &[Fluid<N>],
+        boundaries: &[Boundary<N>],
+    ) {
+        helper::update_fluid_contacts::<_, KernelDensity, KernelGradient>(
+            kernel_radius,
+            &mut contact_manager.fluid_fluid_contacts,
+            &mut contact_manager.fluid_boundary_contacts,
+            fluids,
+            boundaries,
+        );
+
+        helper::update_boundary_contacts::<_, KernelDensity, KernelGradient>(
+            kernel_radius,
+            &mut contact_manager.boundary_boundary_contacts,
+            boundaries,
+        );
+    }
+
+    fn compute_densities(
+        &mut self,
+        contact_manager: &ContactManager<N>,
+        fluids: &[Fluid<N>],
+        boundaries: &[Boundary<N>],
+    ) {
+        self.compute_boundary_volumes(&contact_manager.boundary_boundary_contacts, boundaries);
+        let boundaries_volumes = &self.boundaries_volumes;
+
+        for fluid_id in 0..fluids.len() {
+            par_iter_mut!(self.densities[fluid_id])
+                .enumerate()
+                .for_each(|(i, density)| {
+                    *density = N::zero();
+
+                    for c in contact_manager.fluid_fluid_contacts[fluid_id]
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
+                        *density += fluids[c.j_model].particle_mass(c.j) * c.weight;
+                    }
+
+                    for c in contact_manager.fluid_boundary_contacts[fluid_id]
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
+                        *density += boundaries_volumes[c.j_model][c.j]
+                            * fluids[c.i_model].density0
+                            * c.weight;
+                    }
+
+                    assert!(!density.is_zero());
+                })
         }
     }
 
@@ -555,55 +610,7 @@ where
         boundaries: &[Boundary<N>],
     ) {
         let inv_dt = N::one() / dt;
-
-        counters.solver.pressure_resolution_time.resume();
-        // Init boundary-related data.
-        helper::update_boundary_contacts::<_, KernelDensity, KernelGradient>(
-            kernel_radius,
-            &mut contact_manager.boundary_boundary_contacts,
-            boundaries,
-        );
-
-        self.compute_boundary_volumes(&contact_manager.boundary_boundary_contacts, boundaries);
-
-        helper::update_fluid_contacts::<_, KernelDensity, KernelGradient>(
-            kernel_radius,
-            &mut contact_manager.fluid_fluid_contacts,
-            &mut contact_manager.fluid_boundary_contacts,
-            fluids,
-            boundaries,
-        );
-
-        self.compute_densities(
-            &contact_manager.fluid_fluid_contacts,
-            &contact_manager.fluid_boundary_contacts,
-            fluids,
-        );
-        counters.solver.pressure_resolution_time.pause();
-
-        counters.solver.non_pressure_resolution_time.resume();
-        for (fluid, fluid_fluid_contacts, densities, velocity_changes) in itertools::multizip((
-            &mut *fluids,
-            &contact_manager.fluid_fluid_contacts,
-            &self.densities,
-            &mut self.velocity_changes,
-        )) {
-            let mut forces = std::mem::replace(&mut fluid.nonpressure_forces, Vec::new());
-
-            for np_force in &mut forces {
-                np_force.solve(
-                    dt,
-                    kernel_radius,
-                    fluid_fluid_contacts,
-                    fluid,
-                    densities,
-                    velocity_changes,
-                );
-            }
-
-            fluid.nonpressure_forces = forces;
-        }
-        counters.solver.non_pressure_resolution_time.pause();
+        self.integrate_and_clear_accelerations(dt, fluids);
 
         counters.solver.pressure_resolution_time.resume();
         self.compute_dii(

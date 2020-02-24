@@ -13,6 +13,8 @@ pub struct Fluid<N: RealField> {
     pub positions: Vec<Point<N>>,
     /// The velocities of the fluid particles.
     pub velocities: Vec<Vector<N>>,
+    /// The accelerations of the fluid particles.
+    pub accelerations: Vec<Vector<N>>,
     /// The volume of the fluid particles.
     pub volumes: DVector<N>,
     /// The rest density of this fluid.
@@ -29,9 +31,11 @@ impl<N: RealField> Fluid<N> {
         density0: N,
     ) -> Self {
         let num_particles = particle_positions.len();
-        let velocities = std::iter::repeat(Vector::zeros())
+        let velocities: Vec<_> = std::iter::repeat(Vector::zeros())
             .take(num_particles)
             .collect();
+        let accelerations: Vec<_> = velocities.clone();
+
         // The volume of a fluid is computed as the volume of a cuboid of half-width equal to particle_radius.
         // It is multiplied by 0.8 so that there is no pressure when the cuboids are aligned on a grid.
         // This mass computation method is inspired from the SplishSplash project.
@@ -45,6 +49,7 @@ impl<N: RealField> Fluid<N> {
             nonpressure_forces: Vec::new(),
             positions: particle_positions,
             velocities,
+            accelerations,
             volumes: DVector::repeat(num_particles, particle_volume),
             density0,
         }
@@ -54,6 +59,7 @@ impl<N: RealField> Fluid<N> {
         let order = crate::z_order::compute_points_z_order(&self.positions);
         self.positions = crate::z_order::apply_permutation(&order, &self.positions);
         self.velocities = crate::z_order::apply_permutation(&order, &self.velocities);
+        self.accelerations = crate::z_order::apply_permutation(&order, &self.accelerations);
         self.volumes = DVector::from_vec(crate::z_order::apply_permutation(
             &order,
             self.volumes.as_slice(),

@@ -25,20 +25,23 @@ impl<N: RealField> XSPHViscosity<N> {
 impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
     fn solve(
         &mut self,
-        _dt: N,
+        dt: N,
+        inv_dt: N,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid: &mut Fluid<N>,
         densities: &[N],
-        velocity_changes: &mut [Vector<N>],
     ) {
         let viscosity_coefficient = self.viscosity_coefficient;
+        let velocities = &fluid.velocities;
+        let volumes = &fluid.volumes;
+        let density0 = fluid.density0;
 
-        par_iter_mut!(velocity_changes)
+        par_iter_mut!(fluid.accelerations)
             .enumerate()
-            .for_each(|(i, velocity_change)| {
+            .for_each(|(i, acceleration)| {
                 let mut added_vel = Vector::zeros();
-                let vi = fluid.velocities[i];
+                let vi = velocities[i];
 
                 for c in fluid_fluid_contacts
                     .particle_contacts(i)
@@ -47,12 +50,12 @@ impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
                     .iter()
                 {
                     if c.i_model == c.j_model {
-                        added_vel += (fluid.velocities[c.j] - vi)
-                            * (c.weight * fluid.particle_mass(c.j) / densities[c.j]);
+                        added_vel += (velocities[c.j] - vi)
+                            * (c.weight * volumes[c.j] * density0 / densities[c.j]);
                     }
                 }
 
-                *velocity_change += added_vel * viscosity_coefficient;
+                *acceleration += added_vel * (viscosity_coefficient * inv_dt);
             })
     }
 

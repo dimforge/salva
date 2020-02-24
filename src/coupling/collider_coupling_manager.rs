@@ -109,11 +109,9 @@ where
 {
     fn update_boundaries(
         &mut self,
-        dt: N,
         h: N,
         hgrid: &HGrid<N, HGridEntry>,
         fluids: &mut [Fluid<N>],
-        fluids_delta_vels: &mut [Vec<Vector<N>>],
         boundaries: &mut BoundarySet<N>,
     ) {
         for (collider, coupling) in &mut self.coupling.entries {
@@ -173,10 +171,7 @@ where
                             match particle {
                                 HGridEntry::FluidParticle(fluid_id, particle_id) => {
                                     let fluid = &mut fluids[*fluid_id];
-                                    let particle_delta =
-                                        &mut fluids_delta_vels[*fluid_id][*particle_id];
-                                    let particle_pos = fluid.positions[*particle_id]
-                                        + fluid.velocities[*particle_id] * dt;
+                                    let particle_pos = fluid.positions[*particle_id];
 
                                     if aabb.contains_local_point(&particle_pos) {
                                         let (proj, feature) =

@@ -186,11 +186,10 @@ impl<N: RealField> DFSPHViscosity<N> {
 
     fn compute_strain_rates(
         &mut self,
-        _dt: N,
+        dt: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],
-        velocity_changes: &mut [Vector<N>],
         compute_error: bool,
     ) -> N {
         let mut max_error = N::zero();
@@ -209,8 +208,8 @@ impl<N: RealField> DFSPHViscosity<N> {
                     .iter()
                 {
                     if c.i_model == c.j_model {
-                        let v_i = fluid.velocities[c.i] + velocity_changes[c.i];
-                        let v_j = fluid.velocities[c.j] + velocity_changes[c.j];
+                        let v_i = fluid.velocities[c.i] + fluid.accelerations[c.i] * dt;
+                        let v_j = fluid.velocities[c.j] + fluid.accelerations[c.j] * dt;
                         let v_ji = v_j - v_i;
                         let rate = compute_strain_rate(&c.gradient, &v_ji);
 
@@ -237,21 +236,22 @@ impl<N: RealField> DFSPHViscosity<N> {
         max_error
     }
 
-    fn compute_velocity_changes_for_viscosity(
+    fn compute_accelerations(
         &self,
-        _dt: N,
+        inv_dt: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid: &mut Fluid<N>,
         densities: &[N],
-        velocity_changes: &mut [Vector<N>],
     ) {
         let strain_rates = &self.strain_rates;
         let betas = &self.betas;
+        let volumes = &fluid.volumes;
+        let density0 = fluid.density0;
         let _2: N = na::convert(2.0);
 
-        par_iter_mut!(velocity_changes)
+        par_iter_mut!(fluid.accelerations)
             .enumerate()
-            .for_each(|(i, velocity_change)| {
+            .for_each(|(i, acceleration)| {
                 let ui = betas[i] * strain_rates[i].error / (densities[i] * densities[i]);
 
                 for c in fluid_fluid_contacts
@@ -266,8 +266,9 @@ impl<N: RealField> DFSPHViscosity<N> {
                         let gradient = compute_gradient_matrix(&c.gradient);
 
                         // Compute velocity change.
-                        let coeff = (ui + uj) * (fluid.particle_mass(c.j) / _2);
-                        *velocity_change += gradient.tr_mul(&coeff) * fluid.particle_mass(c.i);
+                        let coeff = (ui + uj) * (volumes[c.j] * density0 / _2);
+                        *acceleration +=
+                            gradient.tr_mul(&coeff) * (volumes[c.i] * density0 * inv_dt);
                     }
                 }
             })
@@ -278,36 +279,23 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
     fn solve(
         &mut self,
         dt: N,
+        inv_dt: N,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid: &mut Fluid<N>,
         densities: &[N],
-        velocity_changes: &mut [Vector<N>],
     ) {
         self.init(fluid);
 
         let _ = self.compute_betas(fluid_fluid_contacts, fluid, densities);
 
-        let _ = self.compute_strain_rates(
-            dt,
-            fluid_fluid_contacts,
-            fluid,
-            densities,
-            velocity_changes,
-            false,
-        );
+        let _ = self.compute_strain_rates(dt, fluid_fluid_contacts, fluid, densities, false);
 
         let mut last_err = N::max_value();
 
         for i in 0..self.max_viscosity_iter {
-            let avg_err = self.compute_strain_rates(
-                dt,
-                fluid_fluid_contacts,
-                fluid,
-                densities,
-                velocity_changes,
-                true,
-            );
+            let avg_err =
+                self.compute_strain_rates(dt, fluid_fluid_contacts, fluid, densities, true);
 
             if avg_err <= self.max_viscosity_error && i >= self.min_viscosity_iter {
                 //                println!(
@@ -321,13 +309,7 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
 
             last_err = avg_err;
 
-            self.compute_velocity_changes_for_viscosity(
-                dt,
-                fluid_fluid_contacts,
-                fluid,
-                densities,
-                velocity_changes,
-            );
+            self.compute_accelerations(inv_dt, fluid_fluid_contacts, fluid, densities);
         }
     }
 

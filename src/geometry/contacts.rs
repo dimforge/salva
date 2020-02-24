@@ -97,11 +97,7 @@ impl<N: RealField> ParticlesContacts<N> {
     }
 }
 
-pub fn insert_fluids_to_grid<N: RealField>(
-    dt: N,
-    fluids: &[Fluid<N>],
-    grid: &mut HGrid<N, HGridEntry>,
-) {
+pub fn insert_fluids_to_grid<N: RealField>(fluids: &[Fluid<N>], grid: &mut HGrid<N, HGridEntry>) {
     for (fluid_id, fluid) in fluids.iter().enumerate() {
         for (particle_id, point) in fluid.positions.iter().enumerate() {
             grid.insert(&point, HGridEntry::FluidParticle(fluid_id, particle_id));
@@ -172,6 +168,33 @@ pub fn compute_contacts<N: RealField>(
     }
 
     par_iter!(grid.inner_table()).for_each(|(curr_cell, curr_particles)| {
+        #[cfg(feature = "dim2")]
+        for i in 0i64..=1 {
+            for j in -1..=1 {
+                // Avoid visiting the same pair of cells twice.
+                if i == 0 && j < 0 {
+                    continue;
+                }
+
+                let neighbor_cell = curr_cell + Vector::new(i, j);
+                if let Some(neighbor_particles) = grid.cell(&neighbor_cell) {
+                    compute_contacts_for_pair_of_cells(
+                        h,
+                        fluids,
+                        boundaries,
+                        fluid_fluid_contacts,
+                        fluid_boundary_contacts,
+                        boundary_boundary_contacts,
+                        curr_cell,
+                        curr_particles,
+                        &neighbor_cell,
+                        neighbor_particles,
+                    );
+                }
+            }
+        }
+
+        #[cfg(feature = "dim3")]
         for i in 0i64..=1 {
             for j in -1..=1 {
                 for k in -1..=1 {

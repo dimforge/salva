@@ -76,11 +76,11 @@ impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
     fn solve(
         &mut self,
         dt: N,
+        inv_dt: N,
         kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid: &mut Fluid<N>,
         densities: &[N],
-        velocity_changes: &mut [Vector<N>],
     ) {
         self.init(fluid);
         let _2: N = na::convert(2.0f64);
@@ -90,10 +90,13 @@ impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
         // Compute and apply forces.
         let normals = &self.normals;
         let tension_coefficient = self.tension_coefficient;
+        let volumes = &mut fluid.volumes;
+        let density0 = fluid.density0;
+        let positions = &fluid.positions;
 
-        par_iter_mut!(velocity_changes)
+        par_iter_mut!(fluid.accelerations)
             .enumerate()
-            .for_each(|(i, velocity_change_i)| {
+            .for_each(|(i, acceleration_i)| {
                 for c in fluid_fluid_contacts
                     .particle_contacts(i)
                     .read()
@@ -101,7 +104,7 @@ impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
                     .iter()
                 {
                     if c.i_model == c.j_model {
-                        let dpos = fluid.positions[c.i] - fluid.positions[c.j];
+                        let dpos = positions[c.i] - positions[c.j];
                         let cohesion_vec = if let Some((dir, dist)) =
                             Unit::try_new_and_get(dpos, N::default_epsilon())
                         {
@@ -111,10 +114,10 @@ impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
                         };
 
                         let cohesion_acc =
-                            cohesion_vec * (-tension_coefficient * fluid.particle_mass(c.j));
+                            cohesion_vec * (-tension_coefficient * volumes[c.j] * density0);
                         let curvature_acc = (normals[c.i] - normals[c.j]) * -tension_coefficient;
-                        let kij = _2 * fluid.density0 / (densities[c.i] + densities[c.j]);
-                        *velocity_change_i += (curvature_acc + cohesion_acc) * (kij * dt);
+                        let kij = _2 * density0 / (densities[c.i] + densities[c.j]);
+                        *acceleration_i += (curvature_acc + cohesion_acc) * kij;
                     }
                 }
             })

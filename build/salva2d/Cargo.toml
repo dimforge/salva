@@ -24,6 +24,8 @@ path = "../../src/lib.rs"
 required-features = [ "dim2" ]
 
 [dependencies]
+num-traits = "0.2"
+fnv = "1.0"
 itertools = "0.8"
 generational-arena = "0.2"
 nalgebra  = "0.19"

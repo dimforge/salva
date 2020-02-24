@@ -33,23 +33,26 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
     fn solve(
         &mut self,
         dt: N,
+        inv_dt: N,
         kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid: &mut Fluid<N>,
         densities: &[N],
-        velocity_changes: &mut [Vector<N>],
     ) {
         let viscosity_coefficient = self.viscosity_coefficient;
         let speed_of_sound = self.speed_of_sound;
         let alpha = self.alpha;
         let beta = self.beta;
+        let density0 = fluid.density0;
+        let volumes = &fluid.volumes;
+        let positions = &fluid.positions;
+        let velocities = &fluid.velocities;
         let _0_5: N = na::convert(0.5);
 
-        par_iter_mut!(velocity_changes)
+        par_iter_mut!(fluid.accelerations)
             .enumerate()
-            .for_each(|(i, velocity_change)| {
-                let mut added_vel = Vector::zeros();
-                let _vi = fluid.velocities[i];
+            .for_each(|(i, acceleration)| {
+                let mut added_acc = Vector::zeros();
 
                 for c in fluid_fluid_contacts
                     .particle_contacts(i)
@@ -58,8 +61,8 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
                     .iter()
                 {
                     if c.i_model == c.j_model {
-                        let r_ij = fluid.positions[c.i] - fluid.positions[c.j];
-                        let v_ij = fluid.velocities[c.i] - fluid.velocities[c.j];
+                        let r_ij = positions[c.i] - positions[c.j];
+                        let v_ij = velocities[c.i] - velocities[c.j];
                         let vr = r_ij.dot(&v_ij);
 
                         if vr < N::zero() {
@@ -67,14 +70,14 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
                             let eta2 = kernel_radius * kernel_radius * na::convert(0.01);
                             let mu_ij = kernel_radius * vr / (r_ij.norm_squared() + eta2);
 
-                            added_vel += c.gradient
+                            added_acc += c.gradient
                                 * ((speed_of_sound * alpha * mu_ij - beta * mu_ij * mu_ij)
-                                    * (dt * fluid.particle_mass(c.j) / density_average));
+                                    * (volumes[c.j] * density0 / density_average));
                         }
                     }
                 }
 
-                *velocity_change += added_vel * viscosity_coefficient;
+                *acceleration += added_acc * viscosity_coefficient;
             })
     }
 

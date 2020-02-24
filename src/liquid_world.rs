@@ -72,35 +72,23 @@ impl<N: RealField> LiquidWorld<N> {
         let mut remaining_time = dt;
 
         // Perform substeps.
-        while remaining_time > N::zero() {
+        while remaining_time > N::default_epsilon() {
             self.nsubsteps_since_sort += 1;
             self.counters.nsubsteps += 1;
 
-            // Substep length.
-            let substep_dt = self.timestep_manager.compute_substep(
-                dt,
-                remaining_time,
-                self.particle_radius,
-                self.fluids.as_slice(),
-            );
-
             self.solver.init_with_fluids(self.fluids.as_slice());
-            self.solver
-                .predict_advection(substep_dt, gravity, self.fluids.as_slice());
 
             self.counters.stages.collision_detection_time.resume();
             self.counters.cd.grid_insertion_time.resume();
             self.hgrid.clear();
-            geometry::insert_fluids_to_grid(substep_dt, self.fluids.as_slice(), &mut self.hgrid);
+            geometry::insert_fluids_to_grid(self.fluids.as_slice(), &mut self.hgrid);
             self.counters.cd.grid_insertion_time.pause();
 
             self.counters.cd.boundary_update_time.resume();
             coupling.update_boundaries(
-                substep_dt,
                 self.h,
                 &self.hgrid,
                 self.fluids.as_mut_slice(),
-                self.solver.velocity_changes_mut(),
                 &mut self.boundaries,
             );
             self.counters.cd.boundary_update_time.pause();
@@ -123,6 +111,44 @@ impl<N: RealField> LiquidWorld<N> {
             self.counters.stages.collision_detection_time.pause();
 
             self.counters.stages.solver_time.resume();
+            self.solver.evaluate_kernels(
+                self.h,
+                &mut self.contact_manager,
+                self.fluids.as_slice(),
+                self.boundaries.as_slice(),
+            );
+
+            self.solver.compute_densities(
+                &self.contact_manager,
+                self.fluids.as_slice(),
+                self.boundaries.as_slice(),
+            );
+
+            let inv_dt = if remaining_time.is_zero() {
+                N::zero()
+            } else {
+                N::one() / remaining_time
+            };
+
+            self.solver.predict_advection(
+                remaining_time,
+                inv_dt,
+                self.h,
+                &self.contact_manager,
+                gravity,
+                self.fluids.as_mut_slice(),
+            );
+
+            // Substep length.
+            let substep_dt = self.timestep_manager.compute_substep(
+                dt,
+                remaining_time,
+                self.particle_radius,
+                self.fluids.as_slice(),
+            );
+
+            println!("Substep dt: {}", substep_dt);
+
             self.solver.step(
                 &mut self.counters,
                 substep_dt,
