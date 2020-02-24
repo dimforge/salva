@@ -12,7 +12,9 @@ use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed2d::{objects::FluidRenderingMode, Testbed};
 use salva2d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva2d::object::{Boundary, Fluid};
-use salva2d::solver::{ArtificialViscosity, Becker2009Elasticity, DFSPHSolver, XSPHViscosity};
+use salva2d::solver::{
+    ArtificialViscosity, Becker2009Elasticity, DFSPHSolver, IISPHSolver, XSPHViscosity,
+};
 use salva2d::LiquidWorld;
 
 pub fn init_world(testbed: &mut Testbed) {
@@ -53,16 +55,16 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(100_000.0, 0.3, false);
     let viscosity = ArtificialViscosity::new(0.5);
-    let mut fluid = Fluid::new(points1, particle_rad, 10.0);
+    let mut fluid = Fluid::new(points1, particle_rad, 100.0);
     //    fluid.nonpressure_forces.push(Box::new(elasticity));
-    fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
+    //    fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
     let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(10_000.0, 0.3, false);
-    let mut fluid = Fluid::new(points2, particle_rad, 10.0);
+    let mut fluid = Fluid::new(points2, particle_rad, 100.0);
     //    fluid.nonpressure_forces.push(Box::new(elasticity));
-    fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
+    //    fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
@@ -74,6 +76,8 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let ground_size = 25.0;
     let ground_shape = ShapeHandle::new(Cuboid::new(Vector2::new(ground_size, 1.0)));
+    let ground_samples =
+        salva2d::sampling::shape_surface_ray_sample(&*ground_shape, particle_rad).unwrap();
 
     let ground_handle = bodies.insert(Ground::new());
     let co = ColliderDesc::new(ground_shape.clone())
@@ -81,7 +85,11 @@ pub fn init_world(testbed: &mut Testbed) {
         .build(BodyPartHandle(ground_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-    coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
+    coupling_set.register_coupling(
+        bo_handle,
+        co_handle,
+        CouplingMethod::StaticSampling(ground_samples.clone()),
+    );
 
     let co = ColliderDesc::new(ground_shape.clone())
         .position(Isometry2::new(
@@ -91,7 +99,11 @@ pub fn init_world(testbed: &mut Testbed) {
         .build(BodyPartHandle(ground_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-    coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
+    coupling_set.register_coupling(
+        bo_handle,
+        co_handle,
+        CouplingMethod::StaticSampling(ground_samples.clone()),
+    );
 
     let co = ColliderDesc::new(ground_shape)
         .position(Isometry2::new(
@@ -101,7 +113,11 @@ pub fn init_world(testbed: &mut Testbed) {
         .build(BodyPartHandle(ground_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-    coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
+    coupling_set.register_coupling(
+        bo_handle,
+        co_handle,
+        CouplingMethod::StaticSampling(ground_samples),
+    );
 
     /*
     /*
@@ -188,6 +204,7 @@ pub fn init_world(testbed: &mut Testbed) {
      * Set up the testbed.
      */
     testbed.set_ground_handle(Some(ground_handle));
+    testbed.set_body_wireframe(ground_handle, true);
     testbed.set_world(
         mechanical_world,
         geometrical_world,
@@ -199,6 +216,7 @@ pub fn init_world(testbed: &mut Testbed) {
     testbed.set_liquid_world(liquid_world, coupling_set);
     testbed.look_at(Point2::new(0.0, -2.5), 95.0);
     testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
+    testbed.enable_boundary_particles_rendering(true);
 }
 
 fn main() {

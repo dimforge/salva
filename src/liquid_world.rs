@@ -48,7 +48,7 @@ impl<N: RealField> LiquidWorld<N> {
             boundaries: BoundarySet::new(),
             solver: Box::new(solver),
             contact_manager: ContactManager::new(),
-            timestep_manager: TimestepManager::new(),
+            timestep_manager: TimestepManager::new(particle_radius),
             hgrid: HGrid::new(h),
         }
     }
@@ -69,10 +69,10 @@ impl<N: RealField> LiquidWorld<N> {
     ) {
         self.counters.reset();
         self.counters.step_time.start();
-        let mut remaining_time = dt;
+        self.timestep_manager.reset(dt);
 
         // Perform substeps.
-        while remaining_time > N::default_epsilon() {
+        while !self.timestep_manager.is_done() {
             self.nsubsteps_since_sort += 1;
             self.counters.nsubsteps += 1;
 
@@ -124,27 +124,12 @@ impl<N: RealField> LiquidWorld<N> {
                 self.boundaries.as_slice(),
             );
 
-            let inv_dt = if remaining_time.is_zero() {
-                N::zero()
-            } else {
-                N::one() / remaining_time
-            };
-
             self.solver.predict_advection(
-                remaining_time,
-                inv_dt,
+                &self.timestep_manager,
                 self.h,
                 &self.contact_manager,
                 gravity,
                 self.fluids.as_mut_slice(),
-            );
-
-            // Substep length.
-            let substep_dt = self.timestep_manager.compute_substep(
-                dt,
-                remaining_time,
-                self.particle_radius,
-                self.fluids.as_slice(),
             );
 
             println!("Substep dt: {}", substep_dt);

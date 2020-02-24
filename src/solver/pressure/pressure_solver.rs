@@ -4,6 +4,7 @@ use crate::counters::Counters;
 use crate::geometry::ContactManager;
 use crate::math::Vector;
 use crate::object::{Boundary, Fluid};
+use crate::TimestepManager;
 
 pub trait PressureSolver<N: RealField> {
     /// Initialize this solver with the given fluids.
@@ -15,8 +16,7 @@ pub trait PressureSolver<N: RealField> {
     /// Predicts advection with the given gravity.
     fn predict_advection(
         &mut self,
-        dt: N,
-        inv_dt: N,
+        timestep: &TimestepManager<N>,
         kernel_radius: N,
         contact_manager: &ContactManager<N>,
         gravity: &Vector<N>,
@@ -45,7 +45,7 @@ pub trait PressureSolver<N: RealField> {
     fn step(
         &mut self,
         counters: &mut Counters,
-        dt: N,
+        timestep: &mut TimestepManager<N>,
         contact_manager: &mut ContactManager<N>,
         kernel_radius: N,
         fluids: &mut [Fluid<N>],
