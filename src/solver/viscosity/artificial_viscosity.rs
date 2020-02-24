@@ -1,14 +1,12 @@
-
-
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use na::{self, RealField};
 
-use crate::geometry::{ParticlesContacts};
+use crate::geometry::ParticlesContacts;
 
-use crate::math::{Vector};
-use crate::object::{Fluid};
+use crate::math::Vector;
+use crate::object::Fluid;
 use crate::solver::NonPressureForce;
 
 // See http://www.astro.lu.se/~david/teaching/SPH/notes/annurev.aa.30.090192.pdf
@@ -53,7 +51,12 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
                 let mut added_vel = Vector::zeros();
                 let _vi = fluid.velocities[i];
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         let r_ij = fluid.positions[c.i] - fluid.positions[c.j];
                         let v_ij = fluid.velocities[c.i] - fluid.velocities[c.j];
@@ -74,4 +77,6 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
                 *velocity_change += added_vel * viscosity_coefficient;
             })
     }
+
+    fn apply_permutation(&mut self, _: &[usize]) {}
 }

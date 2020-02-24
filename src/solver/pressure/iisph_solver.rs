@@ -5,11 +5,12 @@ use rayon::prelude::*;
 
 use na::{self, RealField};
 
+use crate::counters::Counters;
 use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel};
 use crate::math::Vector;
 use crate::object::{Boundary, Fluid};
-use crate::solver::PressureSolver;
+use crate::solver::{helper, PressureSolver};
 
 /// A Position Based Fluid solver.
 pub struct IISPHSolver<
@@ -59,62 +60,6 @@ where
         }
     }
 
-    fn update_fluid_contacts(
-        &mut self,
-        _dt: N,
-        kernel_radius: N,
-        fluid_fluid_contacts: &mut [ParticlesContacts<N>],
-        fluid_boundary_contacts: &mut [ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
-    ) {
-        let _velocity_changes = &self.velocity_changes;
-        for contacts in fluid_fluid_contacts.iter_mut() {
-            par_iter_mut!(contacts.contacts_mut()).for_each(|c| {
-                let fluid1 = &fluids[c.i_model];
-                let fluid2 = &fluids[c.j_model];
-                let pi = fluid1.positions[c.i];
-                let pj = fluid2.positions[c.j];
-
-                c.weight = KernelDensity::points_apply(&pi, &pj, kernel_radius);
-                c.gradient = KernelGradient::points_apply_diff1(&pi, &pj, kernel_radius);
-            })
-        }
-
-        for contacts in fluid_boundary_contacts.iter_mut() {
-            par_iter_mut!(contacts.contacts_mut()).for_each(|c| {
-                let fluid1 = &fluids[c.i_model];
-                let bound2 = &boundaries[c.j_model];
-
-                let pi = fluid1.positions[c.i];
-                let pj = bound2.positions[c.j];
-
-                c.weight = KernelDensity::points_apply(&pi, &pj, kernel_radius);
-                c.gradient = KernelGradient::points_apply_diff1(&pi, &pj, kernel_radius);
-            })
-        }
-    }
-
-    fn update_boundary_contacts(
-        &mut self,
-        kernel_radius: N,
-        boundary_boundary_contacts: &mut [ParticlesContacts<N>],
-        boundaries: &[Boundary<N>],
-    ) {
-        for contacts in boundary_boundary_contacts.iter_mut() {
-            par_iter_mut!(contacts.contacts_mut()).for_each(|c| {
-                let bound1 = &boundaries[c.i_model];
-                let bound2 = &boundaries[c.j_model];
-
-                let pi = bound1.positions[c.i];
-                let pj = bound2.positions[c.j];
-
-                c.weight = KernelDensity::points_apply(&pi, &pj, kernel_radius);
-                c.gradient = KernelGradient::points_apply_diff1(&pi, &pj, kernel_radius);
-            })
-        }
-    }
-
     fn compute_boundary_volumes(
         &mut self,
         boundary_boundary_contacts: &[ParticlesContacts<N>],
@@ -126,7 +71,12 @@ where
                 .for_each(|(i, volume)| {
                     let mut denominator = N::zero();
 
-                    for c in boundary_boundary_contacts[boundary_id].particle_contacts(i) {
+                    for c in boundary_boundary_contacts[boundary_id]
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
                         denominator += c.weight;
                     }
 
@@ -150,11 +100,21 @@ where
                 .for_each(|(i, density)| {
                     *density = N::zero();
 
-                    for c in fluid_fluid_contacts[fluid_id].particle_contacts(i) {
+                    for c in fluid_fluid_contacts[fluid_id]
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
                         *density += fluids[c.j_model].particle_mass(c.j) * c.weight;
                     }
 
-                    for c in fluid_boundary_contacts[fluid_id].particle_contacts(i) {
+                    for c in fluid_boundary_contacts[fluid_id]
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
                         *density += boundaries_volumes[c.j_model][c.j]
                             * fluids[c.i_model].density0
                             * c.weight;
@@ -184,7 +144,12 @@ where
                     let fluid_i = &fluids[fluid_id];
                     let mut delta = N::zero();
 
-                    for c in fluid_fluid_contacts[fluid_id].particle_contacts(i) {
+                    for c in fluid_fluid_contacts[fluid_id]
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
                         let fluid_j = &fluids[c.j_model];
                         let vi = fluid_i.velocities[c.i] + velocity_changes[c.i_model][c.i];
                         let vj = fluid_j.velocities[c.j] + velocity_changes[c.j_model][c.j];
@@ -192,7 +157,12 @@ where
                         delta += fluids[c.j_model].particle_mass(c.j) * (vi - vj).dot(&c.gradient);
                     }
 
-                    for c in fluid_boundary_contacts[fluid_id].particle_contacts(i) {
+                    for c in fluid_boundary_contacts[fluid_id]
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
                         let vi = fluid_i.velocities[c.i] + velocity_changes[c.i_model][c.i];
                         // FIXME: take the velocity of j too?
 
@@ -229,12 +199,22 @@ where
                 let rhoi = densities[fluid_id][i];
                 let factor = -dt * dt / (rhoi * rhoi);
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     let mj = fluids[c.j_model].particle_mass(c.j);
                     *dii += c.gradient * (mj * factor);
                 }
 
-                for c in fluid_boundary_contacts.particle_contacts(i) {
+                for c in fluid_boundary_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     let mj = boundaries_volumes[c.j_model][c.j] * fluid_i.density0;
                     *dii += c.gradient * (mj * factor);
                 }
@@ -265,13 +245,23 @@ where
                 let mi = fluids[fluid_id].particle_mass(i);
                 let factor = dt * dt * mi / (rhoi * rhoi);
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     let mj = fluids[c.j_model].particle_mass(c.j);
                     let dji = c.gradient * factor;
                     *aii += mj * (dii[c.i] - dji).dot(&c.gradient);
                 }
 
-                for c in fluid_boundary_contacts.particle_contacts(i) {
+                for c in fluid_boundary_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     let mj = boundaries_volumes[c.j_model][c.j] * fluid_i.density0;
                     let dji = c.gradient * factor;
                     *aii += mj * (dii[c.i] - dji).dot(&c.gradient);
@@ -300,7 +290,12 @@ where
             par_iter_mut!(dij_pjl).enumerate().for_each(|(i, dij_pjl)| {
                 dij_pjl.fill(N::zero());
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     let rhoj = densities[c.j_model][c.j];
                     let mj = fluids[c.j_model].particle_mass(c.j);
                     let p_jl = pressures[c.j_model][c.j];
@@ -345,7 +340,12 @@ where
                         let rhoi = densities[fluid_id][i];
                         let derr = fluid_i.density0 - predicted_densities[fluid_id][i];
 
-                        for c in fluid_fluid_contacts.particle_contacts(i) {
+                        for c in fluid_fluid_contacts
+                            .particle_contacts(i)
+                            .read()
+                            .unwrap()
+                            .iter()
+                        {
                             let mj = fluids[c.j_model].particle_mass(c.j);
                             let dji = c.gradient * (dt * dt * mi / (rhoi * rhoi));
                             let factor = dij_pjl[c.i_model][c.i]
@@ -354,7 +354,12 @@ where
                             sum += mj * factor.dot(&c.gradient);
                         }
 
-                        for c in fluid_boundary_contacts.particle_contacts(i) {
+                        for c in fluid_boundary_contacts
+                            .particle_contacts(i)
+                            .read()
+                            .unwrap()
+                            .iter()
+                        {
                             let mj = boundaries_volumes[c.j_model][c.j] * fluid_i.density0;
                             sum += mj * dij_pjl[c.i_model][c.i].dot(&c.gradient);
                         }
@@ -406,7 +411,12 @@ where
                     let pi = pressures[fluid_id][i];
                     let rhoi = densities[fluid_id][i];
 
-                    for c in fluid_fluid_contacts[fluid_id].particle_contacts(i) {
+                    for c in fluid_fluid_contacts[fluid_id]
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
                         let mj = fluids[c.j_model].particle_mass(c.j);
                         let pj = pressures[c.j_model][c.j];
                         let rhoj = densities[c.j_model][c.j];
@@ -415,7 +425,12 @@ where
                             c.gradient * (dt * mj * (pi / (rhoi * rhoi) + pj / (rhoj * rhoj)));
                     }
 
-                    for c in fluid_boundary_contacts[fluid_id].particle_contacts(i) {
+                    for c in fluid_boundary_contacts[fluid_id]
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
                         let mj = boundaries_volumes[c.j_model][c.j] * fluid_i.density0;
                         *velocity_change -= c.gradient * (dt * mj * pi / (rhoi * rhoi));
                     }
@@ -532,6 +547,7 @@ where
 
     fn step(
         &mut self,
+        counters: &mut Counters,
         dt: N,
         contact_manager: &mut ContactManager<N>,
         kernel_radius: N,
@@ -540,8 +556,9 @@ where
     ) {
         let inv_dt = N::one() / dt;
 
+        counters.solver.pressure_resolution_time.resume();
         // Init boundary-related data.
-        self.update_boundary_contacts(
+        helper::update_boundary_contacts::<_, KernelDensity, KernelGradient>(
             kernel_radius,
             &mut contact_manager.boundary_boundary_contacts,
             boundaries,
@@ -549,8 +566,7 @@ where
 
         self.compute_boundary_volumes(&contact_manager.boundary_boundary_contacts, boundaries);
 
-        self.update_fluid_contacts(
-            dt,
+        helper::update_fluid_contacts::<_, KernelDensity, KernelGradient>(
             kernel_radius,
             &mut contact_manager.fluid_fluid_contacts,
             &mut contact_manager.fluid_boundary_contacts,
@@ -563,7 +579,9 @@ where
             &contact_manager.fluid_boundary_contacts,
             fluids,
         );
+        counters.solver.pressure_resolution_time.pause();
 
+        counters.solver.non_pressure_resolution_time.resume();
         for (fluid, fluid_fluid_contacts, densities, velocity_changes) in itertools::multizip((
             &mut *fluids,
             &contact_manager.fluid_fluid_contacts,
@@ -585,7 +603,9 @@ where
 
             fluid.nonpressure_forces = forces;
         }
+        counters.solver.non_pressure_resolution_time.pause();
 
+        counters.solver.pressure_resolution_time.resume();
         self.compute_dii(
             dt,
             &contact_manager.fluid_fluid_contacts,
@@ -636,5 +656,6 @@ where
         self.velocity_changes
             .iter_mut()
             .for_each(|vs| vs.iter_mut().for_each(|v| v.fill(N::zero())));
+        counters.solver.pressure_resolution_time.pause();
     }
 }

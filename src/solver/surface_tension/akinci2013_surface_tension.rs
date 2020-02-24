@@ -1,14 +1,12 @@
-
-
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use na::{self, RealField, Unit};
 
-use crate::geometry::{ParticlesContacts};
+use crate::geometry::ParticlesContacts;
 
-use crate::math::{Vector};
-use crate::object::{Fluid};
+use crate::math::Vector;
+use crate::object::Fluid;
 use crate::solver::NonPressureForce;
 
 #[derive(Clone)]
@@ -43,7 +41,12 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
             .for_each(|(i, normal_i)| {
                 let mut normal = Vector::zeros();
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         normal += c.gradient * (fluid.particle_mass(c.j) / densities[c.j]);
                     }
@@ -91,7 +94,12 @@ impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
         par_iter_mut!(velocity_changes)
             .enumerate()
             .for_each(|(i, velocity_change_i)| {
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         let dpos = fluid.positions[c.i] - fluid.positions[c.j];
                         let cohesion_vec = if let Some((dir, dist)) =
@@ -111,4 +119,6 @@ impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
                 }
             })
     }
+
+    fn apply_permutation(&mut self, _: &[usize]) {}
 }

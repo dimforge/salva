@@ -1,5 +1,6 @@
 use na::RealField;
 
+use crate::counters::Counters;
 use crate::geometry::ContactManager;
 use crate::math::Vector;
 use crate::object::{Boundary, Fluid};
@@ -27,6 +28,7 @@ pub trait PressureSolver<N: RealField> {
     /// method.
     fn step(
         &mut self,
+        counters: &mut Counters,
         dt: N,
         contact_manager: &mut ContactManager<N>,
         kernel_radius: N,

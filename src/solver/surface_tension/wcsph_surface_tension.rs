@@ -40,7 +40,12 @@ impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
         par_iter_mut!(velocity_changes)
             .enumerate()
             .for_each(|(i, velocity_change_i)| {
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         let dpos = fluid.positions[c.i] - fluid.positions[c.j];
                         let cohesion_acc = dpos
@@ -51,4 +56,6 @@ impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
                 }
             })
     }
+
+    fn apply_permutation(&mut self, _: &[usize]) {}
 }

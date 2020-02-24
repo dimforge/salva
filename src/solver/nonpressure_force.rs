@@ -3,7 +3,7 @@ use crate::math::Vector;
 use crate::object::Fluid;
 use na::RealField;
 
-pub trait NonPressureForce<N: RealField>: Sync {
+pub trait NonPressureForce<N: RealField>: Send + Sync {
     fn solve(
         &mut self,
         dt: N,
@@ -13,4 +13,6 @@ pub trait NonPressureForce<N: RealField>: Sync {
         densities: &[N],
         velocity_changes: &mut [Vector<N>],
     );
+
+    fn apply_permutation(&mut self, permutation: &[usize]);
 }

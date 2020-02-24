@@ -8,8 +8,9 @@ use ncollide::bounding_volume::BoundingVolume;
 use ncollide::query::PointQuery;
 use ncollide::shape::FeatureId;
 use nphysics::math::ForceType;
-use nphysics::object::{BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
+use nphysics::object::{BodySet, BodyStatus, ColliderAnchor, ColliderHandle, ColliderSet};
 use std::collections::HashMap;
+use std::sync::RwLock;
 
 /// The way a collider is coupled to a boundary object.
 pub enum CouplingMethod<N: RealField> {
@@ -120,6 +121,31 @@ where
                 self.colliders.get(*collider),
                 boundaries.get_mut(coupling.boundary),
             ) {
+                // Update the boundary's ability to receive forces.
+                match collider.anchor() {
+                    ColliderAnchor::OnBodyPart { body_part, .. } => {
+                        if let Some(body) = self.bodies.get_mut(body_part.0) {
+                            if body.status_dependent_ndofs() == 0 {
+                                boundary.forces = None;
+                            } else {
+                                boundary.forces = Some(RwLock::new(Vec::new()));
+                                boundary.clear_forces(true);
+                            }
+                        }
+                    }
+                    ColliderAnchor::OnDeformableBody { body, body_parts } => {
+                        if let Some(body) = self.bodies.get_mut(*body) {
+                            if body.status_dependent_ndofs() == 0 {
+                                boundary.forces = None;
+                            } else {
+                                boundary.forces = Some(RwLock::new(Vec::new()));
+                                boundary.clear_forces(true);
+                            }
+                        }
+                    }
+                }
+
+                // Update positions and velocities.
                 boundary.positions.clear();
                 boundary.velocities.clear();
                 coupling.features.clear();
@@ -150,7 +176,7 @@ where
                                     let particle_delta =
                                         &mut fluids_delta_vels[*fluid_id][*particle_id];
                                     let particle_pos = fluid.positions[*particle_id]
-                                        + (fluid.velocities[*particle_id] + *particle_delta) * dt;
+                                        + fluid.velocities[*particle_id] * dt;
 
                                     if aabb.contains_local_point(&particle_pos) {
                                         let (proj, feature) =
@@ -199,58 +225,59 @@ where
                     continue;
                 }
 
-                let forces = boundary.forces.read().unwrap();
+                if let Some(forces) = &boundary.forces {
+                    let forces = forces.read().unwrap();
+                    match collider.anchor() {
+                        ColliderAnchor::OnBodyPart { body_part, .. } => {
+                            if let Some(body) = self.bodies.get_mut(body_part.0) {
+                                for (pos, force) in
+                                    boundary.positions.iter().zip(forces.iter().cloned())
+                                {
+                                    // FIXME: how do we deal with large density ratio?
+                                    // Is it only an issue with PBF?
+                                    // The following commented code was an attempt to limit the force applied
+                                    // to the bodies in order to avoid large forces.
+                                    //
+                                    //                                let ratio = na::convert::<_, N>(3.0)
+                                    //                                    * body.part(body_part.1).unwrap().inertia().mass();
+                                    //
+                                    //                                if ratio < na::convert(1.0) {
+                                    //                                    force *= ratio;
+                                    //                                }
 
-                match collider.anchor() {
-                    ColliderAnchor::OnBodyPart { body_part, .. } => {
-                        if let Some(body) = self.bodies.get_mut(body_part.0) {
-                            for (pos, force) in
-                                boundary.positions.iter().zip(forces.iter().cloned())
-                            {
-                                // FIXME: how do we deal with large density ratio?
-                                // Is it only an issue with PBF?
-                                // The following commented code was an attempt to limit the force applied
-                                // to the bodies in order to avoid large forces.
-                                //
-                                //                                let ratio = na::convert::<_, N>(3.0)
-                                //                                    * body.part(body_part.1).unwrap().inertia().mass();
-                                //
-                                //                                if ratio < na::convert(1.0) {
-                                //                                    force *= ratio;
-                                //                                }
-
-                                body.apply_force_at_point(
-                                    body_part.1,
-                                    &force,
-                                    pos,
-                                    ForceType::Force,
-                                    true,
-                                )
+                                    body.apply_force_at_point(
+                                        body_part.1,
+                                        &force,
+                                        pos,
+                                        ForceType::Force,
+                                        true,
+                                    )
+                                }
                             }
                         }
-                    }
-                    ColliderAnchor::OnDeformableBody { body, body_parts } => {
-                        if let Some(body) = self.bodies.get_mut(*body) {
-                            for (feature, pos, force) in itertools::multizip((
-                                coupling.features.iter(),
-                                boundary.positions.iter(),
-                                forces.iter(),
-                            )) {
-                                let subshape_id =
-                                    collider.shape().subshape_containing_feature(*feature);
-                                let part_id = if let Some(body_parts) = body_parts {
-                                    body_parts[subshape_id]
-                                } else {
-                                    subshape_id
-                                };
+                        ColliderAnchor::OnDeformableBody { body, body_parts } => {
+                            if let Some(body) = self.bodies.get_mut(*body) {
+                                for (feature, pos, force) in itertools::multizip((
+                                    coupling.features.iter(),
+                                    boundary.positions.iter(),
+                                    forces.iter(),
+                                )) {
+                                    let subshape_id =
+                                        collider.shape().subshape_containing_feature(*feature);
+                                    let part_id = if let Some(body_parts) = body_parts {
+                                        body_parts[subshape_id]
+                                    } else {
+                                        subshape_id
+                                    };
 
-                                body.apply_force_at_point(
-                                    part_id,
-                                    &force,
-                                    pos,
-                                    ForceType::Force,
-                                    true,
-                                )
+                                    body.apply_force_at_point(
+                                        part_id,
+                                        &force,
+                                        pos,
+                                        ForceType::Force,
+                                        true,
+                                    )
+                                }
                             }
                         }
                     }

@@ -7,6 +7,7 @@ pub use self::surface_tension::*;
 pub use self::viscosity::*;
 
 mod elasticity;
+pub mod helper;
 mod nonpressure_force;
 mod pressure;
 mod surface_tension;

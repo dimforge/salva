@@ -129,7 +129,12 @@ impl<N: RealField> DFSPHViscosity<N> {
                 let mut grad_sum = BetaGradientMatrix::zeros();
                 let mut squared_grad_sum = BetaMatrix::zeros();
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         let mat = compute_gradient_matrix(&c.gradient);
                         let grad_i = mat * (fluid.particle_mass(c.j) / (_2 * densities[c.i]));
@@ -197,7 +202,12 @@ impl<N: RealField> DFSPHViscosity<N> {
             .map(|(i, strain_rates_i)| {
                 let mut fluid_rate = StrainRate::zeros();
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         let v_i = fluid.velocities[c.i] + velocity_changes[c.i];
                         let v_j = fluid.velocities[c.j] + velocity_changes[c.j];
@@ -244,7 +254,12 @@ impl<N: RealField> DFSPHViscosity<N> {
             .for_each(|(i, velocity_change)| {
                 let ui = betas[i] * strain_rates[i].error / (densities[i] * densities[i]);
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         let uj = betas[c.j] * strain_rates[c.j].error
                             / (densities[c.j] * densities[c.j]);
@@ -315,4 +330,6 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
             );
         }
     }
+
+    fn apply_permutation(&mut self, _: &[usize]) {}
 }

@@ -12,7 +12,7 @@ use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed2d::{objects::FluidRenderingMode, Testbed};
 use salva2d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva2d::object::{Boundary, Fluid};
-use salva2d::solver::{ArtificialViscosity, Becker2009Elasticity, XSPHViscosity};
+use salva2d::solver::{ArtificialViscosity, Becker2009Elasticity, DFSPHSolver, XSPHViscosity};
 use salva2d::LiquidWorld;
 
 pub fn init_world(testbed: &mut Testbed) {
@@ -30,7 +30,8 @@ pub fn init_world(testbed: &mut Testbed) {
      * Liquid world.
      */
     let particle_rad = 0.1;
-    let mut liquid_world = LiquidWorld::new(particle_rad, 2.0);
+    let solver = DFSPHSolver::<f32>::new();
+    let mut liquid_world = LiquidWorld::new(solver, particle_rad, 2.0);
     let mut coupling_set = ColliderCouplingSet::new();
 
     // Liquid.

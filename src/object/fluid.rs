@@ -50,6 +50,20 @@ impl<N: RealField> Fluid<N> {
         }
     }
 
+    pub fn z_sort(&mut self) {
+        let order = crate::z_order::compute_points_z_order(&self.positions);
+        self.positions = crate::z_order::apply_permutation(&order, &self.positions);
+        self.velocities = crate::z_order::apply_permutation(&order, &self.velocities);
+        self.volumes = DVector::from_vec(crate::z_order::apply_permutation(
+            &order,
+            self.volumes.as_slice(),
+        ));
+
+        for forces in &mut self.nonpressure_forces {
+            forces.apply_permutation(&order);
+        }
+    }
+
     pub fn transform_by(&mut self, t: &Isometry<N>) {
         self.positions.iter_mut().for_each(|p| *p = t * *p)
     }

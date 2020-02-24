@@ -1,14 +1,12 @@
-
-
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
 use na::{self, RealField};
 
-use crate::geometry::{ParticlesContacts};
+use crate::geometry::ParticlesContacts;
 
-use crate::math::{Vector};
-use crate::object::{Fluid};
+use crate::math::Vector;
+use crate::object::Fluid;
 use crate::solver::NonPressureForce;
 
 // http://peridynamics.com/publications/2014-He-RSS.pdf
@@ -46,7 +44,12 @@ impl<N: RealField> He2014SurfaceTension<N> {
             .for_each(|(i, color_i)| {
                 let mut color = N::zero();
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         color += c.weight * fluid.particle_mass(c.j) / densities[c.j];
                     }
@@ -71,7 +74,12 @@ impl<N: RealField> He2014SurfaceTension<N> {
                 let mut gradc = Vector::zeros();
                 let _denom = N::zero();
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         gradc +=
                             c.gradient * colors[c.j] * fluid.particle_mass(c.j) / densities[c.j];
@@ -108,7 +116,12 @@ impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
             .for_each(|(i, velocity_change_i)| {
                 let mi = fluid.particle_mass(i);
 
-                for c in fluid_fluid_contacts.particle_contacts(i) {
+                for c in fluid_fluid_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
                     if c.i_model == c.j_model {
                         let mj = fluid.particle_mass(c.j);
                         let gradsum = gradcs[c.i] + gradcs[c.j];
@@ -119,4 +132,6 @@ impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
                 }
             })
     }
+
+    fn apply_permutation(&mut self, _: &[usize]) {}
 }

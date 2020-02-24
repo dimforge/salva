@@ -36,7 +36,7 @@ fn sym_mat_mul_vec<N: RealField>(mat: &SpatialVector<N>, v: &Vector<N>) -> Vecto
 }
 
 // https://cg.informatik.uni-freiburg.de/publications/2009_NP_corotatedSPH.pdf
-#[derive(Clone)]
+//#[derive(Clone)]
 pub struct Becker2009Elasticity<
     N: RealField,
     KernelDensity: Kernel = CubicSplineKernel,
@@ -89,14 +89,16 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
             self.stress.resize(nparticles, SpatialVector::zeros());
             geometry::compute_self_contacts(kernel_radius, fluid, &mut self.contacts0);
 
-            for c in self.contacts0.contacts_mut() {
-                let p1 = &self.positions0[c.i];
-                let p2 = &self.positions0[c.j];
-                c.weight = KernelDensity::points_apply(p1, p2, kernel_radius);
-                c.gradient = KernelGradient::points_apply_diff1(p1, p2, kernel_radius);
+            for contacts in self.contacts0.contacts_mut() {
+                for c in contacts.get_mut().unwrap() {
+                    let p1 = &self.positions0[c.i];
+                    let p2 = &self.positions0[c.j];
+                    c.weight = KernelDensity::points_apply(p1, p2, kernel_radius);
+                    c.gradient = KernelGradient::points_apply_diff1(p1, p2, kernel_radius);
 
-                self.volumes0[c.i] += fluid.particle_mass(c.j) * c.weight;
-                self.volumes0[c.j] += fluid.particle_mass(c.i) * c.weight;
+                    self.volumes0[c.i] += fluid.particle_mass(c.j) * c.weight;
+                    self.volumes0[c.j] += fluid.particle_mass(c.i) * c.weight;
+                }
             }
 
             for i in 0..nparticles {
@@ -116,7 +118,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
             .for_each(|(i, rotation)| {
                 let mut a_pq = Matrix::zeros();
 
-                for c in contacts0.particle_contacts(i) {
+                for c in contacts0.particle_contacts(i).read().unwrap().iter() {
                     let p_ji = fluid.positions[c.j] - fluid.positions[c.i];
                     let p0_ji = positions0[c.j] - positions0[c.i];
                     let coeff = c.weight * fluid.particle_mass(c.j);
@@ -170,7 +172,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
             .for_each(|(i, (deformation_grad_tr, stress))| {
                 let mut grad_tr = Matrix::zeros();
 
-                for c in contacts0.particle_contacts(i) {
+                for c in contacts0.particle_contacts(i).read().unwrap().iter() {
                     let p_ji = fluid.positions[c.j] - fluid.positions[c.i];
                     let p0_ji = positions0[c.j] - positions0[c.i];
                     let u_ji = rotations[c.i].inverse_transform_vector(&(p_ji)) - p0_ji;
@@ -283,7 +285,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
             par_iter_mut!(velocity_changes)
                 .enumerate()
                 .for_each(|(i, velocity_change)| {
-                    for c in contacts0.particle_contacts(i) {
+                    for c in contacts0.particle_contacts(i).read().unwrap().iter() {
                         let mut force = Vector::zeros();
 
                         let grad_tr_i = &deformation_gradient_tr[c.i];
@@ -305,7 +307,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
             par_iter_mut!(velocity_changes)
                 .enumerate()
                 .for_each(|(i, velocity_change)| {
-                    for c in contacts0.particle_contacts(i) {
+                    for c in contacts0.particle_contacts(i).read().unwrap().iter() {
                         let mut force = Vector::zeros();
 
                         let d_ij = c.gradient * volumes0[c.j];
@@ -320,5 +322,12 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
                     }
                 })
         }
+    }
+
+    fn apply_permutation(&mut self, permutation: &[usize]) {
+        self.volumes0 = crate::z_order::apply_permutation(permutation, &self.volumes0);
+        self.positions0 = crate::z_order::apply_permutation(permutation, &self.positions0);
+        self.rotations = crate::z_order::apply_permutation(permutation, &self.rotations);
+        self.contacts0.apply_permutation(permutation);
     }
 }

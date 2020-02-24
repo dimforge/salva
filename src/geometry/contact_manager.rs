@@ -1,3 +1,4 @@
+use crate::counters::Counters;
 use crate::geometry::{self, HGrid, HGridEntry, ParticlesContacts};
 use crate::math::Vector;
 use crate::object::Boundary;
@@ -23,21 +24,36 @@ impl<N: RealField> ContactManager<N> {
         }
     }
 
+    pub fn ncontacts(&self) -> usize {
+        self.fluid_fluid_contacts
+            .iter()
+            .map(|c| c.len())
+            .sum::<usize>()
+            + self
+                .fluid_boundary_contacts
+                .iter()
+                .map(|c| c.len())
+                .sum::<usize>()
+            + self
+                .boundary_boundary_contacts
+                .iter()
+                .map(|c| c.len())
+                .sum::<usize>()
+    }
+
     pub fn update_contacts(
         &mut self,
-        dt: N,
+        counters: &mut Counters,
         h: N,
         fluids: &[Fluid<N>],
         boundaries: &[Boundary<N>],
-        fluids_delta_pos: Option<&[Vec<Vector<N>>]>,
         hgrid: &HGrid<N, HGridEntry>,
     ) {
         geometry::compute_contacts(
-            dt,
+            counters,
             h,
             &fluids,
             &boundaries,
-            fluids_delta_pos,
             &mut self.fluid_fluid_contacts,
             &mut self.fluid_boundary_contacts,
             &mut self.boundary_boundary_contacts,

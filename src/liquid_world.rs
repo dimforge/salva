@@ -1,3 +1,4 @@
+use crate::counters::Counters;
 use crate::coupling::CouplingManager;
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
 use crate::math::Vector;
@@ -7,8 +8,13 @@ use crate::solver::PressureSolver;
 use crate::TimestepManager;
 use na::RealField;
 
+#[cfg(feature = "parallel")]
+use rayon::prelude::*;
+
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld<N: RealField> {
+    pub counters: Counters,
+    nsubsteps_since_sort: usize,
     particle_radius: N,
     h: N,
     fluids: FluidSet<N>,
@@ -34,6 +40,8 @@ impl<N: RealField> LiquidWorld<N> {
     ) -> Self {
         let h = particle_radius * smoothing_factor * na::convert(2.0);
         Self {
+            counters: Counters::new(false),
+            nsubsteps_since_sort: 0,
             particle_radius,
             h,
             fluids: FluidSet::new(),
@@ -59,15 +67,15 @@ impl<N: RealField> LiquidWorld<N> {
         gravity: &Vector<N>,
         coupling: &mut impl CouplingManager<N>,
     ) {
+        self.counters.reset();
+        self.counters.step_time.start();
         let mut remaining_time = dt;
-        let mut solve_time = 0.0;
-        let mut non_solve_time = 0.0;
-        let mut nsubsteps = 0;
 
         // Perform substeps.
         while remaining_time > N::zero() {
-            nsubsteps += 1;
-            let time = instant::now();
+            self.nsubsteps_since_sort += 1;
+            self.counters.nsubsteps += 1;
+
             // Substep length.
             let substep_dt = self.timestep_manager.compute_substep(
                 dt,
@@ -80,14 +88,13 @@ impl<N: RealField> LiquidWorld<N> {
             self.solver
                 .predict_advection(substep_dt, gravity, self.fluids.as_slice());
 
+            self.counters.stages.collision_detection_time.resume();
+            self.counters.cd.grid_insertion_time.resume();
             self.hgrid.clear();
-            geometry::insert_fluids_to_grid(
-                substep_dt,
-                self.fluids.as_slice(),
-                Some(self.solver.velocity_changes()),
-                &mut self.hgrid,
-            );
+            geometry::insert_fluids_to_grid(substep_dt, self.fluids.as_slice(), &mut self.hgrid);
+            self.counters.cd.grid_insertion_time.pause();
 
+            self.counters.cd.boundary_update_time.resume();
             coupling.update_boundaries(
                 substep_dt,
                 self.h,
@@ -96,39 +103,49 @@ impl<N: RealField> LiquidWorld<N> {
                 self.solver.velocity_changes_mut(),
                 &mut self.boundaries,
             );
+            self.counters.cd.boundary_update_time.pause();
 
+            self.counters.cd.grid_insertion_time.resume();
             geometry::insert_boundaries_to_grid(self.boundaries.as_slice(), &mut self.hgrid);
+            self.counters.cd.grid_insertion_time.pause();
+
             self.solver.init_with_boundaries(self.boundaries.as_slice());
 
             self.contact_manager.update_contacts(
-                substep_dt,
+                &mut self.counters,
                 self.h,
                 self.fluids.as_slice(),
                 self.boundaries.as_slice(),
-                Some(self.solver.velocity_changes()),
                 &self.hgrid,
             );
-            non_solve_time += instant::now() - time;
-            let time = instant::now();
+
+            self.counters.cd.ncontacts = self.contact_manager.ncontacts();
+            self.counters.stages.collision_detection_time.pause();
+
+            self.counters.stages.solver_time.resume();
             self.solver.step(
+                &mut self.counters,
                 substep_dt,
                 &mut self.contact_manager,
                 self.h,
                 self.fluids.as_mut_slice(),
                 self.boundaries.as_slice(),
             );
-            solve_time += instant::now() - time;
 
-            let time = instant::now();
             coupling.transmit_forces(&self.boundaries);
-            non_solve_time += instant::now() - time;
+            self.counters.stages.solver_time.pause();
 
             remaining_time -= substep_dt;
         }
-        println!(
-            "Num substeps: {}, Solve time: {}, Not solve time: {}",
-            nsubsteps, solve_time, non_solve_time
-        );
+
+        //        if self.nsubsteps_since_sort >= 100 {
+        //            self.nsubsteps_since_sort = 0;
+        //            println!("Performing z-sort of particles.");
+        //            par_iter_mut!(self.fluids.as_mut_slice()).for_each(|fluid| fluid.z_sort())
+        //        }
+
+        self.counters.step_time.pause();
+        println!("Counters: {}", self.counters);
     }
 
     /// Add a fluid to the liquid world.

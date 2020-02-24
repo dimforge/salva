@@ -12,7 +12,9 @@ pub struct Boundary<N: RealField> {
     /// The artificial velocities of each boundary particle.
     pub velocities: Vec<Vector<N>>,
     /// The forces applied to each particle of this boundary object.
-    pub forces: RwLock<Vec<Vector<N>>>,
+    /// If this is set to `None` (which is the default), the boundary won't receive any
+    /// force for fluids.
+    pub forces: Option<RwLock<Vec<Vector<N>>>>,
 }
 
 impl<N: RealField> Boundary<N> {
@@ -26,7 +28,7 @@ impl<N: RealField> Boundary<N> {
         Self {
             positions: particle_positions,
             velocities,
-            forces: RwLock::new(Vec::new()),
+            forces: None,
         }
     }
 
@@ -43,20 +45,24 @@ impl<N: RealField> Boundary<N> {
     ///
     /// This call relies on thread-safe interior mutability.
     pub fn apply_force(&self, i: usize, f: Vector<N>) {
-        let mut forces = self.forces.write().unwrap();
-        forces[i] += f;
+        if let Some(forces) = &self.forces {
+            let mut forces = forces.write().unwrap();
+            forces[i] += f;
+        }
     }
 
     /// Clears all the forces applied to this boundary object's particles.
     pub fn clear_forces(&mut self, resize_buffer: bool) {
-        let forces = self.forces.get_mut().unwrap();
+        if let Some(forces) = &mut self.forces {
+            let forces = forces.get_mut().unwrap();
 
-        if resize_buffer {
-            forces.resize(self.positions.len(), Vector::zeros());
-        }
+            if resize_buffer {
+                forces.resize(self.positions.len(), Vector::zeros());
+            }
 
-        for f in forces {
-            f.fill(N::zero())
+            for f in forces {
+                f.fill(N::zero())
+            }
         }
     }
 }

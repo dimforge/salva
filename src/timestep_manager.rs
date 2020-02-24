@@ -5,6 +5,7 @@ use crate::object::Fluid;
 /// Structure responsible for regulating the timestep length of the simulation.
 pub struct TimestepManager<N: RealField> {
     cfl_coeff: N,
+    min_num_substeps: u32,
     max_num_substeps: u32,
 }
 
@@ -13,6 +14,7 @@ impl<N: RealField> TimestepManager<N> {
     pub fn new() -> Self {
         Self {
             cfl_coeff: na::convert(1.0),
+            min_num_substeps: 4,
             max_num_substeps: 10,
         }
     }
@@ -33,13 +35,18 @@ impl<N: RealField> TimestepManager<N> {
         particle_radius: N,
         fluids: &[Fluid<N>],
     ) -> N {
+        remaining_time
+        /*
         let min_substep = total_step_size / na::convert(self.max_num_substeps as f64);
-        let substep = self.max_substep(particle_radius, fluids).max(min_substep);
+        let max_substep = total_step_size / na::convert(self.min_num_substeps as f64);
+        let computed_substep = self.max_substep(particle_radius, fluids);
+        let substep = na::clamp(computed_substep, min_substep, max_substep);
 
         if substep > remaining_time {
             remaining_time
         } else {
             substep
         }
+        */
     }
 }

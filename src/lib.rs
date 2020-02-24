@@ -75,6 +75,7 @@ macro_rules! par_reduce_sum {
     }};
 }
 
+pub mod counters;
 #[cfg(feature = "nphysics")]
 pub mod coupling;
 pub mod geometry;
@@ -85,6 +86,7 @@ pub mod object;
 pub mod sampling;
 pub mod solver;
 mod timestep_manager;
+pub mod z_order;
 
 pub use crate::liquid_world::LiquidWorld;
 pub use crate::timestep_manager::TimestepManager;
