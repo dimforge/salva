@@ -279,6 +279,12 @@ pub fn compute_contacts_for_pair_of_cells<N: RealField>(
                             }
                         }
                         HGridEntry::FluidParticle(fluid_j, particle_j) => {
+                            if *curr_cell == *neighbor_cell {
+                                // This pair will already be handled by the case where particle_i is a
+                                // fluid particle.
+                                continue;
+                            }
+
                             let pi = &boundaries[*boundary_i].positions[*particle_i];
                             let pj = &fluids[*fluid_j].positions[*particle_j];
 
