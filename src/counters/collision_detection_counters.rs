@@ -60,7 +60,7 @@ impl Display for CollisionDetectionCounters {
             f,
             "Neighborhood search time: {}",
             self.neighborhood_search_time
-        );
+        )?;
         writeln!(f, "Contact sorting time: {}", self.contact_sorting_time)
     }
 }

@@ -262,12 +262,12 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
 {
     fn solve(
         &mut self,
-        timestep: &TimestepManager<N>,
+        _timestep: &TimestepManager<N>,
         kernel_radius: N,
         _fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid_boundaries_contacts: &ParticlesContacts<N>,
+        _fluid_boundaries_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
-        boundaries: &[Boundary<N>],
+        _boundaries: &[Boundary<N>],
         _densities: &[N],
     ) {
         self.init(kernel_radius, fluid);

@@ -80,7 +80,7 @@ impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
                                 * boundaries[c.j_model].volumes[c.j]
                                 * density0
                                 / densities[c.i]);
-                        added_fluid_vel += delta;
+                        added_boundary_vel += delta;
 
                         let mi = volumes[c.i] * density0;
                         boundaries[c.j_model].apply_force(c.j, delta * (-mi * timestep.inv_dt()));

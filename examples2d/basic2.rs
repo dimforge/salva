@@ -1,20 +1,17 @@
 extern crate nalgebra as na;
 
 use na::{Isometry2, Point2, Point3, Vector2};
-use ncollide2d::shape::{Ball, Cuboid, ShapeHandle};
+use ncollide2d::shape::{Cuboid, ShapeHandle};
 use nphysics2d::force_generator::DefaultForceGeneratorSet;
-use nphysics2d::joint::{DefaultJointConstraintSet, FreeJoint, RevoluteJoint};
+use nphysics2d::joint::DefaultJointConstraintSet;
 use nphysics2d::object::{
-    BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, FEMSurfaceDesc, Ground,
-    MultibodyDesc, RigidBodyDesc,
+    BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground, RigidBodyDesc,
 };
 use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed2d::{objects::FluidRenderingMode, Testbed};
 use salva2d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva2d::object::{Boundary, Fluid};
-use salva2d::solver::{
-    ArtificialViscosity, Becker2009Elasticity, DFSPHSolver, IISPHSolver, XSPHViscosity,
-};
+use salva2d::solver::{ArtificialViscosity, DFSPHSolver};
 use salva2d::LiquidWorld;
 
 pub fn init_world(testbed: &mut Testbed) {

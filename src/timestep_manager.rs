@@ -1,3 +1,5 @@
+#![allow(dead_code)] // NOTE: keep this until we fix CFL
+
 use na::RealField;
 
 use crate::object::Fluid;
@@ -73,11 +75,12 @@ impl<N: RealField> TimestepManager<N> {
         self.remaining_time -= self.dt;
     }
 
-    fn compute_substep(&self, fluids: &[Fluid<N>]) -> N {
-        return self.total_step_size; // FIXME
-        let min_substep = self.total_step_size / na::convert(self.max_num_substeps as f64);
-        let max_substep = self.total_step_size / na::convert(self.min_num_substeps as f64);
-        let computed_substep = self.max_substep(fluids);
-        na::clamp(computed_substep, min_substep, max_substep)
+    fn compute_substep(&self, _fluids: &[Fluid<N>]) -> N {
+        return self.total_step_size;
+        // FIXME
+        //        let min_substep = self.total_step_size / na::convert(self.max_num_substeps as f64);
+        //        let max_substep = self.total_step_size / na::convert(self.min_num_substeps as f64);
+        //        let computed_substep = self.max_substep(fluids);
+        //        na::clamp(computed_substep, min_substep, max_substep)
     }
 }

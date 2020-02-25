@@ -35,7 +35,7 @@ impl<N: RealField> ArtificialViscosity<N> {
 impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
     fn solve(
         &mut self,
-        timestep: &TimestepManager<N>,
+        _timestep: &TimestepManager<N>,
         kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid_boundaries_contacts: &ParticlesContacts<N>,

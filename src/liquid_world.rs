@@ -40,7 +40,7 @@ impl<N: RealField> LiquidWorld<N> {
     ) -> Self {
         let h = particle_radius * smoothing_factor * na::convert(2.0);
         Self {
-            counters: Counters::new(false),
+            counters: Counters::new(),
             nsubsteps_since_sort: 0,
             particle_radius,
             h,

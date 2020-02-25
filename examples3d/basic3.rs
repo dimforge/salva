@@ -1,21 +1,18 @@
 extern crate nalgebra as na;
 
 use na::{Isometry3, Point3, Vector3};
-use ncollide3d::shape::{Capsule, Cuboid, ShapeHandle};
+use ncollide3d::shape::{Cuboid, ShapeHandle};
 use nphysics3d::force_generator::DefaultForceGeneratorSet;
 use nphysics3d::joint::DefaultJointConstraintSet;
 use nphysics3d::object::{
-    BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground, RigidBodyDesc,
+    BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground,
 };
 use nphysics3d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed3d::objects::FluidRenderingMode;
 use nphysics_testbed3d::Testbed;
 use salva3d::coupling::{ColliderCouplingSet, CouplingMethod};
-use salva3d::object::{Boundary, Fluid};
-use salva3d::solver::{
-    Akinci2013SurfaceTension, ArtificialViscosity, Becker2009Elasticity, DFSPHSolver,
-    DFSPHViscosity, He2014SurfaceTension, WCSPHSurfaceTension, XSPHViscosity,
-};
+use salva3d::object::Boundary;
+use salva3d::solver::{ArtificialViscosity, DFSPHSolver};
 use salva3d::LiquidWorld;
 use std::f32;
 
@@ -55,7 +52,6 @@ pub fn init_world(testbed: &mut Testbed) {
         0.0,
     ));
     let viscosity = ArtificialViscosity::new(1.0, 0.0);
-    let surface_tension = Akinci2013SurfaceTension::new(1.0, 0.0);
     fluid.nonpressure_forces.push(Box::new(viscosity));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));

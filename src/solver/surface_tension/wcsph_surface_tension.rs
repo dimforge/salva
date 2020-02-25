@@ -5,7 +5,6 @@ use na::{self, RealField};
 
 use crate::geometry::ParticlesContacts;
 
-use crate::math::Vector;
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
@@ -31,10 +30,10 @@ impl<N: RealField> WCSPHSurfaceTension<N> {
 impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
     fn solve(
         &mut self,
-        timestep: &TimestepManager<N>,
+        _timestep: &TimestepManager<N>,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid_boundaries_contacts: &ParticlesContacts<N>,
+        _fluid_boundaries_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
         boundaries: &[Boundary<N>],
         _densities: &[N],

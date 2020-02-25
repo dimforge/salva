@@ -1,8 +1,7 @@
 use na::RealField;
 
 use crate::geometry::{HGrid, HGridEntry};
-use crate::math::Vector;
-use crate::object::{Boundary, BoundarySet, Fluid};
+use crate::object::{BoundarySet, Fluid};
 
 pub trait CouplingManager<N: RealField> {
     fn update_boundaries(

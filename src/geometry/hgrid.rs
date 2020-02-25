@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use crate::math::{Point, Vector, DIM};
 
-use std::collections::hash_map::DefaultHasher;
 use std::hash::BuildHasher;
 
 #[derive(Copy, Clone, Debug)]

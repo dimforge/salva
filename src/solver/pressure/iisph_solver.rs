@@ -493,7 +493,7 @@ where
         }
     }
 
-    fn init_with_boundaries(&mut self, boundaries: &[Boundary<N>]) {}
+    fn init_with_boundaries(&mut self, _boundaries: &[Boundary<N>]) {}
 
     fn predict_advection(
         &mut self,

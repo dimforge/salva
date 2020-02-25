@@ -1,21 +1,18 @@
 extern crate nalgebra as na;
 
 use na::{Isometry3, Point3, Vector3};
-use ncollide3d::shape::{Capsule, Cuboid, ShapeHandle};
+use ncollide3d::shape::{Cuboid, ShapeHandle};
 use nphysics3d::force_generator::DefaultForceGeneratorSet;
 use nphysics3d::joint::DefaultJointConstraintSet;
 use nphysics3d::object::{
-    BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground, RigidBodyDesc,
+    BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground,
 };
 use nphysics3d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed3d::objects::FluidRenderingMode;
 use nphysics_testbed3d::Testbed;
 use salva3d::coupling::{ColliderCouplingSet, CouplingMethod};
-use salva3d::object::{Boundary, Fluid};
-use salva3d::solver::{
-    Akinci2013SurfaceTension, Becker2009Elasticity, DFSPHSolver, DFSPHViscosity,
-    He2014SurfaceTension, WCSPHSurfaceTension, XSPHViscosity,
-};
+use salva3d::object::Boundary;
+use salva3d::solver::{Becker2009Elasticity, DFSPHSolver, XSPHViscosity};
 use salva3d::LiquidWorld;
 use std::f32;
 

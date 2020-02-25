@@ -1,6 +1,5 @@
 use crate::counters::Counters;
 use crate::geometry::{self, HGrid, HGridEntry, ParticlesContacts};
-use crate::math::Vector;
 use crate::object::Boundary;
 use crate::object::Fluid;
 use na::RealField;

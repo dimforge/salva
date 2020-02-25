@@ -9,7 +9,6 @@ use crate::math::Vector;
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
-use std::thread::yield_now;
 
 #[derive(Clone)]
 pub struct Akinci2013SurfaceTension<N: RealField> {
@@ -99,7 +98,7 @@ fn adhesion_kernel<N: RealField>(r: N, h: N) -> N {
 impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
     fn solve(
         &mut self,
-        timestep: &TimestepManager<N>,
+        _timestep: &TimestepManager<N>,
         kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid_boundaries_contacts: &ParticlesContacts<N>,

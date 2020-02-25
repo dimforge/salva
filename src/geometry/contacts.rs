@@ -4,8 +4,6 @@ use crate::math::{Point, Vector};
 use crate::object::Boundary;
 use crate::object::Fluid;
 use na::RealField;
-use std::collections::HashSet;
-use std::ops::Range;
 use std::sync::RwLock;
 
 #[cfg(feature = "parallel")]
@@ -92,7 +90,7 @@ impl<N: RealField> ParticlesContacts<N> {
         self.contacts.iter().map(|c| c.read().unwrap().len()).sum()
     }
 
-    pub fn apply_permutation(&mut self, permutation: &[usize]) {
+    pub fn apply_permutation(&mut self, _permutation: &[usize]) {
         unimplemented!()
     }
 }

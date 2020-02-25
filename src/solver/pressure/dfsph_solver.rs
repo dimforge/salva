@@ -435,11 +435,11 @@ where
                 boundaries,
             );
 
-            println!(
-                "Average density error: {}, break after niters: {}",
-                avg_err, i
-            );
             if avg_err <= self.max_density_error && i >= self.min_pressure_iter {
+                //                println!(
+                //                    "Average density error: {}, break after niters: {}",
+                //                    avg_err, i
+                //                );
                 break;
             }
 
@@ -457,7 +457,6 @@ where
         &mut self,
         counters: &mut Counters,
         timestep: &TimestepManager<N>,
-        _kernel_radius: N,
         contact_manager: &mut ContactManager<N>,
         fluids: &mut [Fluid<N>],
         boundaries: &[Boundary<N>],
@@ -541,7 +540,7 @@ where
         }
     }
 
-    fn init_with_boundaries(&mut self, boundaries: &[Boundary<N>]) {}
+    fn init_with_boundaries(&mut self, _boundaries: &[Boundary<N>]) {}
 
     fn predict_advection(
         &mut self,
@@ -664,14 +663,7 @@ where
             boundaries,
         );
 
-        self.divergence_solve(
-            counters,
-            timestep,
-            kernel_radius,
-            contact_manager,
-            fluids,
-            boundaries,
-        );
+        self.divergence_solve(counters, timestep, contact_manager, fluids, boundaries);
 
         self.update_velocities(fluids);
         self.velocity_changes

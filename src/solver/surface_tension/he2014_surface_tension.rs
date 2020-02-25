@@ -106,8 +106,8 @@ impl<N: RealField> He2014SurfaceTension<N> {
 impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
     fn solve(
         &mut self,
-        timestep: &TimestepManager<N>,
-        kernel_radius: N,
+        _timestep: &TimestepManager<N>,
+        _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid_boundary_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,

@@ -1,22 +1,18 @@
 extern crate nalgebra as na;
 
 use na::{Isometry2, Point2, Point3, Vector2};
-use nalgebra::Isometry;
-use ncollide2d::shape::{Capsule, Cuboid, ShapeHandle};
+use ncollide2d::shape::{Cuboid, ShapeHandle};
 use nphysics2d::force_generator::DefaultForceGeneratorSet;
 use nphysics2d::joint::DefaultJointConstraintSet;
 use nphysics2d::object::{
-    BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground, RigidBodyDesc,
+    BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground,
 };
 use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed2d::objects::FluidRenderingMode;
 use nphysics_testbed2d::Testbed;
 use salva2d::coupling::{ColliderCouplingSet, CouplingMethod};
-use salva2d::object::{Boundary, Fluid};
-use salva2d::solver::{
-    Akinci2013SurfaceTension, ArtificialViscosity, Becker2009Elasticity, DFSPHSolver,
-    DFSPHViscosity, He2014SurfaceTension, IISPHSolver, WCSPHSurfaceTension, XSPHViscosity,
-};
+use salva2d::object::Boundary;
+use salva2d::solver::{Akinci2013SurfaceTension, ArtificialViscosity, IISPHSolver};
 use salva2d::LiquidWorld;
 use std::f32;
 
@@ -29,7 +25,7 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     // We want to simulate a 1cm³ droplet. We use the spacial unit 1 = 1dm.
     // Therefore each particles must have a diameter of 0.005, and the gravity is -0.981 instead of -9.81.
-    let mut mechanical_world = DefaultMechanicalWorld::new(Vector2::new(0.0, -0.981));
+    let mechanical_world = DefaultMechanicalWorld::new(Vector2::new(0.0, -0.981));
     let geometrical_world = DefaultGeometricalWorld::new();
     let mut bodies = DefaultBodySet::new();
     let mut colliders = DefaultColliderSet::new();
@@ -40,7 +36,7 @@ pub fn init_world(testbed: &mut Testbed) {
      * Liquid world.
      */
     let particle_rad = 0.0025;
-    let mut solver = IISPHSolver::<f32>::new();
+    let solver = IISPHSolver::<f32>::new();
     let mut liquid_world = LiquidWorld::new(solver, particle_rad, 2.0);
     let mut coupling_manager = ColliderCouplingSet::new();
 

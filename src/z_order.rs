@@ -43,9 +43,9 @@ pub fn z_order_floats<N: RealField>(p1: &[N], p2: &[N]) -> Option<Ordering> {
 
 fn xor_msb_float<N: RealField>(a: N, b: N) -> i16 {
     let fa = na::try_convert::<_, f64>(a).unwrap();
-    let fb = na::try_convert::<_, f64>(a).unwrap();
-    let (mantissa1, exponent1, sign1) = fa.integer_decode();
-    let (mantissa2, exponent2, sign2) = fb.integer_decode();
+    let fb = na::try_convert::<_, f64>(b).unwrap();
+    let (mantissa1, exponent1, _sign1) = fa.integer_decode();
+    let (mantissa2, exponent2, _sign2) = fb.integer_decode();
     let x = exponent1; // To keep the same notation as the paper.
     let y = exponent2; // To keep the same notation as the paper.
 

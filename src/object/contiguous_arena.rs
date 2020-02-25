@@ -1,5 +1,4 @@
 use generational_arena::{Arena, Index};
-use na::RealField;
 use std::marker::PhantomData;
 
 pub type ContiguousArenaIndex = Index;

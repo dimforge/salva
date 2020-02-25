@@ -1,21 +1,15 @@
 extern crate nalgebra as na;
 
-use na::{Isometry2, Point2, Point3, Unit, Vector2};
-use ncollide2d::shape::{Capsule, Cuboid, ShapeHandle};
+use na::{Point2, Point3, Unit, Vector2};
 use nphysics2d::force_generator::DefaultForceGeneratorSet;
 use nphysics2d::joint::DefaultJointConstraintSet;
-use nphysics2d::object::{
-    BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground, RigidBodyDesc,
-};
+use nphysics2d::object::{DefaultBodySet, DefaultColliderSet};
 use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed2d::objects::FluidRenderingMode;
 use nphysics_testbed2d::Testbed;
-use salva2d::coupling::{ColliderCouplingSet, CouplingMethod};
+use salva2d::coupling::ColliderCouplingSet;
 use salva2d::object::{Boundary, Fluid};
-use salva2d::solver::{
-    Akinci2013SurfaceTension, ArtificialViscosity, Becker2009Elasticity, DFSPHSolver,
-    DFSPHViscosity, He2014SurfaceTension, NonPressureForce, WCSPHSurfaceTension, XSPHViscosity,
-};
+use salva2d::solver::{DFSPHSolver, NonPressureForce};
 use salva2d::LiquidWorld;
 use std::f32;
 
@@ -28,15 +22,10 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     let mechanical_world = DefaultMechanicalWorld::new(Vector2::zeros());
     let geometrical_world = DefaultGeometricalWorld::new();
-    let mut bodies = DefaultBodySet::new();
-    let mut colliders = DefaultColliderSet::new();
+    let bodies = DefaultBodySet::new();
+    let colliders = DefaultColliderSet::new();
     let joint_constraints = DefaultJointConstraintSet::new();
     let force_generators = DefaultForceGeneratorSet::new();
-
-    // Parameters of the ground.
-    let ground_thickness = 0.2;
-    let ground_half_width = 1.5;
-    let ground_half_height = 0.7;
 
     /*
      * Liquid world.
@@ -44,7 +33,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let particle_rad = 0.025;
     let solver: DFSPHSolver<f32> = DFSPHSolver::new();
     let mut liquid_world = LiquidWorld::new(solver, particle_rad, 2.0);
-    let mut coupling_manager = ColliderCouplingSet::new();
+    let coupling_manager = ColliderCouplingSet::new();
 
     // Liquid.
     let nparticles = 30;
@@ -89,13 +78,13 @@ struct CustomForceField {
 impl NonPressureForce<f32> for CustomForceField {
     fn solve(
         &mut self,
-        timestep: &salva2d::TimestepManager<f32>,
-        kernel_radius: f32,
-        fluid_fluid_contacts: &salva2d::geometry::ParticlesContacts<f32>,
-        fluid_boundaries_contacts: &salva2d::geometry::ParticlesContacts<f32>,
+        _timestep: &salva2d::TimestepManager<f32>,
+        _kernel_radius: f32,
+        _fluid_fluid_contacts: &salva2d::geometry::ParticlesContacts<f32>,
+        _fluid_boundaries_contacts: &salva2d::geometry::ParticlesContacts<f32>,
         fluid: &mut Fluid<f32>,
-        boundaries: &[Boundary<f32>],
-        densities: &[f32],
+        _boundaries: &[Boundary<f32>],
+        _densities: &[f32],
     ) {
         for (pos, acc) in fluid.positions.iter().zip(fluid.accelerations.iter_mut()) {
             if let Some((dir, dist)) = Unit::try_new_and_get(self.origin - pos, 0.1) {
@@ -104,5 +93,5 @@ impl NonPressureForce<f32> for CustomForceField {
         }
     }
 
-    fn apply_permutation(&mut self, permutation: &[usize]) {}
+    fn apply_permutation(&mut self, _permutation: &[usize]) {}
 }

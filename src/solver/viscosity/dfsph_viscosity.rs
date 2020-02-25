@@ -282,9 +282,9 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
         timestep: &TimestepManager<N>,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid_boundaries_contacts: &ParticlesContacts<N>,
+        _fluid_boundaries_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
-        boundaries: &[Boundary<N>],
+        _boundaries: &[Boundary<N>],
         densities: &[N],
     ) {
         self.init(fluid);
@@ -292,8 +292,6 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
         let _ = self.compute_betas(fluid_fluid_contacts, fluid, densities);
 
         let _ = self.compute_strain_rates(timestep, fluid_fluid_contacts, fluid, densities, false);
-
-        let mut last_err = N::max_value();
 
         for i in 0..self.max_viscosity_iter {
             let avg_err =
@@ -308,8 +306,6 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
                 //                );
                 break;
             }
-
-            last_err = avg_err;
 
             self.compute_accelerations(timestep, fluid_fluid_contacts, fluid, densities);
         }

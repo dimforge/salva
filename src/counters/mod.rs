@@ -31,7 +31,7 @@ pub struct Counters {
 
 impl Counters {
     /// Create a new set of counters initialized to wero.
-    pub fn new(enabled: bool) -> Self {
+    pub fn new() -> Self {
         Counters {
             nsubsteps: 0,
             step_time: Timer::new(),

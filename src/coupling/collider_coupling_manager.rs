@@ -2,13 +2,13 @@ use crate::coupling::CouplingManager;
 use crate::geometry::{HGrid, HGridEntry};
 use crate::math::{Point, Vector};
 use crate::object::Fluid;
-use crate::object::{Boundary, BoundaryHandle, BoundarySet};
+use crate::object::{BoundaryHandle, BoundarySet};
 use na::{RealField, Unit};
 use ncollide::bounding_volume::BoundingVolume;
 use ncollide::query::PointQuery;
 use ncollide::shape::FeatureId;
 use nphysics::math::ForceType;
-use nphysics::object::{BodySet, BodyStatus, ColliderAnchor, ColliderHandle, ColliderSet};
+use nphysics::object::{BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -131,7 +131,7 @@ where
                             }
                         }
                     }
-                    ColliderAnchor::OnDeformableBody { body, body_parts } => {
+                    ColliderAnchor::OnDeformableBody { body, .. } => {
                         if let Some(body) = self.bodies.get_mut(*body) {
                             if body.status_dependent_ndofs() == 0 {
                                 boundary.forces = None;

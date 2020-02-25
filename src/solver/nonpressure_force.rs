@@ -1,5 +1,4 @@
 use crate::geometry::ParticlesContacts;
-use crate::math::Vector;
 use crate::object::{Boundary, Fluid};
 use crate::TimestepManager;
 use na::RealField;
