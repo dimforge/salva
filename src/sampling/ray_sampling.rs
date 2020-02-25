@@ -36,29 +36,47 @@ pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
     let origin = volume.mins() + Vector::repeat(subdivision_size / na::convert(2.0));
     let mut curr = origin;
 
+    let mut perform_cast = |i, curr| {
+        let mut dir = Vector::zeros();
+        dir[i] = N::one();
+        let mut ray = Ray::new(curr, dir);
+        let mut entry_point = true;
+
+        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, false) {
+            let impact = ray.point_at(toi);
+            let quantized_pt = quantize_point(&origin, &impact, subdivision_size, entry_point, i);
+            let _ = quantized_points.insert(quantized_pt);
+            ray.origin[i] += toi + subdivision_size / na::convert(10.0);
+            entry_point = !entry_point;
+        }
+    };
+
+    #[cfg(feature = "dim3")]
     for i in 0..DIM {
         let j = (i + 1) % DIM;
         let k = (i + 2) % DIM;
 
         while curr[j] < maxs[j] {
             while curr[k] < maxs[k] {
-                // Cast a ray along `z`.
-                let mut dir = Vector::zeros();
-                dir[i] = N::one();
-                let mut ray = Ray::new(curr, dir);
-
-                while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, false) {
-                    let impact = ray.point_at(toi);
-                    let quantized_pt = quantize_point(&origin, &impact, subdivision_size);
-                    let _ = quantized_points.insert(quantized_pt);
-                    ray.origin[i] += toi + subdivision_size / na::convert(10.0);
-                }
-
+                perform_cast(i, curr);
                 curr[k] += subdivision_size;
             }
 
             curr[j] += subdivision_size;
             curr[k] = origin[k];
+        }
+
+        curr[i] += subdivision_size;
+        curr[j] = origin[j];
+    }
+
+    #[cfg(feature = "dim2")]
+    for i in 0..DIM {
+        let j = (i + 1) % DIM;
+
+        while curr[j] < maxs[j] {
+            perform_cast(i, curr);
+            curr[j] += subdivision_size;
         }
 
         curr[i] += subdivision_size;
@@ -79,44 +97,61 @@ pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
     let volume = volume.loosened(subdivision_size);
     let maxs = volume.maxs();
     let origin = volume.mins() + Vector::repeat(subdivision_size / na::convert(2.0));
+
+    let mut perform_cast = |i, curr| {
+        let mut dir = Vector::zeros();
+        dir[i] = N::one();
+        let mut ray = Ray::new(curr, dir);
+        let mut prev_impact = None;
+
+        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, false) {
+            if let Some(prev) = prev_impact {
+                sample_segment(
+                    &origin,
+                    &curr,
+                    prev,
+                    ray.origin[i] + toi,
+                    subdivision_size,
+                    i,
+                    &mut quantized_points,
+                );
+                prev_impact = None;
+            } else {
+                prev_impact = Some(ray.origin[i] + toi);
+            }
+
+            ray.origin[i] += toi + subdivision_size / na::convert(10.0);
+        }
+    };
+
     let mut curr = origin;
 
+    #[cfg(feature = "dim3")]
     for i in 0..DIM {
         let j = (i + 1) % DIM;
         let k = (i + 2) % DIM;
 
         while curr[j] < maxs[j] {
             while curr[k] < maxs[k] {
-                // Cast a ray along `z`.
-                let mut dir = Vector::zeros();
-                dir[i] = N::one();
-                let mut ray = Ray::new(curr, dir);
-                let mut prev_impact = None;
-
-                while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, false) {
-                    if let Some(prev) = prev_impact {
-                        sample_segment(
-                            &origin,
-                            &curr,
-                            prev,
-                            ray.origin[i] + toi,
-                            subdivision_size,
-                            i,
-                            &mut quantized_points,
-                        );
-                        prev_impact = None;
-                    } else {
-                        prev_impact = Some(ray.origin[i] + toi);
-                    }
-
-                    ray.origin[i] += toi + subdivision_size / na::convert(10.0);
-                }
-
+                perform_cast(i, curr);
                 curr[k] += subdivision_size;
             }
 
             curr[j] += subdivision_size;
             curr[k] = origin[k];
+        }
+
+        curr[i] += subdivision_size;
+        curr[j] = origin[j];
+    }
+
+    #[cfg(feature = "dim2")]
+    for i in 0..DIM {
+        let j = (i + 1) % DIM;
+
+        while curr[j] < maxs[j] {
+            perform_cast(i, curr);
+            curr[j] += subdivision_size;
         }
 
         curr[i] += subdivision_size;
@@ -173,12 +208,22 @@ fn quantize_point<N: RealField>(
     origin: &Point<N>,
     point: &Point<N>,
     subdivision_size: N,
+    entry_point: bool,
+    leading_dimension: usize,
 ) -> Point<u32> {
-    (point - origin)
-        .map(|e| {
-            na::try_convert::<_, f64>(e / subdivision_size)
-                .unwrap()
-                .round() as u32
-        })
+    let mut dpt = point - origin;
+    for i in 0..DIM {
+        if i == leading_dimension {
+            if entry_point {
+                dpt[i] = (dpt[i] / subdivision_size).ceil();
+            } else {
+                dpt[i] = (dpt[i] / subdivision_size).floor();
+            }
+        } else {
+            dpt[i] = (dpt[i] / subdivision_size).round();
+        }
+    }
+
+    dpt.map(|e| na::try_convert::<_, f64>(e).unwrap() as u32)
         .into()
 }

@@ -35,4 +35,4 @@ path = "./all_examples3.rs"
 
 [[bin]]
 name = "fluids3"
-path = "breaking_dam3.rs"
+path = "basic3.rs"

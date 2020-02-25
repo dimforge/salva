@@ -1,23 +1,23 @@
 extern crate nalgebra as na;
 
-use na::{Isometry3, Point3, Vector3};
+use na::{Isometry2, Point2, Point3, Vector2};
 use nalgebra::Isometry;
-use ncollide3d::shape::{Capsule, Cuboid, ShapeHandle};
-use nphysics3d::force_generator::DefaultForceGeneratorSet;
-use nphysics3d::joint::DefaultJointConstraintSet;
-use nphysics3d::object::{
+use ncollide2d::shape::{Capsule, Cuboid, ShapeHandle};
+use nphysics2d::force_generator::DefaultForceGeneratorSet;
+use nphysics2d::joint::DefaultJointConstraintSet;
+use nphysics2d::object::{
     BodyPartHandle, ColliderDesc, DefaultBodySet, DefaultColliderSet, Ground, RigidBodyDesc,
 };
-use nphysics3d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
-use nphysics_testbed3d::objects::FluidRenderingMode;
-use nphysics_testbed3d::Testbed;
-use salva3d::coupling::{ColliderCouplingSet, CouplingMethod};
-use salva3d::object::{Boundary, Fluid};
-use salva3d::solver::{
+use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
+use nphysics_testbed2d::objects::FluidRenderingMode;
+use nphysics_testbed2d::Testbed;
+use salva2d::coupling::{ColliderCouplingSet, CouplingMethod};
+use salva2d::object::{Boundary, Fluid};
+use salva2d::solver::{
     Akinci2013SurfaceTension, ArtificialViscosity, Becker2009Elasticity, DFSPHSolver,
     DFSPHViscosity, He2014SurfaceTension, IISPHSolver, WCSPHSurfaceTension, XSPHViscosity,
 };
-use salva3d::LiquidWorld;
+use salva2d::LiquidWorld;
 use std::f32;
 
 #[path = "./helper.rs"]
@@ -29,7 +29,7 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     // We want to simulate a 1cm³ droplet. We use the spacial unit 1 = 1dm.
     // Therefore each particles must have a diameter of 0.005, and the gravity is -0.981 instead of -9.81.
-    let mut mechanical_world = DefaultMechanicalWorld::new(Vector3::new(0.0, -0.981, 0.0));
+    let mut mechanical_world = DefaultMechanicalWorld::new(Vector2::new(0.0, -0.981));
     let geometrical_world = DefaultGeometricalWorld::new();
     let mut bodies = DefaultBodySet::new();
     let mut colliders = DefaultColliderSet::new();
@@ -39,16 +39,16 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * Liquid world.
      */
-    let particle_rad = 0.005;
+    let particle_rad = 0.0025;
     let mut solver = IISPHSolver::<f32>::new();
     let mut liquid_world = LiquidWorld::new(solver, particle_rad, 2.0);
     let mut coupling_manager = ColliderCouplingSet::new();
 
     // Initialize the fluid and give it some surface tension. This will make the fluid take a spherical shape.
     let surface_tension = Akinci2013SurfaceTension::new(1.0, 0.0);
-    let viscosity = ArtificialViscosity::new(0.01, 0.01);
-    let mut fluid = helper::cube_fluid(10, 10, 10, particle_rad, 1000.0);
-    fluid.transform_by(&Isometry3::translation(0.0, 0.08, 0.0));
+    let viscosity = ArtificialViscosity::new(0.01, 0.0);
+    let mut fluid = helper::cube_fluid(20, 20, particle_rad, 1000.0);
+    fluid.transform_by(&Isometry2::translation(0.0, 0.08));
     fluid.nonpressure_forces.push(Box::new(surface_tension));
     fluid.nonpressure_forces.push(Box::new(viscosity));
     let fluid_handle = liquid_world.add_fluid(fluid);
@@ -60,14 +60,13 @@ pub fn init_world(testbed: &mut Testbed) {
     let ground_thickness = 0.02;
     let ground_half_width = 0.15;
 
-    let ground_shape = ShapeHandle::new(Cuboid::new(Vector3::new(
+    let ground_shape = ShapeHandle::new(Cuboid::new(Vector2::new(
         ground_half_width,
         ground_thickness,
-        ground_half_width,
     )));
 
     let samples =
-        salva3d::sampling::shape_surface_ray_sample(&*ground_shape, particle_rad).unwrap();
+        salva2d::sampling::shape_surface_ray_sample(&*ground_shape, particle_rad).unwrap();
     let co = ColliderDesc::new(ground_shape)
         .margin(0.0)
         .build(BodyPartHandle(ground_handle, 0));
@@ -94,7 +93,8 @@ pub fn init_world(testbed: &mut Testbed) {
     testbed.set_liquid_world(liquid_world, coupling_manager);
     testbed.mechanical_world_mut().set_timestep(1.0 / 200.0);
     testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
-    testbed.look_at(Point3::new(0.25, 0.25, 0.25), Point3::origin());
+    testbed.look_at(Point2::origin(), 2000.0);
+    testbed.enable_boundary_particles_rendering(true);
 }
 
 fn main() {

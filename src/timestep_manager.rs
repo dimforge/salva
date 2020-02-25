@@ -63,7 +63,6 @@ impl<N: RealField> TimestepManager<N> {
 
     #[inline]
     pub fn advance(&mut self, fluids: &[Fluid<N>]) {
-        self.remaining_time -= self.dt;
         let substep = self.compute_substep(fluids);
         self.dt = substep;
         self.inv_dt = if substep.is_zero() {
@@ -71,10 +70,11 @@ impl<N: RealField> TimestepManager<N> {
         } else {
             N::one() / substep
         };
+        self.remaining_time -= self.dt;
     }
 
     fn compute_substep(&self, fluids: &[Fluid<N>]) -> N {
-        return self.total_step_size;
+        return self.total_step_size; // FIXME
         let min_substep = self.total_step_size / na::convert(self.max_num_substeps as f64);
         let max_substep = self.total_step_size / na::convert(self.min_num_substeps as f64);
         let computed_substep = self.max_substep(fluids);

@@ -62,7 +62,11 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
 }
 
 fn cohesion_kernel<N: RealField>(r: N, h: N) -> N {
+    #[cfg(feature = "dim3")]
     let normalizer = na::convert::<_, N>(32.0f64) / (N::pi() * h.powi(9));
+    // NOTE: not sure this is the right formula for the 2D version.
+    #[cfg(feature = "dim2")]
+    let normalizer = na::convert::<_, N>(32.0f64) / (N::pi() * h.powi(8));
     let _2: N = na::convert(2.0f64);
 
     let coeff = if r <= h / _2 {
@@ -147,29 +151,27 @@ impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
                 }
 
                 if boundary_adhesion_coefficient != N::zero() {
-                    for c in fluid_fluid_contacts
+                    for c in fluid_boundaries_contacts
                         .particle_contacts(i)
                         .read()
                         .unwrap()
                         .iter()
                     {
-                        if c.i_model == c.j_model {
-                            let dpos = positions[c.i] - positions[c.j];
-                            let adhesion_vec = if let Some((dir, dist)) =
-                                Unit::try_new_and_get(dpos, N::default_epsilon())
-                            {
-                                *dir * adhesion_kernel(dist, kernel_radius)
-                            } else {
-                                Vector::zeros()
-                            };
+                        let dpos = positions[c.i] - boundaries[c.j_model].positions[c.j];
+                        let adhesion_vec = if let Some((dir, dist)) =
+                            Unit::try_new_and_get(dpos, N::default_epsilon())
+                        {
+                            *dir * adhesion_kernel(dist, kernel_radius)
+                        } else {
+                            Vector::zeros()
+                        };
 
-                            let mi = volumes[c.i] * density0;
-                            let mj = boundaries[c.j_model].volumes[c.j] * density0;
-                            let adhesion_acc = adhesion_vec * (boundary_adhesion_coefficient * mj);
-                            *acceleration_i -= adhesion_acc;
+                        let mi = volumes[c.i] * density0;
+                        let mj = boundaries[c.j_model].volumes[c.j] * density0;
+                        let adhesion_acc = adhesion_vec * (boundary_adhesion_coefficient * mj);
+                        *acceleration_i -= adhesion_acc;
 
-                            boundaries[c.j_model].apply_force(c.j, adhesion_acc * mi);
-                        }
+                        boundaries[c.j_model].apply_force(c.j, adhesion_acc * mi);
                     }
                 }
             })

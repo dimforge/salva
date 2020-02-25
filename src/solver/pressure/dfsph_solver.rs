@@ -19,12 +19,12 @@ pub struct DFSPHSolver<
     KernelDensity: Kernel = CubicSplineKernel,
     KernelGradient: Kernel = CubicSplineKernel,
 > {
-    min_pressure_iter: usize,
-    max_pressure_iter: usize,
-    max_density_error: N,
-    min_divergence_iter: usize,
-    max_divergence_iter: usize,
-    max_divergence_error: N,
+    pub min_pressure_iter: usize,
+    pub max_pressure_iter: usize,
+    pub max_density_error: N,
+    pub min_divergence_iter: usize,
+    pub max_divergence_iter: usize,
+    pub max_divergence_error: N,
     min_neighbors_for_divergence_solve: usize,
     alphas: Vec<Vec<N>>,
     densities: Vec<Vec<N>>,
@@ -124,17 +124,21 @@ where
                         .iter()
                     {
                         let vi = fluid_i.velocities[c.i] + velocity_changes[c.i_model][c.i];
-                        // FIXME: take the velocity of j too?
+                        let vj = boundaries[c.j_model].velocities[c.j];
 
                         delta += boundaries[c.j_model].volumes[c.j]
                             * fluid_i.density0
-                            * vi.dot(&c.gradient);
+                            * (vi - vj).dot(&c.gradient);
                     }
 
                     *predicted_density = densities[fluid_id][i] + delta * timestep.dt();
-                    *predicted_density = predicted_density.max(fluid_i.density0);
                     assert!(!predicted_density.is_zero());
-                    *predicted_density / fluid_i.density0 - N::one()
+
+                    if *predicted_density < fluid_i.density0 {
+                        N::zero()
+                    } else {
+                        *predicted_density / fluid_i.density0 - N::one()
+                    }
                 });
             let err = par_reduce_sum!(N::zero(), it);
 
@@ -191,7 +195,12 @@ where
                     }
 
                     let denominator = squared_grad_sum + grad_sum.norm_squared();
-                    *alpha_i = N::one() / denominator.max(na::convert(1.0e-6));
+
+                    if denominator <= na::convert(1.0e-6) {
+                        *alpha_i = N::zero();
+                    } else {
+                        *alpha_i = N::one() / denominator;
+                    }
                 })
         }
     }
@@ -226,16 +235,16 @@ where
                         let kj = (predicted_densities[c.j_model][c.j] - fluid2.density0)
                             * alphas[c.j_model][c.j];
 
-                        let kij = ki + kj;
+                        let kij = ki.max(N::zero()) + kj.max(N::zero());
 
                         // Compute velocity change.
-                        if kij > N::default_epsilon() {
+                        if kij > N::zero() {
                             let coeff = kij * fluid2.particle_mass(c.j);
                             *velocity_change -= c.gradient * (coeff * timestep.inv_dt());
                         }
                     }
 
-                    if ki > N::default_epsilon() {
+                    if ki > N::zero() {
                         for c in fluid_boundary_contacts[fluid_id]
                             .particle_contacts(i)
                             .read()
@@ -390,10 +399,10 @@ where
     }
 
     fn update_positions(&mut self, timestep: &TimestepManager<N>, fluids: &mut [Fluid<N>]) {
-        for (fluid, delta) in fluids.iter_mut().zip(self.velocity_changes.iter()) {
+        for (fluid, velocity_changes) in fluids.iter_mut().zip(self.velocity_changes.iter()) {
             par_iter_mut!(fluid.positions)
                 .zip(par_iter!(fluid.velocities))
-                .zip(par_iter!(delta))
+                .zip(par_iter!(velocity_changes))
                 .for_each(|((pos, vel), delta)| {
                     *pos += (*vel + delta) * timestep.dt();
                 })
@@ -426,11 +435,11 @@ where
                 boundaries,
             );
 
+            println!(
+                "Average density error: {}, break after niters: {}",
+                avg_err, i
+            );
             if avg_err <= self.max_density_error && i >= self.min_pressure_iter {
-                //                println!(
-                //                    "Average density error: {}, break after niters: {}",
-                //                    avg_err, i
-                //                );
                 break;
             }
 

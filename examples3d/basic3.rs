@@ -13,8 +13,8 @@ use nphysics_testbed3d::Testbed;
 use salva3d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva3d::object::{Boundary, Fluid};
 use salva3d::solver::{
-    Akinci2013SurfaceTension, Becker2009Elasticity, DFSPHSolver, DFSPHViscosity,
-    He2014SurfaceTension, WCSPHSurfaceTension, XSPHViscosity,
+    Akinci2013SurfaceTension, ArtificialViscosity, Becker2009Elasticity, DFSPHSolver,
+    DFSPHViscosity, He2014SurfaceTension, WCSPHSurfaceTension, XSPHViscosity,
 };
 use salva3d::LiquidWorld;
 use std::f32;
@@ -33,8 +33,10 @@ pub fn init_world(testbed: &mut Testbed) {
     let joint_constraints = DefaultJointConstraintSet::new();
     let force_generators = DefaultForceGeneratorSet::new();
 
+    // Parameters of the ground.
     let ground_thickness = 0.2;
     let ground_half_width = 1.5;
+    let ground_half_height = 0.7;
 
     /*
      * Liquid world.
@@ -44,76 +46,81 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut liquid_world = LiquidWorld::new(solver, particle_rad, 2.0);
     let mut coupling_manager = ColliderCouplingSet::new();
 
-    // Initialize the fluids and give them elasticity.
-    let height = 0.4;
-    let nparticles = 6;
-
-    // First fluid with high young modulus.
-    let elasticity = Becker2009Elasticity::<f32>::new(500_000.0, 0.3, true);
-    let viscosity = XSPHViscosity::new(0.5, 1.0);
-    let mut fluid = helper::cube_fluid(
-        nparticles * 2,
-        nparticles,
-        nparticles * 2,
-        particle_rad,
-        1000.0,
-    );
+    // Liquid.
+    let nparticles = 20;
+    let mut fluid = helper::cube_fluid(nparticles, nparticles, nparticles, particle_rad, 1000.0);
     fluid.transform_by(&Isometry3::translation(
         0.0,
-        ground_thickness + particle_rad * nparticles as f32 + height,
+        ground_thickness + nparticles as f32 * particle_rad,
         0.0,
     ));
-    fluid.nonpressure_forces.push(Box::new(elasticity));
-    fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
+    let viscosity = ArtificialViscosity::new(1.0, 0.0);
+    let surface_tension = Akinci2013SurfaceTension::new(1.0, 0.0);
+    fluid.nonpressure_forces.push(Box::new(viscosity));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
-    // Second fluid with smaller young modulus.
-    let elasticity = Becker2009Elasticity::<f32>::new(100_000.0, 0.3, true);
-    let mut fluid = helper::cube_fluid(
-        nparticles * 2,
-        nparticles,
-        nparticles * 2,
-        particle_rad,
-        1000.0,
-    );
-    fluid.transform_by(&Isometry3::translation(
-        0.0,
-        ground_thickness + particle_rad * nparticles as f32 * 4.0 + height,
-        0.0,
-    ));
-    fluid.nonpressure_forces.push(Box::new(elasticity));
-    fluid.nonpressure_forces.push(Box::new(viscosity));
-    let fluid_handle = liquid_world.add_fluid(fluid);
-    testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
-
-    // Setup the ground.
-    let ground_handle = bodies.insert(Ground::new());
-
+    /*
+     * Ground.
+     */
     let ground_shape = ShapeHandle::new(Cuboid::new(Vector3::new(
         ground_half_width,
         ground_thickness,
         ground_half_width,
     )));
+    let wall_shape = ShapeHandle::new(Cuboid::new(Vector3::new(
+        ground_thickness,
+        ground_half_height,
+        ground_half_width,
+    )));
 
-    let samples =
-        salva3d::sampling::shape_surface_ray_sample(&*ground_shape, particle_rad).unwrap();
-    let co = ColliderDesc::new(ground_shape)
-        .margin(0.0)
-        .build(BodyPartHandle(ground_handle, 0));
+    let ground_handle = bodies.insert(Ground::new());
+
+    let wall_poses = [
+        Isometry3::new(
+            Vector3::new(0.0, ground_half_height, ground_half_width),
+            Vector3::y() * (f32::consts::PI / 2.0),
+        ),
+        Isometry3::new(
+            Vector3::new(0.0, ground_half_height, -ground_half_width),
+            Vector3::y() * (f32::consts::PI / 2.0),
+        ),
+        Isometry3::translation(ground_half_width, ground_half_height, 0.0),
+        Isometry3::translation(-ground_half_width, ground_half_height, 0.0),
+    ];
+
+    for pose in wall_poses.iter() {
+        let samples = salva3d::sampling::shape_surface_ray_sample(&*wall_shape, particle_rad);
+        let co = ColliderDesc::new(wall_shape.clone())
+            .position(*pose)
+            .build(BodyPartHandle(ground_handle, 0));
+        let co_handle = colliders.insert(co);
+        let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
+
+        coupling_manager.register_coupling(
+            bo_handle,
+            co_handle,
+            CouplingMethod::StaticSampling(samples.unwrap()),
+        );
+    }
+
+    let samples = salva3d::sampling::shape_surface_ray_sample(&*ground_shape, particle_rad);
+    let co = ColliderDesc::new(ground_shape).build(BodyPartHandle(ground_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
 
     coupling_manager.register_coupling(
         bo_handle,
         co_handle,
-        CouplingMethod::StaticSampling(samples),
+        CouplingMethod::StaticSampling(samples.unwrap()),
     );
 
     /*
      * Set up the testbed.
      */
+    testbed.set_body_wireframe(ground_handle, true);
     testbed.set_ground_handle(Some(ground_handle));
+
     testbed.set_world(
         mechanical_world,
         geometrical_world,
@@ -125,8 +132,7 @@ pub fn init_world(testbed: &mut Testbed) {
     testbed.set_liquid_world(liquid_world, coupling_manager);
     testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.mechanical_world_mut().set_timestep(1.0 / 200.0);
-    //    testbed.enable_boundary_particles_rendering(true);
-    testbed.look_at(Point3::new(1.5, 1.5, 1.5), Point3::origin());
+    testbed.look_at(Point3::new(3.0, 3.0, 3.0), Point3::origin());
 }
 
 fn main() {

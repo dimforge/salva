@@ -9,7 +9,8 @@ use inflector::Inflector;
 
 use nphysics_testbed3d::Testbed;
 
-mod breaking_dam3;
+mod basic3;
+mod custom_forces3;
 mod elasticity3;
 mod surface_tension3;
 
@@ -44,7 +45,8 @@ fn main() {
         .to_camel_case();
 
     let mut builders: Vec<(_, fn(&mut Testbed))> = vec![
-        ("Breaking dam", breaking_dam3::init_world),
+        ("Basic", basic3::init_world),
+        ("Custom forces", custom_forces3::init_world),
         ("Elasticity", elasticity3::init_world),
         ("Surface tension", surface_tension3::init_world),
     ];

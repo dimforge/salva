@@ -6,7 +6,10 @@ use inflector::Inflector;
 
 use nphysics_testbed2d::Testbed;
 
-mod fluids2;
+mod basic2;
+mod custom_forces2;
+mod elasticity2;
+mod surface_tension2;
 
 fn demo_name_from_command_line() -> Option<String> {
     let mut args = std::env::args();
@@ -38,8 +41,12 @@ fn main() {
         .unwrap_or(String::new())
         .to_camel_case();
 
-    let mut builders: Vec<(_, fn(&mut Testbed))> = vec![("Fluids", fluids2::init_world)];
-
+    let mut builders: Vec<(_, fn(&mut Testbed))> = vec![
+        ("Basic", basic2::init_world),
+        ("Custom forces", custom_forces2::init_world),
+        ("Elasticity", elasticity2::init_world),
+        ("Surface tension", surface_tension2::init_world),
+    ];
     builders.sort_by_key(|builder| builder.0);
 
     let i = builders

@@ -34,4 +34,4 @@ path = "./all_examples2.rs"
 
 [[bin]]
 name = "fluids2"
-path = "./fluids2.rs"
+path = "basic2.rs"

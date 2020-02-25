@@ -40,7 +40,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut points1 = Vec::new();
     let mut points2 = Vec::new();
     let ni = 25;
-    let nj = 25;
+    let nj = 15;
 
     let shift2 = (nj as f32) * particle_rad * 2.0;
 
@@ -53,18 +53,14 @@ pub fn init_world(testbed: &mut Testbed) {
         }
     }
 
-    let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(100_000.0, 0.3, false);
-    let viscosity = ArtificialViscosity::new(0.5);
-    let mut fluid = Fluid::new(points1, particle_rad, 100.0);
-    //    fluid.nonpressure_forces.push(Box::new(elasticity));
-    //    fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
+    let viscosity = ArtificialViscosity::new(0.5, 0.0);
+    let mut fluid = Fluid::new(points1, particle_rad, 1.0);
+    fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
 
-    let elasticity: Becker2009Elasticity<_> = Becker2009Elasticity::new(10_000.0, 0.3, false);
-    let mut fluid = Fluid::new(points2, particle_rad, 100.0);
-    //    fluid.nonpressure_forces.push(Box::new(elasticity));
-    //    fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
+    let mut fluid = Fluid::new(points2, particle_rad, 1.0);
+    fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
     let fluid_handle = liquid_world.add_fluid(fluid);
     testbed.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
@@ -120,27 +116,33 @@ pub fn init_world(testbed: &mut Testbed) {
     );
 
     /*
-    /*
      * Create a dynamic box.
      */
     let rad = 0.4;
     let cuboid = ShapeHandle::new(Cuboid::new(Vector2::repeat(rad)));
+    let cuboid_sample =
+        salva2d::sampling::shape_surface_ray_sample(&*cuboid, particle_rad).unwrap();
 
     // Build the rigid body.
     let rb = RigidBodyDesc::new()
-        .translation(Vector2::y() * 20.0)
+        .translation(Vector2::y() * 10.0)
         .build();
     let rb_handle = bodies.insert(rb);
     testbed.set_body_color(rb_handle, Point3::new(0.3, 0.3, 0.7));
 
     // Build the collider.
     let co = ColliderDesc::new(cuboid)
-        .density(0.5)
+        .density(0.9)
         .build(BodyPartHandle(rb_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
-    coupling_set.register_coupling(bo_handle, co_handle, CouplingMethod::DynamicContactSampling);
+    coupling_set.register_coupling(
+        bo_handle,
+        co_handle,
+        CouplingMethod::StaticSampling(cuboid_sample),
+    );
 
+    /*
     /*
      * Create the deformable body and a collider for its boundary.
      */
@@ -204,7 +206,6 @@ pub fn init_world(testbed: &mut Testbed) {
      * Set up the testbed.
      */
     testbed.set_ground_handle(Some(ground_handle));
-    testbed.set_body_wireframe(ground_handle, true);
     testbed.set_world(
         mechanical_world,
         geometrical_world,
@@ -216,7 +217,7 @@ pub fn init_world(testbed: &mut Testbed) {
     testbed.set_liquid_world(liquid_world, coupling_set);
     testbed.look_at(Point2::new(0.0, -2.5), 95.0);
     testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
-    testbed.enable_boundary_particles_rendering(true);
+    testbed.mechanical_world_mut().set_timestep(1.0 / 200.0);
 }
 
 fn main() {

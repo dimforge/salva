@@ -124,11 +124,11 @@ where
                         .iter()
                     {
                         let vi = fluid_i.velocities[c.i] + velocity_changes[c.i_model][c.i];
-                        // FIXME: take the velocity of j too?
+                        let vj = boundaries[c.j_model].velocities[c.j];
 
                         delta += boundaries[c.j_model].volumes[c.j]
                             * fluid_i.density0
-                            * vi.dot(&c.gradient);
+                            * (vi - vj).dot(&c.gradient);
                     }
 
                     *predicted_density = densities[fluid_id][i] + delta * timestep.dt();
