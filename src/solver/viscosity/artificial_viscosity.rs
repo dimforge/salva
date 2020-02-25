@@ -8,6 +8,7 @@ use crate::geometry::ParticlesContacts;
 use crate::math::Vector;
 use crate::object::Fluid;
 use crate::solver::NonPressureForce;
+use crate::TimestepManager;
 
 // See http://www.astro.lu.se/~david/teaching/SPH/notes/annurev.aa.30.090192.pdf
 #[derive(Clone)]
@@ -32,8 +33,7 @@ impl<N: RealField> ArtificialViscosity<N> {
 impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
     fn solve(
         &mut self,
-        dt: N,
-        inv_dt: N,
+        timestep: &TimestepManager<N>,
         kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,

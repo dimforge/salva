@@ -46,6 +46,7 @@ pub trait PressureSolver<N: RealField> {
         &mut self,
         counters: &mut Counters,
         timestep: &mut TimestepManager<N>,
+        gravity: &Vector<N>,
         contact_manager: &mut ContactManager<N>,
         kernel_radius: N,
         fluids: &mut [Fluid<N>],

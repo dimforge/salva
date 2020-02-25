@@ -89,7 +89,7 @@ where
 
     fn compute_predicted_densities(
         &mut self,
-        timestep: TimestepManager<N>,
+        timestep: &TimestepManager<N>,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
@@ -186,7 +186,7 @@ where
 
     fn compute_aii(
         &mut self,
-        dt: N,
+        timestep: &TimestepManager<N>,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
@@ -205,7 +205,7 @@ where
                 *aii = N::zero();
                 let rhoi = densities[fluid_id][i];
                 let mi = fluids[fluid_id].particle_mass(i);
-                let factor = dt * dt * mi / (rhoi * rhoi);
+                let factor = timestep.dt() * timestep.dt() * mi / (rhoi * rhoi);
 
                 for c in fluid_fluid_contacts
                     .particle_contacts(i)
@@ -234,7 +234,7 @@ where
 
     fn compute_dij_pjl(
         &mut self,
-        dt: N,
+        timestep: &TimestepManager<N>,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
@@ -264,14 +264,14 @@ where
                     *dij_pjl += c.gradient * (-mj * p_jl / (rhoj * rhoj));
                 }
 
-                *dij_pjl *= dt * dt;
+                *dij_pjl *= timestep.dt() * timestep.dt();
             })
         }
     }
 
     fn compute_next_pressures(
         &mut self,
-        dt: N,
+        timestep: &TimestepManager<N>,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
@@ -309,7 +309,8 @@ where
                             .iter()
                         {
                             let mj = fluids[c.j_model].particle_mass(c.j);
-                            let dji = c.gradient * (dt * dt * mi / (rhoi * rhoi));
+                            let dji =
+                                c.gradient * (timestep.dt() * timestep.dt() * mi / (rhoi * rhoi));
                             let factor = dij_pjl[c.i_model][c.i]
                                 - dii[c.j_model][c.j] * pressures[c.j_model][c.j]
                                 - (dij_pjl[c.j_model][c.j] - dji * pi);
@@ -354,8 +355,7 @@ where
 
     fn compute_velocity_changes(
         &mut self,
-        dt: N,
-        _inv_dt: N,
+        timestep: &TimestepManager<N>,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
@@ -609,12 +609,15 @@ where
     fn step(
         &mut self,
         counters: &mut Counters,
-        timestep: &TimestepManager<N>,
+        timestep: &mut TimestepManager<N>,
+        gravity: &Vector<N>,
         contact_manager: &mut ContactManager<N>,
         kernel_radius: N,
         fluids: &mut [Fluid<N>],
         boundaries: &[Boundary<N>],
     ) {
+        self.predict_advection(timestep, kernel_radius, contact_manager, gravity, fluids);
+        timestep.advance(fluids);
         self.integrate_and_clear_accelerations(timestep, fluids);
 
         counters.solver.pressure_resolution_time.resume();

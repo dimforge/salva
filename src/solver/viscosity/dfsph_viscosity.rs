@@ -7,6 +7,7 @@ use crate::geometry::ParticlesContacts;
 use crate::math::{Vector, SPATIAL_DIM};
 use crate::object::Fluid;
 use crate::solver::NonPressureForce;
+use crate::TimestepManager;
 
 #[cfg(feature = "dim2")]
 type BetaMatrix<N> = na::Matrix3<N>;
@@ -186,7 +187,7 @@ impl<N: RealField> DFSPHViscosity<N> {
 
     fn compute_strain_rates(
         &mut self,
-        dt: N,
+        timestep: &TimestepManager<N>,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
         densities: &[N],
@@ -208,8 +209,8 @@ impl<N: RealField> DFSPHViscosity<N> {
                     .iter()
                 {
                     if c.i_model == c.j_model {
-                        let v_i = fluid.velocities[c.i] + fluid.accelerations[c.i] * dt;
-                        let v_j = fluid.velocities[c.j] + fluid.accelerations[c.j] * dt;
+                        let v_i = fluid.velocities[c.i] + fluid.accelerations[c.i] * timestep.dt();
+                        let v_j = fluid.velocities[c.j] + fluid.accelerations[c.j] * timestep.dt();
                         let v_ji = v_j - v_i;
                         let rate = compute_strain_rate(&c.gradient, &v_ji);
 
@@ -238,7 +239,7 @@ impl<N: RealField> DFSPHViscosity<N> {
 
     fn compute_accelerations(
         &self,
-        inv_dt: N,
+        timestep: &TimestepManager<N>,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
         densities: &[N],
@@ -268,7 +269,7 @@ impl<N: RealField> DFSPHViscosity<N> {
                         // Compute velocity change.
                         let coeff = (ui + uj) * (volumes[c.j] * density0 / _2);
                         *acceleration +=
-                            gradient.tr_mul(&coeff) * (volumes[c.i] * density0 * inv_dt);
+                            gradient.tr_mul(&coeff) * (volumes[c.i] * density0 * timestep.inv_dt());
                     }
                 }
             })
@@ -278,8 +279,7 @@ impl<N: RealField> DFSPHViscosity<N> {
 impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
     fn solve(
         &mut self,
-        dt: N,
-        inv_dt: N,
+        timestep: &TimestepManager<N>,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
@@ -289,13 +289,13 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
 
         let _ = self.compute_betas(fluid_fluid_contacts, fluid, densities);
 
-        let _ = self.compute_strain_rates(dt, fluid_fluid_contacts, fluid, densities, false);
+        let _ = self.compute_strain_rates(timestep, fluid_fluid_contacts, fluid, densities, false);
 
         let mut last_err = N::max_value();
 
         for i in 0..self.max_viscosity_iter {
             let avg_err =
-                self.compute_strain_rates(dt, fluid_fluid_contacts, fluid, densities, true);
+                self.compute_strain_rates(timestep, fluid_fluid_contacts, fluid, densities, true);
 
             if avg_err <= self.max_viscosity_error && i >= self.min_viscosity_iter {
                 //                println!(
@@ -309,7 +309,7 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
 
             last_err = avg_err;
 
-            self.compute_accelerations(inv_dt, fluid_fluid_contacts, fluid, densities);
+            self.compute_accelerations(timestep, fluid_fluid_contacts, fluid, densities);
         }
     }
 

@@ -8,6 +8,7 @@ use crate::geometry::ParticlesContacts;
 use crate::math::Vector;
 use crate::object::Fluid;
 use crate::solver::NonPressureForce;
+use crate::TimestepManager;
 
 #[derive(Clone)]
 pub struct XSPHViscosity<N: RealField> {
@@ -25,8 +26,7 @@ impl<N: RealField> XSPHViscosity<N> {
 impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
     fn solve(
         &mut self,
-        dt: N,
-        inv_dt: N,
+        timestep: &TimestepManager<N>,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
@@ -55,7 +55,7 @@ impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
                     }
                 }
 
-                *acceleration += added_vel * (viscosity_coefficient * inv_dt);
+                *acceleration += added_vel * (viscosity_coefficient * timestep.inv_dt());
             })
     }
 

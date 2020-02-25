@@ -342,7 +342,7 @@ where
 
     fn compute_velocity_changes_for_divergence(
         &mut self,
-        timestep: TimestepManager<N>,
+        timestep: &TimestepManager<N>,
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
@@ -644,14 +644,12 @@ where
         &mut self,
         counters: &mut Counters,
         timestep: &mut TimestepManager<N>,
+        gravity: &Vector<N>,
         contact_manager: &mut ContactManager<N>,
         kernel_radius: N,
         fluids: &mut [Fluid<N>],
         boundaries: &[Boundary<N>],
     ) {
-        timestep.advance(fluids);
-        self.integrate_and_clear_accelerations(timestep, fluids);
-
         counters.solver.pressure_resolution_time.resume();
 
         self.compute_alphas(
@@ -669,13 +667,17 @@ where
             boundaries,
         );
 
-        self.update_velocities(timestep, fluids);
+        self.update_velocities(fluids);
         self.velocity_changes
             .iter_mut()
             .for_each(|vs| vs.iter_mut().for_each(|v| v.fill(N::zero())));
 
-        self.pressure_solve(timestep, contact_manager, fluids, boundaries);
+        self.predict_advection(timestep, kernel_radius, contact_manager, gravity, fluids);
 
+        timestep.advance(fluids);
+
+        self.integrate_and_clear_accelerations(timestep, fluids);
+        self.pressure_solve(timestep, contact_manager, fluids, boundaries);
         self.update_positions(timestep, fluids);
         counters.solver.pressure_resolution_time.pause();
     }

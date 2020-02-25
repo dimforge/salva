@@ -7,8 +7,8 @@ pub struct TimestepManager<N: RealField> {
     cfl_coeff: N,
     min_num_substeps: u32,
     max_num_substeps: u32,
-    curr_dt: N,
-    curr_inv_dt: N,
+    dt: N,
+    inv_dt: N,
     total_step_size: N,
     remaining_time: N,
     particle_radius: N,
@@ -18,10 +18,14 @@ impl<N: RealField> TimestepManager<N> {
     /// Initialize a new timestep manager with default parameters.
     pub fn new(particle_radius: N) -> Self {
         Self {
-            cfl_coeff: na::convert(1.0),
+            cfl_coeff: na::convert(0.4),
             min_num_substeps: 1,
             max_num_substeps: 10,
             particle_radius,
+            dt: N::zero(),
+            inv_dt: N::zero(),
+            total_step_size: N::zero(),
+            remaining_time: N::zero(),
         }
     }
 
@@ -42,18 +46,22 @@ impl<N: RealField> TimestepManager<N> {
         self.remaining_time = total_step_size;
     }
 
+    #[inline]
     pub fn is_done(&self) -> bool {
-        self.remaining_time > N::zero()
+        self.remaining_time <= N::default_epsilon()
     }
 
+    #[inline]
     pub fn dt(&self) -> N {
         self.dt
     }
 
+    #[inline]
     pub fn inv_dt(&self) -> N {
         self.inv_dt
     }
 
+    #[inline]
     pub fn advance(&mut self, fluids: &[Fluid<N>]) {
         self.remaining_time -= self.dt;
         let substep = self.compute_substep(fluids);
@@ -66,11 +74,7 @@ impl<N: RealField> TimestepManager<N> {
     }
 
     fn compute_substep(&self, fluids: &[Fluid<N>]) -> N {
-        //        return remaining_time;
-        if self.remaining_time < N::default_epsilon() {
-            return N::zero();
-        }
-
+        //        return self.total_step_size;
         let min_substep = self.total_step_size / na::convert(self.max_num_substeps as f64);
         let max_substep = self.total_step_size / na::convert(self.min_num_substeps as f64);
         let computed_substep = self.max_substep(fluids);

@@ -10,6 +10,7 @@ use crate::kernel::{CubicSplineKernel, Kernel};
 use crate::math::{Matrix, Point, RotationMatrix, SpatialVector, Vector};
 use crate::object::Fluid;
 use crate::solver::NonPressureForce;
+use crate::TimestepManager;
 
 fn elasticity_coefficients<N: RealField>(young_modulus: N, poisson_ratio: N) -> (N, N, N) {
     let _1 = N::one();
@@ -261,8 +262,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
 {
     fn solve(
         &mut self,
-        dt: N,
-        inv_dt: N,
+        timestep: &TimestepManager<N>,
         kernel_radius: N,
         _fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,

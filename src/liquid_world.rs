@@ -124,19 +124,12 @@ impl<N: RealField> LiquidWorld<N> {
                 self.boundaries.as_slice(),
             );
 
-            self.solver.predict_advection(
-                &self.timestep_manager,
-                self.h,
-                &self.contact_manager,
-                gravity,
-                self.fluids.as_mut_slice(),
-            );
-
-            println!("Substep dt: {}", substep_dt);
+            println!("Substep dt: {}", self.timestep_manager.dt());
 
             self.solver.step(
                 &mut self.counters,
-                substep_dt,
+                &mut self.timestep_manager,
+                gravity,
                 &mut self.contact_manager,
                 self.h,
                 self.fluids.as_mut_slice(),
@@ -145,8 +138,6 @@ impl<N: RealField> LiquidWorld<N> {
 
             coupling.transmit_forces(&self.boundaries);
             self.counters.stages.solver_time.pause();
-
-            remaining_time -= substep_dt;
         }
 
         //        if self.nsubsteps_since_sort >= 100 {

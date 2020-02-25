@@ -8,6 +8,7 @@ use crate::geometry::ParticlesContacts;
 use crate::math::Vector;
 use crate::object::Fluid;
 use crate::solver::NonPressureForce;
+use crate::TimestepManager;
 
 #[derive(Clone)]
 pub struct Akinci2013SurfaceTension<N: RealField> {
@@ -75,8 +76,7 @@ fn cohesion_kernel<N: RealField>(r: N, h: N) -> N {
 impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
     fn solve(
         &mut self,
-        dt: N,
-        inv_dt: N,
+        timestep: &TimestepManager<N>,
         kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,

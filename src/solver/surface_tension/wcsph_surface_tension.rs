@@ -8,6 +8,7 @@ use crate::geometry::ParticlesContacts;
 use crate::math::Vector;
 use crate::object::Fluid;
 use crate::solver::NonPressureForce;
+use crate::TimestepManager;
 
 // Surface tension of water: 0.01
 // Stable values of surface tension: up to 3.4
@@ -28,8 +29,7 @@ impl<N: RealField> WCSPHSurfaceTension<N> {
 impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
     fn solve(
         &mut self,
-        dt: N,
-        inv_dt: N,
+        timestep: &TimestepManager<N>,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,

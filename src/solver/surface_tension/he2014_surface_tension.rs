@@ -8,6 +8,7 @@ use crate::geometry::ParticlesContacts;
 use crate::math::Vector;
 use crate::object::Fluid;
 use crate::solver::NonPressureForce;
+use crate::TimestepManager;
 
 // http://peridynamics.com/publications/2014-He-RSS.pdf
 pub struct He2014SurfaceTension<N: RealField> {
@@ -92,8 +93,7 @@ impl<N: RealField> He2014SurfaceTension<N> {
 impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
     fn solve(
         &mut self,
-        dt: N,
-        inv_dt: N,
+        timestep: &TimestepManager<N>,
         kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
