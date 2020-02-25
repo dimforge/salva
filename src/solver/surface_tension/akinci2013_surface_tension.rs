@@ -163,10 +163,12 @@ impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
                                 Vector::zeros()
                             };
 
-                            //                            let mi = volumes[c.i] * density0;
+                            let mi = volumes[c.i] * density0;
                             let mj = boundaries[c.j_model].volumes[c.j] * density0;
-                            let adhesion_acc = adhesion_vec * (-boundary_adhesion_coefficient * mj);
-                            *acceleration_i += adhesion_acc;
+                            let adhesion_acc = adhesion_vec * (boundary_adhesion_coefficient * mj);
+                            *acceleration_i -= adhesion_acc;
+
+                            boundaries[c.j_model].apply_force(c.j, adhesion_acc * mi);
                         }
                     }
                 }

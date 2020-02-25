@@ -164,8 +164,14 @@ impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
                     {
                         let mj = boundaries[c.j_model].volumes[c.j] * density0;
                         let gradsum = gradcs[c.i];
-                        let f = c.gradient * (mi / densities[c.i] * mj / density0 * gradsum / _2);
-                        *acceleration_i += f * (boundary_tension_coefficient / (_2 * mi));
+                        let f = c.gradient
+                            * (mi / densities[c.i] * mj / density0
+                                * gradsum
+                                * boundary_tension_coefficient
+                                * na::convert(0.25));
+                        *acceleration_i += f / mi;
+
+                        boundaries[c.j_model].apply_force(c.j, -f);
                     }
                 }
             })

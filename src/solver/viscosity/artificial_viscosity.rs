@@ -57,8 +57,8 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
         par_iter_mut!(fluid.accelerations)
             .enumerate()
             .for_each(|(i, acceleration)| {
-                let mut added_fluid_acc = Vector::zeros();
-                let mut added_boundary_acc = Vector::zeros();
+                let mut fluid_acc = Vector::zeros();
+                let mut boundary_acc = Vector::zeros();
 
                 if self.fluid_viscosity_coefficient != N::zero() {
                     for c in fluid_fluid_contacts
@@ -77,8 +77,9 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
                                 let eta2 = kernel_radius * kernel_radius * na::convert(0.01);
                                 let mu_ij = kernel_radius * vr / (r_ij.norm_squared() + eta2);
 
-                                added_fluid_acc += c.gradient
-                                    * ((speed_of_sound * alpha * mu_ij - beta * mu_ij * mu_ij)
+                                fluid_acc += c.gradient
+                                    * (fluid_viscosity_coefficient
+                                        * (speed_of_sound * alpha * mu_ij - beta * mu_ij * mu_ij)
                                         * (volumes[c.j] * density0 / density_average));
                             }
                         }
@@ -101,16 +102,18 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
                             let eta2 = kernel_radius * kernel_radius * na::convert(0.01);
                             let mu_ij = kernel_radius * vr / (r_ij.norm_squared() + eta2);
 
-                            added_boundary_acc += c.gradient
-                                * ((speed_of_sound * alpha * mu_ij - beta * mu_ij * mu_ij)
+                            boundary_acc += c.gradient
+                                * (boundary_viscosity_coefficient
+                                    * (speed_of_sound * alpha * mu_ij - beta * mu_ij * mu_ij)
                                     * (boundaries[c.j_model].volumes[c.j] * density0
                                         / density_average));
+                            let mi = volumes[c.i] * density0;
+                            boundaries[c.j_model].apply_force(c.j, boundary_acc * -mi);
                         }
                     }
                 }
 
-                *acceleration += added_fluid_acc * fluid_viscosity_coefficient
-                    + added_boundary_acc * boundary_viscosity_coefficient;
+                *acceleration += fluid_acc + boundary_acc;
             })
     }
 

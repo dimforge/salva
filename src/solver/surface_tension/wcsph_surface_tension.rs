@@ -73,13 +73,14 @@ impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
                         .iter()
                     {
                         let dpos = positions[c.i] - boundaries[c.j_model].positions[c.j];
-                        let cohesion_acc = dpos
-                            * (-boundary_tension_coefficient
+                        let mi = volumes[c.i] * density0;
+                        let cohesion_force = dpos
+                            * (boundary_tension_coefficient
                                 * c.weight
                                 * boundaries[c.j_model].volumes[c.j]
-                                * density0
-                                / (volumes[c.i] * density0));
-                        *acceleration_i += cohesion_acc;
+                                * density0);
+                        *acceleration_i -= cohesion_force / mi;
+                        boundaries[c.j_model].apply_force(c.j, cohesion_force);
                     }
                 }
             })

@@ -58,7 +58,11 @@ impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
                     {
                         if c.i_model == c.j_model {
                             added_fluid_vel += (velocities[c.j] - vi)
-                                * (c.weight * volumes[c.j] * density0 / densities[c.j]);
+                                * (fluid_viscosity_coefficient
+                                    * c.weight
+                                    * volumes[c.j]
+                                    * density0
+                                    / densities[c.j]);
                         }
                     }
                 }
@@ -70,16 +74,21 @@ impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
                         .unwrap()
                         .iter()
                     {
-                        added_fluid_vel += (boundaries[c.j_model].velocities[c.j] - vi)
-                            * (c.weight * boundaries[c.j_model].volumes[c.j] * density0
+                        let delta = (boundaries[c.j_model].velocities[c.j] - vi)
+                            * (boundary_viscosity_coefficient
+                                * c.weight
+                                * boundaries[c.j_model].volumes[c.j]
+                                * density0
                                 / densities[c.i]);
+                        added_fluid_vel += delta;
+
+                        let mi = volumes[c.i] * density0;
+                        boundaries[c.j_model].apply_force(c.j, delta * (-mi * timestep.inv_dt()));
                     }
                 }
 
                 *acceleration +=
-                    added_fluid_vel * (fluid_viscosity_coefficient * timestep.inv_dt());
-                *acceleration +=
-                    added_boundary_vel * (boundary_viscosity_coefficient * timestep.inv_dt());
+                    added_fluid_vel * timestep.inv_dt() + added_boundary_vel * timestep.inv_dt();
             })
     }
 
