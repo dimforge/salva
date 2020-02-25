@@ -6,21 +6,23 @@ use na::{self, RealField};
 use crate::geometry::ParticlesContacts;
 
 use crate::math::Vector;
-use crate::object::Fluid;
+use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
 // http://peridynamics.com/publications/2014-He-RSS.pdf
 pub struct He2014SurfaceTension<N: RealField> {
-    tension_coefficient: N,
+    fluid_tension_coefficient: N,
+    boundary_tension_coefficient: N,
     gradcs: Vec<N>,
     colors: Vec<N>,
 }
 
 impl<N: RealField> He2014SurfaceTension<N> {
-    pub fn new(tension_coefficient: N) -> Self {
+    pub fn new(fluid_tension_coefficient: N, boundary_tension_coefficient: N) -> Self {
         Self {
-            tension_coefficient,
+            fluid_tension_coefficient,
+            boundary_tension_coefficient,
             colors: Vec::new(),
             gradcs: Vec::new(),
         }
@@ -36,7 +38,9 @@ impl<N: RealField> He2014SurfaceTension<N> {
     fn compute_colors(
         &mut self,
         fluid_fluid_contacts: &ParticlesContacts<N>,
+        fluid_boundary_contacts: &ParticlesContacts<N>,
         fluid: &Fluid<N>,
+        boundaries: &[Boundary<N>],
         densities: &[N],
     ) {
         par_iter_mut!(self.colors)
@@ -53,6 +57,15 @@ impl<N: RealField> He2014SurfaceTension<N> {
                     if c.i_model == c.j_model {
                         color += c.weight * fluid.particle_mass(c.j) / densities[c.j];
                     }
+                }
+
+                for c in fluid_boundary_contacts
+                    .particle_contacts(i)
+                    .read()
+                    .unwrap()
+                    .iter()
+                {
+                    color += c.weight * boundaries[c.j_model].volumes[c.j];
                 }
 
                 *color_i = color;
@@ -96,18 +109,27 @@ impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
         timestep: &TimestepManager<N>,
         kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
+        fluid_boundary_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
+        boundaries: &[Boundary<N>],
         densities: &[N],
     ) {
         self.init(fluid);
         let _2: N = na::convert(2.0f64);
 
-        self.compute_colors(fluid_fluid_contacts, fluid, densities);
+        self.compute_colors(
+            fluid_fluid_contacts,
+            fluid_boundary_contacts,
+            fluid,
+            boundaries,
+            densities,
+        );
         self.compute_gradc(fluid_fluid_contacts, fluid, densities);
 
         // Compute and apply forces.
         let gradcs = &self.gradcs;
-        let tension_coefficient = self.tension_coefficient;
+        let fluid_tension_coefficient = self.fluid_tension_coefficient;
+        let boundary_tension_coefficient = self.boundary_tension_coefficient;
         let density0 = fluid.density0;
         let volumes = &fluid.volumes;
 
@@ -116,18 +138,34 @@ impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
             .for_each(|(i, acceleration_i)| {
                 let mi = volumes[i] * density0;
 
-                for c in fluid_fluid_contacts
-                    .particle_contacts(i)
-                    .read()
-                    .unwrap()
-                    .iter()
-                {
-                    if c.i_model == c.j_model {
-                        let mj = volumes[c.j] * density0;
-                        let gradsum = gradcs[c.i] + gradcs[c.j];
-                        let f =
-                            c.gradient * (mi / densities[c.i] * mj / densities[c.j] * gradsum / _2);
-                        *acceleration_i += f * (tension_coefficient / (_2 * mi));
+                if fluid_tension_coefficient != N::zero() {
+                    for c in fluid_fluid_contacts
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
+                        if c.i_model == c.j_model {
+                            let mj = volumes[c.j] * density0;
+                            let gradsum = gradcs[c.i] + gradcs[c.j];
+                            let f = c.gradient
+                                * (mi / densities[c.i] * mj / densities[c.j] * gradsum / _2);
+                            *acceleration_i += f * (fluid_tension_coefficient / (_2 * mi));
+                        }
+                    }
+                }
+
+                if boundary_tension_coefficient != N::zero() {
+                    for c in fluid_boundary_contacts
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
+                        let mj = boundaries[c.j_model].volumes[c.j] * density0;
+                        let gradsum = gradcs[c.i];
+                        let f = c.gradient * (mi / densities[c.i] * mj / density0 * gradsum / _2);
+                        *acceleration_i += f * (boundary_tension_coefficient / (_2 * mi));
                     }
                 }
             })

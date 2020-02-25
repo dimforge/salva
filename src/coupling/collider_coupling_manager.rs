@@ -146,6 +146,7 @@ where
                 // Update positions and velocities.
                 boundary.positions.clear();
                 boundary.velocities.clear();
+                boundary.volumes.clear();
                 coupling.features.clear();
 
                 match &coupling.coupling_method {
@@ -155,6 +156,8 @@ where
                             // XXX: actually set the velocity of this point.
                             boundary.velocities.push(Vector::zeros());
                         }
+
+                        boundary.volumes.resize(points.len(), N::zero());
                     }
                     CouplingMethod::DynamicContactSampling => {
                         let prediction = h; // * na::convert(0.5);
@@ -194,6 +197,8 @@ where
                                         }
 
                                         boundary.positions.push(proj.point);
+                                        boundary.volumes.push(N::zero());
+                                        boundary.velocities.push(Vector::zeros()); // FIXME: set the actual velocity.
                                         coupling.features.push(feature);
                                     }
                                 }

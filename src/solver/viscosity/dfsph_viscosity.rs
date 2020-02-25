@@ -5,7 +5,7 @@ use na::{self, RealField};
 
 use crate::geometry::ParticlesContacts;
 use crate::math::{Vector, SPATIAL_DIM};
-use crate::object::Fluid;
+use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
@@ -282,7 +282,9 @@ impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
         timestep: &TimestepManager<N>,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
+        fluid_boundaries_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
+        boundaries: &[Boundary<N>],
         densities: &[N],
     ) {
         self.init(fluid);

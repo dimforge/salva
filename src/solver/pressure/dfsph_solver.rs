@@ -30,7 +30,6 @@ pub struct DFSPHSolver<
     densities: Vec<Vec<N>>,
     predicted_densities: Vec<Vec<N>>,
     divergences: Vec<Vec<N>>,
-    boundaries_volumes: Vec<Vec<N>>,
     velocity_changes: Vec<Vec<Vector<N>>>,
     phantoms: PhantomData<(KernelDensity, KernelGradient)>,
 }
@@ -55,7 +54,6 @@ where
             densities: Vec::new(),
             predicted_densities: Vec::new(),
             divergences: Vec::new(),
-            boundaries_volumes: Vec::new(),
             velocity_changes: Vec::new(),
             phantoms: PhantomData,
         }
@@ -64,10 +62,10 @@ where
     fn compute_boundary_volumes(
         &mut self,
         boundary_boundary_contacts: &[ParticlesContacts<N>],
-        boundaries: &[Boundary<N>],
+        boundaries: &mut [Boundary<N>],
     ) {
         for boundary_id in 0..boundaries.len() {
-            par_iter_mut!(self.boundaries_volumes[boundary_id])
+            par_iter_mut!(boundaries[boundary_id].volumes)
                 .enumerate()
                 .for_each(|(i, volume)| {
                     let mut denominator = N::zero();
@@ -93,8 +91,8 @@ where
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
+        boundaries: &[Boundary<N>],
     ) -> N {
-        let boundaries_volumes = &self.boundaries_volumes;
         let velocity_changes = &self.velocity_changes;
         let densities = &self.densities;
         let mut max_error = N::zero();
@@ -128,7 +126,7 @@ where
                         let vi = fluid_i.velocities[c.i] + velocity_changes[c.i_model][c.i];
                         // FIXME: take the velocity of j too?
 
-                        delta += boundaries_volumes[c.j_model][c.j]
+                        delta += boundaries[c.j_model].volumes[c.j]
                             * fluid_i.density0
                             * vi.dot(&c.gradient);
                     }
@@ -155,9 +153,8 @@ where
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
+        boundaries: &[Boundary<N>],
     ) {
-        let boundaries_volumes = &self.boundaries_volumes;
-
         for fluid_id in 0..fluids.len() {
             let fluid_fluid_contacts = &fluid_fluid_contacts[fluid_id];
             let fluid_boundary_contacts = &fluid_boundary_contacts[fluid_id];
@@ -188,7 +185,7 @@ where
                         .iter()
                     {
                         let grad_i =
-                            c.gradient * boundaries_volumes[c.j_model][c.j] * fluid_i.density0;
+                            c.gradient * boundaries[c.j_model].volumes[c.j] * fluid_i.density0;
                         squared_grad_sum += grad_i.norm_squared();
                         grad_sum += grad_i;
                     }
@@ -208,7 +205,6 @@ where
         boundaries: &[Boundary<N>],
     ) {
         let alphas = &self.alphas;
-        let boundaries_volumes = &self.boundaries_volumes;
         let predicted_densities = &self.predicted_densities;
 
         for (fluid_id, _fluid1) in fluids.iter().enumerate() {
@@ -246,7 +242,7 @@ where
                             .unwrap()
                             .iter()
                         {
-                            let coeff = ki * boundaries_volumes[c.j_model][c.j] * fluid1.density0;
+                            let coeff = ki * boundaries[c.j_model].volumes[c.j] * fluid1.density0;
                             let delta = c.gradient * (coeff * timestep.inv_dt());
 
                             *velocity_change -= delta;
@@ -266,8 +262,8 @@ where
         fluid_fluid_contacts: &[ParticlesContacts<N>],
         fluid_boundary_contacts: &[ParticlesContacts<N>],
         fluids: &[Fluid<N>],
+        boundaries: &[Boundary<N>],
     ) -> N {
-        let boundaries_volumes = &self.boundaries_volumes;
         let velocity_changes = &self.velocity_changes;
         let min_neighbors_for_divergence_solve = self.min_neighbors_for_divergence_solve;
         let mut max_error = N::zero();
@@ -322,7 +318,7 @@ where
 
                         let dvel = v_i;
                         *divergence_i += dvel.dot(&c.gradient)
-                            * boundaries_volumes[c.j_model][c.j]
+                            * boundaries[c.j_model].volumes[c.j]
                             * fluid_i.density0;
                     }
 
@@ -349,7 +345,6 @@ where
         boundaries: &[Boundary<N>],
     ) {
         let alphas = &self.alphas;
-        let boundaries_volumes = &self.boundaries_volumes;
         let divergences = &self.divergences;
 
         for (fluid_id, _fluid1) in fluids.iter().enumerate() {
@@ -382,7 +377,7 @@ where
                         let boundary2 = &boundaries[c.j_model];
 
                         // Compute velocity change.
-                        let coeff = -ki * boundaries_volumes[c.j_model][c.j] * fluid1.density0;
+                        let coeff = -ki * boundaries[c.j_model].volumes[c.j] * fluid1.density0;
                         let delta = c.gradient * coeff;
                         *velocity_change += delta;
 
@@ -428,6 +423,7 @@ where
                 &contact_manager.fluid_fluid_contacts,
                 &contact_manager.fluid_boundary_contacts,
                 fluids,
+                boundaries,
             );
 
             if avg_err <= self.max_density_error && i >= self.min_pressure_iter {
@@ -462,6 +458,7 @@ where
                 &contact_manager.fluid_fluid_contacts,
                 &contact_manager.fluid_boundary_contacts,
                 fluids,
+                boundaries,
             );
 
             let max_err = self.max_divergence_error * timestep.inv_dt() * na::convert(0.01);
@@ -535,13 +532,7 @@ where
         }
     }
 
-    fn init_with_boundaries(&mut self, boundaries: &[Boundary<N>]) {
-        self.boundaries_volumes.resize(boundaries.len(), Vec::new());
-
-        for (boundary, volumes) in boundaries.iter().zip(self.boundaries_volumes.iter_mut()) {
-            volumes.resize(boundary.num_particles(), N::zero())
-        }
-    }
+    fn init_with_boundaries(&mut self, boundaries: &[Boundary<N>]) {}
 
     fn predict_advection(
         &mut self,
@@ -550,6 +541,7 @@ where
         contact_manager: &ContactManager<N>,
         gravity: &Vector<N>,
         fluids: &mut [Fluid<N>],
+        boundaries: &[Boundary<N>],
     ) {
         for fluid in fluids.iter_mut() {
             par_iter_mut!(fluid.accelerations).for_each(|acceleration| {
@@ -557,11 +549,14 @@ where
             })
         }
 
-        for (fluid, fluid_fluid_contacts, densities) in itertools::multizip((
-            &mut *fluids,
-            &contact_manager.fluid_fluid_contacts,
-            &self.densities,
-        )) {
+        for (fluid, fluid_fluid_contacts, fluid_boundary_contacts, densities) in
+            itertools::multizip((
+                &mut *fluids,
+                &contact_manager.fluid_fluid_contacts,
+                &contact_manager.fluid_boundary_contacts,
+                &self.densities,
+            ))
+        {
             let mut forces = std::mem::replace(&mut fluid.nonpressure_forces, Vec::new());
 
             for np_force in &mut forces {
@@ -569,7 +564,9 @@ where
                     timestep,
                     kernel_radius,
                     fluid_fluid_contacts,
+                    fluid_boundary_contacts,
                     fluid,
+                    boundaries,
                     densities,
                 );
             }
@@ -604,10 +601,9 @@ where
         &mut self,
         contact_manager: &ContactManager<N>,
         fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        boundaries: &mut [Boundary<N>],
     ) {
         self.compute_boundary_volumes(&contact_manager.boundary_boundary_contacts, boundaries);
-        let boundaries_volumes = &self.boundaries_volumes;
 
         for fluid_id in 0..fluids.len() {
             par_iter_mut!(self.densities[fluid_id])
@@ -630,7 +626,7 @@ where
                         .unwrap()
                         .iter()
                     {
-                        *density += boundaries_volumes[c.j_model][c.j]
+                        *density += boundaries[c.j_model].volumes[c.j]
                             * fluids[c.i_model].density0
                             * c.weight;
                     }
@@ -656,6 +652,7 @@ where
             &contact_manager.fluid_fluid_contacts,
             &contact_manager.fluid_boundary_contacts,
             fluids,
+            boundaries,
         );
 
         self.divergence_solve(
@@ -672,7 +669,14 @@ where
             .iter_mut()
             .for_each(|vs| vs.iter_mut().for_each(|v| v.fill(N::zero())));
 
-        self.predict_advection(timestep, kernel_radius, contact_manager, gravity, fluids);
+        self.predict_advection(
+            timestep,
+            kernel_radius,
+            contact_manager,
+            gravity,
+            fluids,
+            boundaries,
+        );
 
         timestep.advance(fluids);
 

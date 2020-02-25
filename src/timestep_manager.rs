@@ -74,7 +74,7 @@ impl<N: RealField> TimestepManager<N> {
     }
 
     fn compute_substep(&self, fluids: &[Fluid<N>]) -> N {
-        //        return self.total_step_size;
+        return self.total_step_size;
         let min_substep = self.total_step_size / na::convert(self.max_num_substeps as f64);
         let max_substep = self.total_step_size / na::convert(self.min_num_substeps as f64);
         let computed_substep = self.max_substep(fluids);

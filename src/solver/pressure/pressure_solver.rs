@@ -21,6 +21,7 @@ pub trait PressureSolver<N: RealField> {
         contact_manager: &ContactManager<N>,
         gravity: &Vector<N>,
         fluids: &mut [Fluid<N>],
+        boundaries: &[Boundary<N>],
     );
 
     fn evaluate_kernels(
@@ -35,7 +36,7 @@ pub trait PressureSolver<N: RealField> {
         &mut self,
         contact_manager: &ContactManager<N>,
         fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        boundaries: &mut [Boundary<N>],
     );
 
     /// Solves pressure and non-pressure force for the given fluids and boundaries.

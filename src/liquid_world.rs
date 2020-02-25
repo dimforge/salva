@@ -121,7 +121,7 @@ impl<N: RealField> LiquidWorld<N> {
             self.solver.compute_densities(
                 &self.contact_manager,
                 self.fluids.as_slice(),
-                self.boundaries.as_slice(),
+                self.boundaries.as_mut_slice(),
             );
 
             println!("Substep dt: {}", self.timestep_manager.dt());

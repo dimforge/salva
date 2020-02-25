@@ -11,6 +11,8 @@ pub struct Boundary<N: RealField> {
     pub positions: Vec<Point<N>>,
     /// The artificial velocities of each boundary particle.
     pub velocities: Vec<Vector<N>>,
+    /// The volume computed for each boundary particle.
+    pub volumes: Vec<N>,
     /// The forces applied to each particle of this boundary object.
     /// If this is set to `None` (which is the default), the boundary won't receive any
     /// force for fluids.
@@ -24,10 +26,12 @@ impl<N: RealField> Boundary<N> {
         let velocities = std::iter::repeat(Vector::zeros())
             .take(num_particles)
             .collect();
+        let volumes = std::iter::repeat(N::zero()).take(num_particles).collect();
 
         Self {
             positions: particle_positions,
             velocities,
+            volumes,
             forces: None,
         }
     }

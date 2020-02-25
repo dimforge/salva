@@ -8,7 +8,7 @@ use na::{self, RealField};
 use crate::geometry::{self, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel};
 use crate::math::{Matrix, Point, RotationMatrix, SpatialVector, Vector};
-use crate::object::Fluid;
+use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
@@ -265,7 +265,9 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
         timestep: &TimestepManager<N>,
         kernel_radius: N,
         _fluid_fluid_contacts: &ParticlesContacts<N>,
+        fluid_boundaries_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
+        boundaries: &[Boundary<N>],
         _densities: &[N],
     ) {
         self.init(kernel_radius, fluid);

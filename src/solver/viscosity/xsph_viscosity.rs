@@ -6,19 +6,21 @@ use na::{self, RealField};
 use crate::geometry::ParticlesContacts;
 
 use crate::math::Vector;
-use crate::object::Fluid;
+use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
 #[derive(Clone)]
 pub struct XSPHViscosity<N: RealField> {
-    viscosity_coefficient: N,
+    pub boundary_viscosity_coefficient: N,
+    pub fluid_viscosity_coefficient: N,
 }
 
 impl<N: RealField> XSPHViscosity<N> {
-    pub fn new(viscosity_coefficient: N) -> Self {
+    pub fn new(fluid_viscosity_coefficient: N, boundary_viscosity_coefficient: N) -> Self {
         Self {
-            viscosity_coefficient,
+            boundary_viscosity_coefficient,
+            fluid_viscosity_coefficient,
         }
     }
 }
@@ -29,10 +31,13 @@ impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
         timestep: &TimestepManager<N>,
         _kernel_radius: N,
         fluid_fluid_contacts: &ParticlesContacts<N>,
+        fluid_boundaries_contacts: &ParticlesContacts<N>,
         fluid: &mut Fluid<N>,
+        boundaries: &[Boundary<N>],
         densities: &[N],
     ) {
-        let viscosity_coefficient = self.viscosity_coefficient;
+        let boundary_viscosity_coefficient = self.boundary_viscosity_coefficient;
+        let fluid_viscosity_coefficient = self.fluid_viscosity_coefficient;
         let velocities = &fluid.velocities;
         let volumes = &fluid.volumes;
         let density0 = fluid.density0;
@@ -40,22 +45,41 @@ impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
         par_iter_mut!(fluid.accelerations)
             .enumerate()
             .for_each(|(i, acceleration)| {
-                let mut added_vel = Vector::zeros();
+                let mut added_fluid_vel = Vector::zeros();
+                let mut added_boundary_vel = Vector::zeros();
                 let vi = velocities[i];
 
-                for c in fluid_fluid_contacts
-                    .particle_contacts(i)
-                    .read()
-                    .unwrap()
-                    .iter()
-                {
-                    if c.i_model == c.j_model {
-                        added_vel += (velocities[c.j] - vi)
-                            * (c.weight * volumes[c.j] * density0 / densities[c.j]);
+                if self.fluid_viscosity_coefficient != N::zero() {
+                    for c in fluid_fluid_contacts
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
+                        if c.i_model == c.j_model {
+                            added_fluid_vel += (velocities[c.j] - vi)
+                                * (c.weight * volumes[c.j] * density0 / densities[c.j]);
+                        }
                     }
                 }
 
-                *acceleration += added_vel * (viscosity_coefficient * timestep.inv_dt());
+                if self.boundary_viscosity_coefficient != N::zero() {
+                    for c in fluid_boundaries_contacts
+                        .particle_contacts(i)
+                        .read()
+                        .unwrap()
+                        .iter()
+                    {
+                        added_fluid_vel += (boundaries[c.j_model].velocities[c.j] - vi)
+                            * (c.weight * boundaries[c.j_model].volumes[c.j] * density0
+                                / densities[c.i]);
+                    }
+                }
+
+                *acceleration +=
+                    added_fluid_vel * (fluid_viscosity_coefficient * timestep.inv_dt());
+                *acceleration +=
+                    added_boundary_vel * (boundary_viscosity_coefficient * timestep.inv_dt());
             })
     }
 
