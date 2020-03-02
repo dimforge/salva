@@ -15,11 +15,13 @@ The name of this library is inspired from the famous surrealist artist `Salvador
  is inspired from its renown painting [The Persistence of Memory](https://en.wikipedia.org/wiki/The_Persistence_of_Memory).
 
 ## Features
-- PBF pressure resolution.
-- XSPH viscosity.
-- Multiphase fluids.
-- Optional two-way coupling with bodies from **nphysics**.
-- WASM support
+- **Pressure resolution:** DFSPH and IISPH.
+- **Viscosity:** DFSPH viscosity, Artificial viscosity, and XSPH viscosity.
+- **Surface tension:** WCSPH surface tension, and methods from He et al. 2014 and Akinci et al. 2013
+- **Elasticity:** method from Becker et al. 2009
+- **Multiphase fluids**: mix several fluids with different characteristics (densities, viscosities, etc.)
+- Optional **two-way coupling** with bodies from **nphysics**.
+- **WASM** support
 */
 #![deny(non_camel_case_types)]
 #![deny(unused_parens)]
