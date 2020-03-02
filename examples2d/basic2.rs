@@ -11,7 +11,7 @@ use nphysics2d::world::{DefaultGeometricalWorld, DefaultMechanicalWorld};
 use nphysics_testbed2d::{objects::FluidRenderingMode, Testbed};
 use salva2d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva2d::object::{Boundary, Fluid};
-use salva2d::solver::{ArtificialViscosity, DFSPHSolver, IISPHSolver};
+use salva2d::solver::{ArtificialViscosity, IISPHSolver};
 use salva2d::LiquidWorld;
 
 pub fn init_world(testbed: &mut Testbed) {
@@ -198,7 +198,7 @@ pub fn init_world(testbed: &mut Testbed) {
         force_generators,
     );
     testbed.set_liquid_world(liquid_world, coupling_set);
-    testbed.look_at(Point2::new(0.0, -2.5), 95.0);
+    testbed.look_at(Point2::new(0.0, 2.5), 95.0);
     testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.mechanical_world_mut().set_timestep(1.0 / 100.0);
     //    testbed.enable_boundary_particles_rendering(true);

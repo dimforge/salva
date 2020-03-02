@@ -1,7 +1,7 @@
 extern crate nalgebra as na;
 
-use na::{Isometry3, Point3, Vector3};
-use ncollide3d::shape::{Ball, Cuboid, ShapeHandle};
+use na::{Point3, Vector3};
+use ncollide3d::shape::{Ball, ShapeHandle};
 use nphysics3d::force_generator::DefaultForceGeneratorSet;
 use nphysics3d::joint::DefaultJointConstraintSet;
 use nphysics3d::object::{
@@ -12,7 +12,7 @@ use nphysics_testbed3d::objects::FluidRenderingMode;
 use nphysics_testbed3d::Testbed;
 use salva3d::coupling::{ColliderCouplingSet, CouplingMethod};
 use salva3d::object::{Boundary, Fluid};
-use salva3d::solver::{Akinci2013SurfaceTension, Becker2009Elasticity, DFSPHSolver, XSPHViscosity};
+use salva3d::solver::{Akinci2013SurfaceTension, DFSPHSolver, XSPHViscosity};
 use salva3d::LiquidWorld;
 use std::f32;
 

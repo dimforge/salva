@@ -106,7 +106,7 @@ pub fn init_world(testbed: &mut Testbed) {
     testbed.set_liquid_world(liquid_world, coupling_manager);
     testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.mechanical_world_mut().set_timestep(1.0 / 200.0);
-    testbed.look_at(Point2::new(0.0, -1.0), 300.0);
+    testbed.look_at(Point2::new(0.0, 1.0), 300.0);
 }
 
 fn main() {
