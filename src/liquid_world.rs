@@ -8,11 +8,9 @@ use crate::solver::PressureSolver;
 use crate::TimestepManager;
 use na::RealField;
 
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
-
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld<N: RealField> {
+    /// Performance counters of the whole fluid simulation engine.
     pub counters: Counters,
     nsubsteps_since_sort: usize,
     particle_radius: N,
@@ -71,12 +69,16 @@ impl<N: RealField> LiquidWorld<N> {
         self.counters.step_time.start();
         self.timestep_manager.reset(dt);
 
+        self.solver.init_with_fluids(self.fluids.as_slice());
+
+        for fluid in self.fluids.as_mut_slice() {
+            fluid.apply_particles_removal();
+        }
+
         // Perform substeps.
         while !self.timestep_manager.is_done() {
             self.nsubsteps_since_sort += 1;
             self.counters.nsubsteps += 1;
-
-            self.solver.init_with_fluids(self.fluids.as_slice());
 
             self.counters.stages.collision_detection_time.resume();
             self.counters.cd.grid_insertion_time.resume();
@@ -86,7 +88,9 @@ impl<N: RealField> LiquidWorld<N> {
 
             self.counters.cd.boundary_update_time.resume();
             coupling.update_boundaries(
+                &self.timestep_manager,
                 self.h,
+                self.particle_radius,
                 &self.hgrid,
                 self.fluids.as_mut_slice(),
                 &mut self.boundaries,
@@ -123,8 +127,6 @@ impl<N: RealField> LiquidWorld<N> {
                 self.fluids.as_slice(),
                 self.boundaries.as_mut_slice(),
             );
-
-            println!("Substep dt: {}", self.timestep_manager.dt());
 
             self.solver.step(
                 &mut self.counters,
@@ -175,9 +177,19 @@ impl<N: RealField> LiquidWorld<N> {
         &self.fluids
     }
 
+    /// The mutable set of fluids on this liquid world.
+    pub fn fluids_mut(&mut self) -> &mut FluidSet<N> {
+        &mut self.fluids
+    }
+
     /// The set of boundaries on this liquid world.
     pub fn boundaries(&self) -> &BoundarySet<N> {
         &self.boundaries
+    }
+
+    /// The mutable set of boundaries on this liquid world.
+    pub fn boundaries_mut(&mut self) -> &mut BoundarySet<N> {
+        &mut self.boundaries
     }
 
     /// The SPH kernel radius.

@@ -63,3 +63,13 @@ pub fn update_boundary_contacts<N: RealField, KernelDensity: Kernel, KernelGradi
         })
     }
 }
+
+pub fn filter_from_mask<T: Copy>(mask: &[bool], vec: &mut Vec<T>) {
+    let mut i = 0;
+
+    vec.retain(|_| {
+        let delete = mask[i];
+        i += 1;
+        !delete
+    })
+}

@@ -37,7 +37,7 @@ fn sym_mat_mul_vec<N: RealField>(mat: &SpatialVector<N>, v: &Vector<N>) -> Vecto
 }
 
 // https://cg.informatik.uni-freiburg.de/publications/2009_NP_corotatedSPH.pdf
-//#[derive(Clone)]
+/// Elasticity based on the method from Becker et al. 2009.
 pub struct Becker2009Elasticity<
     N: RealField,
     KernelDensity: Kernel = CubicSplineKernel,
@@ -59,6 +59,11 @@ pub struct Becker2009Elasticity<
 impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
     Becker2009Elasticity<N, KernelDensity, KernelGradient>
 {
+    /// Initialize elasticity from its young modulus and poisson ration.
+    ///
+    /// If `nonlinear_strain` is `true`, the nonlinear version of the strain tensor is used.
+    /// This allows a more realistic simulation of large deformation. However this is slightly more
+    /// computationally intensive.
     pub fn new(young_modulus: N, poisson_ratio: N, nonlinear_strain: bool) -> Self {
         let (d0, d1, d2) = elasticity_coefficients(young_modulus, poisson_ratio);
 

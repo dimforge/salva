@@ -33,12 +33,9 @@ impl<N: RealField, T> HGrid<N, T> {
         }
     }
 
+    /// The width of a cell of this spacial grid.
     pub fn cell_width(&self) -> N {
         self.cell_width
-    }
-
-    pub fn cells_map(&self) -> &HashMap<Point<i64>, Vec<T>, DeterministicState> {
-        &self.cells
     }
 
     fn quantify(value: N, cell_width: N) -> i64 {
@@ -49,6 +46,7 @@ impl<N: RealField, T> HGrid<N, T> {
         na::try_convert::<N, f64>((value / cell_width).ceil()).unwrap() as i64
     }
 
+    /// Computes the logical grid cell containing `point`.
     pub fn key(&self, point: &Point<N>) -> Point<i64> {
         Point::from(point.coords.map(|e| Self::quantify(e, self.cell_width)))
     }
@@ -79,10 +77,12 @@ impl<N: RealField, T> HGrid<N, T> {
         self.cells.iter()
     }
 
+    /// The underlying hash map of this spacial grid.
     pub fn inner_table(&self) -> &HashMap<Point<i64>, Vec<T>, DeterministicState> {
         &self.cells
     }
 
+    /// Get the content of the logical cell identified by `key`.
     pub fn cell(&self, key: &Point<i64>) -> Option<&Vec<T>> {
         self.cells.get(key)
     }

@@ -81,16 +81,28 @@ fn compute_gradient_matrix<N: RealField>(gradient: &Vector<N>) -> BetaGradientMa
     );
 }
 
+/// Viscosity introduced with the Viscous DFSPH method.
+///
+/// This does not include any viscosity with boundaries so it can be useful to
+/// combine this with another viscosity model and include only its boundary part.
 pub struct DFSPHViscosity<N: RealField> {
+    /// Minimum number of iterations that must be executed for viscosity resolution.
     pub min_viscosity_iter: usize,
+    /// Maximum number of iterations that must be executed for viscosity resolution.
     pub max_viscosity_iter: usize,
+    /// Maximum acceptable strain error (in percents).
+    ///
+    /// The viscosity solver will continue iterating until the strain error drops bellow this
+    /// threshold, or until the maximum number of iterations is reached.
     pub max_viscosity_error: N,
-    viscosity_coefficient: N,
+    /// The viscosity coefficient.
+    pub viscosity_coefficient: N,
     betas: Vec<BetaMatrix<N>>,
     strain_rates: Vec<StrainRates<N>>,
 }
 
 impl<N: RealField> DFSPHViscosity<N> {
+    /// Initialize a new DFSPH visocisity solver.
     pub fn new(viscosity_coefficient: N) -> Self {
         assert!(
             viscosity_coefficient >= N::zero() && viscosity_coefficient <= N::one(),

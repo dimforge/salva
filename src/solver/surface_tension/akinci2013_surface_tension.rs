@@ -11,6 +11,10 @@ use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
 #[derive(Clone)]
+/// Surface tension method introduced by Akinci et al. 2013
+///
+/// This combines both cohesion forces as well as curvature minimization forces.
+/// This also includes adhesion forces for fluid/boundary interactions.
 pub struct Akinci2013SurfaceTension<N: RealField> {
     fluid_tension_coefficient: N,
     boundary_adhesion_coefficient: N,
@@ -18,6 +22,9 @@ pub struct Akinci2013SurfaceTension<N: RealField> {
 }
 
 impl<N: RealField> Akinci2013SurfaceTension<N> {
+    /// Initializes a surface tension with the given surface tension coefficient and boundary adhesion coefficients.
+    ///
+    /// Both those coefficients are typically in [0.0, 1.0].
     pub fn new(fluid_tension_coefficient: N, boundary_adhesion_coefficient: N) -> Self {
         Self {
             fluid_tension_coefficient,
@@ -63,7 +70,7 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
 fn cohesion_kernel<N: RealField>(r: N, h: N) -> N {
     #[cfg(feature = "dim3")]
     let normalizer = na::convert::<_, N>(32.0f64) / (N::pi() * h.powi(9));
-    // NOTE: not sure this is the right formula for the 2D version.
+    // FIXME: not sure this is the right formula for the 2D version.
     #[cfg(feature = "dim2")]
     let normalizer = na::convert::<_, N>(32.0f64) / (N::pi() * h.powi(8));
     let _2: N = na::convert(2.0f64);
@@ -85,7 +92,13 @@ fn adhesion_kernel<N: RealField>(r: N, h: N) -> N {
     if r > h / _2 && r <= h {
         let _4: N = na::convert(4.0f64);
         let _6: N = na::convert(6.0f64);
+
+        #[cfg(feature = "dim3")]
         let normalizer = na::convert::<_, N>(0.007) / h.powf(na::convert(3.25f64));
+        // FIXME: not sure this is the right formula for the 2D version.
+        #[cfg(feature = "dim2")]
+        let normalizer = na::convert::<_, N>(0.007) / h.powf(na::convert(2.25f64));
+
         // NOTE: the .max(N::zero()) prevents NaN due to float rounding errors.
         let coeff = ((-_4 * r * r / h + _6 * r - _2 * h).max(N::zero())).powf(na::convert(0.25));
 

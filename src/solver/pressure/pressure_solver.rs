@@ -6,6 +6,7 @@ use crate::math::Vector;
 use crate::object::{Boundary, Fluid};
 use crate::TimestepManager;
 
+/// Trait implemented by pressure solvers.
 pub trait PressureSolver<N: RealField> {
     /// Initialize this solver with the given fluids.
     fn init_with_fluids(&mut self, fluids: &[Fluid<N>]);
@@ -24,6 +25,7 @@ pub trait PressureSolver<N: RealField> {
         boundaries: &[Boundary<N>],
     );
 
+    /// Evaluate the SPH kernels for all the contacts in `contact_manager`.
     fn evaluate_kernels(
         &mut self,
         kernel_radius: N,
@@ -32,6 +34,7 @@ pub trait PressureSolver<N: RealField> {
         boundaries: &[Boundary<N>],
     );
 
+    /// Compute the densities of all the boundary and fluid particles.
     fn compute_densities(
         &mut self,
         contact_manager: &ContactManager<N>,

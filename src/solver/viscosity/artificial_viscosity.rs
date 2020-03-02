@@ -11,16 +11,23 @@ use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
 // See http://www.astro.lu.se/~david/teaching/SPH/notes/annurev.aa.30.090192.pdf
+/// Implements artificial viscosity.
 #[derive(Clone)]
 pub struct ArtificialViscosity<N: RealField> {
+    /// The coefficient of the linear part of the viscosity.
     pub alpha: N,
+    /// The coefficient of the quadratic part of the viscosity.
     pub beta: N,
+    /// The speed of sound.
     pub speed_of_sound: N,
+    /// The fluid viscosity coefficient.
     pub fluid_viscosity_coefficient: N,
+    /// The viscosity coefficient when interacting with boundaries.
     pub boundary_viscosity_coefficient: N,
 }
 
 impl<N: RealField> ArtificialViscosity<N> {
+    /// Initializes the artificial viscosity with the given viscosity coefficients.
     pub fn new(fluid_viscosity_coefficient: N, boundary_viscosity_coefficient: N) -> Self {
         Self {
             alpha: N::one(),

@@ -42,6 +42,7 @@ impl Counters {
         }
     }
 
+    /// Resets to zero all the counters.
     pub fn reset(&mut self) {
         self.nsubsteps = 0;
         self.step_time.reset();

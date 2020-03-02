@@ -3,6 +3,7 @@ use crate::geometry::{HGrid, HGridEntry};
 use crate::math::{Point, Vector};
 use crate::object::Fluid;
 use crate::object::{BoundaryHandle, BoundarySet};
+use crate::TimestepManager;
 use na::{RealField, Unit};
 use ncollide::bounding_volume::BoundingVolume;
 use ncollide::query::PointQuery;
@@ -72,6 +73,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle
         deleted.map(|e| e.boundary)
     }
 
+    /// Use this collider coupling set as a coupling manager.
     pub fn as_manager_mut<'a, Colliders, Bodies>(
         &'a mut self,
         colliders: &'a Colliders,
@@ -89,6 +91,8 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle
     }
 }
 
+/// A manager for coupling colliders from nphysics2d/nphysics3D with the boundary
+/// objects from salva.
 pub struct ColliderCouplingManager<'a, N: RealField, Colliders, Bodies>
 where
     N: RealField,
@@ -109,7 +113,9 @@ where
 {
     fn update_boundaries(
         &mut self,
+        timestep: &TimestepManager<N>,
         h: N,
+        particle_radius: N,
         hgrid: &HGrid<N, HGridEntry>,
         fluids: &mut [Fluid<N>],
         boundaries: &mut BoundarySet<N>,
@@ -120,26 +126,13 @@ where
                 boundaries.get_mut(coupling.boundary),
             ) {
                 // Update the boundary's ability to receive forces.
-                match collider.anchor() {
-                    ColliderAnchor::OnBodyPart { body_part, .. } => {
-                        if let Some(body) = self.bodies.get_mut(body_part.0) {
-                            if body.status_dependent_ndofs() == 0 {
-                                boundary.forces = None;
-                            } else {
-                                boundary.forces = Some(RwLock::new(Vec::new()));
-                                boundary.clear_forces(true);
-                            }
-                        }
-                    }
-                    ColliderAnchor::OnDeformableBody { body, .. } => {
-                        if let Some(body) = self.bodies.get_mut(*body) {
-                            if body.status_dependent_ndofs() == 0 {
-                                boundary.forces = None;
-                            } else {
-                                boundary.forces = Some(RwLock::new(Vec::new()));
-                                boundary.clear_forces(true);
-                            }
-                        }
+                let body = self.bodies.get(collider.body());
+                if let Some(body) = body {
+                    if body.status_dependent_ndofs() == 0 {
+                        boundary.forces = None;
+                    } else {
+                        boundary.forces = Some(RwLock::new(Vec::new()));
+                        boundary.clear_forces(true);
                     }
                 }
 
@@ -153,14 +146,27 @@ where
                     CouplingMethod::StaticSampling(points) => {
                         for pt in points {
                             boundary.positions.push(collider.position() * pt);
-                            // XXX: actually set the velocity of this point.
-                            boundary.velocities.push(Vector::zeros());
+                            // FIXME: how do we get the point-velocity of deformable bodies correctly?
+                            let velocity = body.map(|b| {
+                                if let ColliderAnchor::OnBodyPart { body_part, .. } =
+                                    collider.anchor()
+                                {
+                                    b.velocity_at_point(body_part.1, pt).linear
+                                } else {
+                                    Vector::zeros()
+                                }
+                            });
+
+                            boundary
+                                .velocities
+                                .push(velocity.unwrap_or(Vector::zeros()));
                         }
 
                         boundary.volumes.resize(points.len(), N::zero());
                     }
                     CouplingMethod::DynamicContactSampling => {
-                        let prediction = h; // * na::convert(0.5);
+                        let prediction = h * na::convert(0.5);
+                        let margin = particle_radius * na::convert(0.1);
                         let collider_pos = collider.position();
                         let aabb = collider
                             .shape()
@@ -174,7 +180,8 @@ where
                             match particle {
                                 HGridEntry::FluidParticle(fluid_id, particle_id) => {
                                     let fluid = &mut fluids[*fluid_id];
-                                    let particle_pos = fluid.positions[*particle_id];
+                                    let particle_pos = fluid.positions[*particle_id]
+                                        + fluid.velocities[*particle_id] * timestep.dt();
 
                                     if aabb.contains_local_point(&particle_pos) {
                                         let (proj, feature) =
@@ -190,15 +197,36 @@ where
                                         {
                                             if proj.is_inside {
                                                 fluid.positions[*particle_id] -=
-                                                    *normal * (depth + na::convert(0.0001));
+                                                    *normal * (depth + margin);
+
+                                                let vel_err =
+                                                    normal.dot(&fluid.velocities[*particle_id]);
+
+                                                if vel_err > N::zero() {
+                                                    fluid.velocities[*particle_id] -=
+                                                        *normal * vel_err;
+                                                }
                                             } else if depth > h + prediction {
                                                 continue;
                                             }
                                         }
 
+                                        let velocity = body.map(|b| {
+                                            if let ColliderAnchor::OnBodyPart {
+                                                body_part, ..
+                                            } = collider.anchor()
+                                            {
+                                                b.velocity_at_point(body_part.1, &proj.point).linear
+                                            } else {
+                                                Vector::zeros()
+                                            }
+                                        });
+
+                                        boundary
+                                            .velocities
+                                            .push(velocity.unwrap_or(Vector::zeros()));
                                         boundary.positions.push(proj.point);
                                         boundary.volumes.push(N::zero());
-                                        boundary.velocities.push(Vector::zeros()); // FIXME: set the actual velocity.
                                         coupling.features.push(feature);
                                     }
                                 }

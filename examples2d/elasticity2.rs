@@ -79,8 +79,6 @@ pub fn init_world(testbed: &mut Testbed) {
         ground_thickness,
     )));
 
-    let samples =
-        salva2d::sampling::shape_surface_ray_sample(&*ground_shape, particle_rad).unwrap();
     let co = ColliderDesc::new(ground_shape)
         .margin(0.0)
         .build(BodyPartHandle(ground_handle, 0));
@@ -90,7 +88,7 @@ pub fn init_world(testbed: &mut Testbed) {
     coupling_manager.register_coupling(
         bo_handle,
         co_handle,
-        CouplingMethod::StaticSampling(samples),
+        CouplingMethod::DynamicContactSampling,
     );
 
     /*

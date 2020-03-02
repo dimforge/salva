@@ -19,16 +19,19 @@ impl SolverCounters {
         }
     }
 
+    /// Enables all the counters for the solver.
     pub fn enable(&mut self) {
         self.non_pressure_resolution_time.enable();
         self.pressure_resolution_time.enable();
     }
 
+    /// Disables all the counters for the solver.
     pub fn disable(&mut self) {
         self.non_pressure_resolution_time.disable();
         self.pressure_resolution_time.disable();
     }
 
+    /// Resets to zero all the counters for the solver.
     pub fn reset(&mut self) {
         self.non_pressure_resolution_time.reset();
         self.pressure_resolution_time.reset();

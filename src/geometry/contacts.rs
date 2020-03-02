@@ -10,13 +10,18 @@ use std::sync::RwLock;
 use rayon::prelude::*;
 
 #[derive(Copy, Clone, Debug)]
+/// A particle inserted on a spacial grid.
 pub enum HGridEntry {
+    /// A fluid particle with its fluid ID and particle ID.
     FluidParticle(usize, usize),
+    /// A fluid particle with its boundary ID and particle ID.
     BoundaryParticle(usize, usize),
 }
 
 impl HGridEntry {
-    // The last tuple entry is `true` if this is a fluid particle, or `false` if it is a boundary particle.
+    /// Returns (object ID, particle ID, is_boundary).
+    ///
+    /// The last tuple entry is `true` if this is a fluid particle, or `false` if it is a boundary particle.
     pub fn into_tuple(self) -> (usize, usize, bool) {
         match self {
             HGridEntry::FluidParticle(a, b) => (a, b, false),
@@ -26,16 +31,31 @@ impl HGridEntry {
 }
 
 #[derive(Copy, Clone, Debug)]
+/// A contact between two particles.
+///
+/// If the contact is between two fluid particles, it is assumed "one-way", i.e., this contact can
+/// only result in a force applied by the particle `j` to the particle `i`. The force applied by
+/// `i` on `j` will result from another contacts.
+/// In other words, for each par of distinct fluid particles, there will be be two symmetric contacts.
 pub struct Contact<N: RealField> {
+    /// The index of the first particle involved in this contact.
     pub i: usize,
+    /// The index of the first fluid involved in this contact.
     pub i_model: usize,
+    /// The index of the second particle involved in this contact.
     pub j: usize,
+    /// The index of the second fluid boundary involved in this contact.
     pub j_model: usize,
+    /// The kernel evaluated at `xi - xj` where `xi` is the position of the
+    /// particle `i`, and `xj` is the position of the particle `j`.
     pub weight: N,
+    /// The kernel gradient evaluated at `xi - xj` where `xi` is the position of the
+    /// particle `i`, and `xj` is the position of the particle `j`.
     pub gradient: Vector<N>,
 }
 
 impl<N: RealField> Contact<N> {
+    /// Flips this contact by swapping `i` with `j`, `i_model` with `j_model`, and by negating the gradient.
     pub fn flip(&self) -> Self {
         Self {
             i: self.j,
@@ -47,54 +67,69 @@ impl<N: RealField> Contact<N> {
         }
     }
 
+    /// Returns `true` if this contact involves a single particle with itself.
     pub fn is_same_particle_contact(&self) -> bool {
         self.i_model == self.j_model && self.i == self.j
     }
 
+    /// Returns `true` if this contact involves two particles from the same fluid.
     pub fn is_same_model_contact(&self) -> bool {
         self.i_model == self.j_model
     }
 }
 
 #[derive(Debug)]
+/// The set of contacts affecting the particles of a single fluid.
 pub struct ParticlesContacts<N: RealField> {
     // All the particle contact for one model.
-    // There is one vec per particle.
+    // `self.contacts[i]` contains all the contacts involving the particle `i`.
     contacts: Vec<RwLock<Vec<Contact<N>>>>,
 }
 
 impl<N: RealField> ParticlesContacts<N> {
+    /// Creates an empty set of contacts.
     pub fn new() -> Self {
         Self {
             contacts: Vec::new(),
         }
     }
 
+    /// The set of contacts affecting the particle `i`.
     pub fn particle_contacts(&self, i: usize) -> &RwLock<Vec<Contact<N>>> {
         &self.contacts[i]
     }
 
+    /// The set of mutable contacts affecting the particle `i`.
     pub fn particle_contacts_mut(&mut self, i: usize) -> &mut RwLock<Vec<Contact<N>>> {
         &mut self.contacts[i]
     }
 
+    /// All the contacts in this set.
+    ///
+    /// The `self.contacts()[i]` contains all the contact affecting the particle `i`.
     pub fn contacts(&self) -> &[RwLock<Vec<Contact<N>>>] {
         &self.contacts[..]
     }
 
+    /// All the mutable contacts in this set.
+    ///
+    /// The `self.contacts()[i]` contains all the contact affecting the particle `i`.
     pub fn contacts_mut(&mut self) -> &mut [RwLock<Vec<Contact<N>>>] {
         &mut self.contacts[..]
     }
 
+    /// The total number of contacts in this set.
     pub fn len(&self) -> usize {
         self.contacts.iter().map(|c| c.read().unwrap().len()).sum()
     }
 
+    /// Apply a permutation to this set of contacts.
     pub fn apply_permutation(&mut self, _permutation: &[usize]) {
         unimplemented!()
     }
 }
 
+/// Insert all the particles from the given fluids into the `grid`.
 pub fn insert_fluids_to_grid<N: RealField>(fluids: &[Fluid<N>], grid: &mut HGrid<N, HGridEntry>) {
     for (fluid_id, fluid) in fluids.iter().enumerate() {
         for (particle_id, point) in fluid.positions.iter().enumerate() {
@@ -103,6 +138,7 @@ pub fn insert_fluids_to_grid<N: RealField>(fluids: &[Fluid<N>], grid: &mut HGrid
     }
 }
 
+/// Insert all the particles from the given boundaries into the `grid`.
 pub fn insert_boundaries_to_grid<N: RealField>(
     boundaries: &[Boundary<N>],
     grid: &mut HGrid<N, HGridEntry>,
@@ -117,6 +153,7 @@ pub fn insert_boundaries_to_grid<N: RealField>(
     }
 }
 
+/// Compute all the contacts between the particles inserted in `grid`.
 pub fn compute_contacts<N: RealField>(
     counters: &mut Counters,
     h: N,
@@ -230,7 +267,7 @@ pub fn compute_contacts<N: RealField>(
     counters.cd.neighborhood_search_time.pause();
 }
 
-pub fn compute_contacts_for_pair_of_cells<N: RealField>(
+fn compute_contacts_for_pair_of_cells<N: RealField>(
     h: N,
     fluids: &[Fluid<N>],
     boundaries: &[Boundary<N>],
@@ -351,6 +388,7 @@ pub fn compute_contacts_for_pair_of_cells<N: RealField>(
     }
 }
 
+/// Compute all the contacts between the particles of a single fluid object.
 pub fn compute_self_contacts<N: RealField>(
     h: N,
     fluid: &Fluid<N>,

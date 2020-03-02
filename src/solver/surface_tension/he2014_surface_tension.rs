@@ -11,6 +11,7 @@ use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
 // http://peridynamics.com/publications/2014-He-RSS.pdf
+/// Surface tension method introduced by He et al. 2014
 pub struct He2014SurfaceTension<N: RealField> {
     fluid_tension_coefficient: N,
     boundary_tension_coefficient: N,
@@ -19,6 +20,7 @@ pub struct He2014SurfaceTension<N: RealField> {
 }
 
 impl<N: RealField> He2014SurfaceTension<N> {
+    /// Initializes a surface tension with the given surface tension coefficient and boundary adhesion coefficients.
     pub fn new(fluid_tension_coefficient: N, boundary_tension_coefficient: N) -> Self {
         Self {
             fluid_tension_coefficient,

@@ -12,6 +12,7 @@ use nphysics_testbed3d::Testbed;
 mod basic3;
 mod custom_forces3;
 mod elasticity3;
+mod faucet3;
 mod surface_tension3;
 
 fn demo_name_from_command_line() -> Option<String> {
@@ -48,6 +49,7 @@ fn main() {
         ("Basic", basic3::init_world),
         ("Custom forces", custom_forces3::init_world),
         ("Elasticity", elasticity3::init_world),
+        ("Faucet", faucet3::init_world),
         ("Surface tension", surface_tension3::init_world),
     ];
 

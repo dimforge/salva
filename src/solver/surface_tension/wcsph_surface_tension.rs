@@ -12,6 +12,7 @@ use crate::TimestepManager;
 // Surface tension of water: 0.01
 // Stable values of surface tension: up to 3.4
 // From https://cg.informatik.uni-freiburg.de/publications/2007_SCA_SPH.pdf
+/// Surface tension method introduced by the WCSPH method.
 #[derive(Clone)]
 pub struct WCSPHSurfaceTension<N: RealField> {
     fluid_tension_coefficient: N,
@@ -19,6 +20,7 @@ pub struct WCSPHSurfaceTension<N: RealField> {
 }
 
 impl<N: RealField> WCSPHSurfaceTension<N> {
+    /// Initializes a surface tension with the given surface tension coefficient and boundary adhesion coefficients.
     pub fn new(fluid_tension_coefficient: N, boundary_tension_coefficient: N) -> Self {
         Self {
             fluid_tension_coefficient,

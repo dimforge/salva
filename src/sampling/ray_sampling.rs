@@ -5,6 +5,7 @@ use ncollide::query::{Ray, RayCast};
 use ncollide::shape::Shape;
 use std::collections::HashSet;
 
+/// Samples the surface of `shape` with a method based on ray-casting.
 pub fn shape_surface_ray_sample<N: RealField, S: ?Sized + Shape<N>>(
     shape: &S,
     particle_rad: N,
@@ -14,6 +15,7 @@ pub fn shape_surface_ray_sample<N: RealField, S: ?Sized + Shape<N>>(
     Some(surface_ray_sample(rc, &aabb, particle_rad))
 }
 
+/// Samples the volume of `shape` with a method based on ray-casting.
 pub fn shape_volume_ray_sample<N: RealField, S: ?Sized + Shape<N>>(
     shape: &S,
     particle_rad: N,
@@ -23,6 +25,7 @@ pub fn shape_volume_ray_sample<N: RealField, S: ?Sized + Shape<N>>(
     Some(volume_ray_sample(rc, &aabb, particle_rad))
 }
 
+/// Samples the surface of `shape` with a method based on ray-casting.
 pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
     shape: &S,
     volume: &AABB<N>,
@@ -86,6 +89,7 @@ pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
     unquantize_points(&origin, subdivision_size, &quantized_points)
 }
 
+/// Samples the volume of `shape` with a method based on ray-casting.
 pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
     shape: &S,
     volume: &AABB<N>,

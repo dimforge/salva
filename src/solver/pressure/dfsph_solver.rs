@@ -13,17 +13,29 @@ use crate::object::{Boundary, Fluid};
 use crate::solver::{helper, PressureSolver};
 use crate::TimestepManager;
 
-/// A Position Based Fluid solver.
+/// A DFSPH (Divergence Free Smoothed Particle Hydrodynamics) pressure solver.
 pub struct DFSPHSolver<
     N: RealField,
     KernelDensity: Kernel = CubicSplineKernel,
     KernelGradient: Kernel = CubicSplineKernel,
 > {
+    /// Minimum number of iterations that must be executed for pressure resolution.
     pub min_pressure_iter: usize,
+    /// Maximum number of iterations that must be executed for pressure resolution.
     pub max_pressure_iter: usize,
+    /// Maximum acceptable density error (in percents).
+    ///
+    /// The pressure solver will continue iterating until the density error drops bellow this
+    /// threshold, or until the maximum number of pressure iterations is reached.
     pub max_density_error: N,
+    /// Minimum number of iterations that must be executed for divergence resolution.
     pub min_divergence_iter: usize,
+    /// Maximum number of iterations that must be executed for divergence resolution.
     pub max_divergence_iter: usize,
+    /// Maximum acceptable divergence error (in percents).
+    ///
+    /// The pressure solver will continue iterating until the divergence error drops bellow this
+    /// threshold, or until the maximum number of pressure iterations is reached.
     pub max_divergence_error: N,
     min_neighbors_for_divergence_solve: usize,
     alphas: Vec<Vec<N>>,
@@ -40,7 +52,7 @@ where
     KernelDensity: Kernel,
     KernelGradient: Kernel,
 {
-    /// Initialize a new Position Based Fluid solver.
+    /// Initialize a new DFSPH pressure solver.
     pub fn new() -> Self {
         Self {
             min_pressure_iter: 1,
@@ -537,6 +549,17 @@ where
             predicted_densities.resize(fluid.num_particles(), N::zero());
             divergences.resize(fluid.num_particles(), N::zero());
             velocity_changes.resize(fluid.num_particles(), Vector::zeros());
+
+            if fluid.num_deleted_particles() != 0 {
+                crate::helper::filter_from_mask(fluid.deleted_particles_mask(), alphas);
+                crate::helper::filter_from_mask(fluid.deleted_particles_mask(), densities);
+                crate::helper::filter_from_mask(
+                    fluid.deleted_particles_mask(),
+                    predicted_densities,
+                );
+                crate::helper::filter_from_mask(fluid.deleted_particles_mask(), divergences);
+                crate::helper::filter_from_mask(fluid.deleted_particles_mask(), velocity_changes);
+            }
         }
     }
 

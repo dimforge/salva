@@ -43,26 +43,33 @@ impl<N: RealField> TimestepManager<N> {
         self.particle_radius * na::convert(2.0) / max_sq_vel.sqrt() * self.cfl_coeff
     }
 
+    /// Resets the remaining time of the timestep manager.
     pub fn reset(&mut self, total_step_size: N) {
         self.total_step_size = total_step_size;
         self.remaining_time = total_step_size;
     }
 
+    /// Checks if all the time of this timestep has been consumed.
     #[inline]
     pub fn is_done(&self) -> bool {
         self.remaining_time <= N::default_epsilon()
     }
 
+    /// The current substep length.
     #[inline]
     pub fn dt(&self) -> N {
         self.dt
     }
 
+    /// The inverse of the current substep length.
+    ///
+    /// If the substep length is zero, this inverse is also zero.
     #[inline]
     pub fn inv_dt(&self) -> N {
         self.inv_dt
     }
 
+    /// Advance to the next substep.
     #[inline]
     pub fn advance(&mut self, fluids: &[Fluid<N>]) {
         let substep = self.compute_substep(fluids);

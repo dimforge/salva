@@ -25,7 +25,7 @@ The name of this library is inspired from the famous surrealist artist `Salvador
 #![deny(unused_parens)]
 #![deny(non_upper_case_globals)]
 #![deny(unused_qualifications)]
-#![allow(missing_docs)] // FIXME: deny this
+#![warn(missing_docs)] // FIXME: deny this
 #![deny(unused_results)]
 #![allow(type_alias_bounds)]
 #![warn(non_camel_case_types)]
@@ -79,6 +79,7 @@ pub mod counters;
 #[cfg(feature = "nphysics")]
 pub mod coupling;
 pub mod geometry;
+pub mod helper;
 pub mod kernel;
 mod liquid_world;
 pub mod object;
@@ -86,7 +87,7 @@ pub mod object;
 pub mod sampling;
 pub mod solver;
 mod timestep_manager;
-pub mod z_order;
+pub(crate) mod z_order;
 
 pub use crate::liquid_world::LiquidWorld;
 pub use crate::timestep_manager::TimestepManager;

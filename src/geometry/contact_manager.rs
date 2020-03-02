@@ -15,6 +15,7 @@ pub struct ContactManager<N: RealField> {
 }
 
 impl<N: RealField> ContactManager<N> {
+    /// Create a new contact manager.
     pub fn new() -> Self {
         Self {
             fluid_fluid_contacts: Vec::new(),
@@ -23,6 +24,9 @@ impl<N: RealField> ContactManager<N> {
         }
     }
 
+    /// The total number of contacts detected by this manager.
+    ///
+    /// Note that there will be two contact for each pair of distinct particles.
     pub fn ncontacts(&self) -> usize {
         self.fluid_fluid_contacts
             .iter()
@@ -40,6 +44,7 @@ impl<N: RealField> ContactManager<N> {
                 .sum::<usize>()
     }
 
+    /// Computes all the contacts between the particles inserted on the provided spacial grid.
     pub fn update_contacts(
         &mut self,
         counters: &mut Counters,

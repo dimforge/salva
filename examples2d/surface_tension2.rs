@@ -61,8 +61,6 @@ pub fn init_world(testbed: &mut Testbed) {
         ground_thickness,
     )));
 
-    let samples =
-        salva2d::sampling::shape_surface_ray_sample(&*ground_shape, particle_rad).unwrap();
     let co = ColliderDesc::new(ground_shape)
         .margin(0.0)
         .build(BodyPartHandle(ground_handle, 0));
@@ -72,7 +70,7 @@ pub fn init_world(testbed: &mut Testbed) {
     coupling_manager.register_coupling(
         bo_handle,
         co_handle,
-        CouplingMethod::StaticSampling(samples),
+        CouplingMethod::DynamicContactSampling,
     );
 
     /*
@@ -90,7 +88,7 @@ pub fn init_world(testbed: &mut Testbed) {
     testbed.mechanical_world_mut().set_timestep(1.0 / 200.0);
     testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.look_at(Point2::origin(), 2000.0);
-    testbed.enable_boundary_particles_rendering(true);
+    //    testbed.enable_boundary_particles_rendering(true);
 }
 
 fn main() {

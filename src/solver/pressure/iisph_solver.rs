@@ -13,15 +13,21 @@ use crate::object::{Boundary, Fluid};
 use crate::solver::{helper, PressureSolver};
 use crate::TimestepManager;
 
-/// A Position Based Fluid solver.
+/// A IISPH (Implicit Incompressible Smoothed Particle Hydrodynamics) pressure solver.
 pub struct IISPHSolver<
     N: RealField,
     KernelDensity: Kernel = CubicSplineKernel,
     KernelGradient: Kernel = CubicSplineKernel,
 > {
-    min_pressure_iter: usize,
-    max_pressure_iter: usize,
-    max_density_error: N,
+    /// Minimum number of iterations that must be executed for pressure resolution.
+    pub min_pressure_iter: usize,
+    /// Maximum number of iterations that must be executed for pressure resolution.
+    pub max_pressure_iter: usize,
+    /// Maximum acceptable density error (in percents).
+    ///
+    /// The pressure solver will continue iterating until the density error drops bellow this
+    /// threshold, or until the maximum number of pressure iterations is reached.
+    pub max_density_error: N,
     omega: N,
     densities: Vec<Vec<N>>,
     aii: Vec<Vec<N>>,
@@ -40,7 +46,7 @@ where
     KernelDensity: Kernel,
     KernelGradient: Kernel,
 {
-    /// Initialize a new Position Based Fluid solver.
+    /// Initialize a new IISPH pressure solver.
     pub fn new() -> Self {
         Self {
             min_pressure_iter: 1,
@@ -387,7 +393,12 @@ where
                         .iter()
                     {
                         let mj = boundaries[c.j_model].volumes[c.j] * fluid_i.density0;
-                        *velocity_change -= c.gradient * (timestep.dt() * mj * pi / (rhoi * rhoi));
+                        let acc = c.gradient * (mj * pi / (rhoi * rhoi));
+                        *velocity_change -= acc * timestep.dt();
+
+                        // Apply the force to the boundary too.
+                        let mi = fluid_i.particle_mass(c.i);
+                        boundaries[c.j_model].apply_force(c.j, acc * mi);
                     }
                 })
         }
@@ -490,6 +501,17 @@ where
             self.dij_pjl[i].resize(nparticles, Vector::zeros());
             self.pressures[i].resize(nparticles, N::zero());
             self.next_pressures[i].resize(nparticles, N::zero());
+
+            if fluids[i].num_deleted_particles() != 0 {
+                crate::helper::filter_from_mask(
+                    fluids[i].deleted_particles_mask(),
+                    &mut self.pressures[i],
+                );
+                crate::helper::filter_from_mask(
+                    fluids[i].deleted_particles_mask(),
+                    &mut self.next_pressures[i],
+                );
+            }
         }
     }
 

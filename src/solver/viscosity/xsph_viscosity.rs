@@ -11,12 +11,16 @@ use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
 #[derive(Clone)]
+/// Implements the viscosity model introduced with the XSPH method.
 pub struct XSPHViscosity<N: RealField> {
+    /// The viscosity coefficient when interacting with boundaries.
     pub boundary_viscosity_coefficient: N,
+    /// The fluid viscosity coefficient.
     pub fluid_viscosity_coefficient: N,
 }
 
 impl<N: RealField> XSPHViscosity<N> {
+    /// Initializes the XSPH viscosity with the given viscosity coefficients.
     pub fn new(fluid_viscosity_coefficient: N, boundary_viscosity_coefficient: N) -> Self {
         Self {
             boundary_viscosity_coefficient,

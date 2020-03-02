@@ -19,16 +19,19 @@ impl StagesCounters {
         }
     }
 
+    /// Enables all the counters for the simulation stages.
     pub fn enable(&mut self) {
         self.collision_detection_time.enable();
         self.solver_time.enable();
     }
 
+    /// Disables all the counters for the simulation stages.
     pub fn disable(&mut self) {
         self.collision_detection_time.disable();
         self.solver_time.disable();
     }
 
+    /// Resets to zero all the counters for the simulation stages.
     pub fn reset(&mut self) {
         self.collision_detection_time.reset();
         self.solver_time.reset();

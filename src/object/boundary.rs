@@ -41,6 +41,7 @@ impl<N: RealField> Boundary<N> {
         self.positions.len()
     }
 
+    /// Transforms all the particle positions of this boundary by the given isometry.
     pub fn transform_by(&mut self, pose: &Isometry<N>) {
         self.positions.iter_mut().for_each(|p| *p = pose * *p);
     }
@@ -72,7 +73,9 @@ impl<N: RealField> Boundary<N> {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+/// The unique identifier of a boundary object.
 pub struct BoundaryHandle(ContiguousArenaIndex);
+/// A set of all boundary objects.
 pub type BoundarySet<N> = ContiguousArena<BoundaryHandle, Boundary<N>>;
 
 impl From<ContiguousArenaIndex> for BoundaryHandle {

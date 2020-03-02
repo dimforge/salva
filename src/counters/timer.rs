@@ -18,10 +18,12 @@ impl Timer {
         }
     }
 
+    /// Enables this timer.
     pub fn enable(&mut self) {
         self.enabled = true;
     }
 
+    /// Disables this timer.
     pub fn disable(&mut self) {
         self.enabled = false;
     }

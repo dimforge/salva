@@ -28,6 +28,7 @@ impl CollisionDetectionCounters {
         }
     }
 
+    /// Enables all the performance counters for collision detection.
     pub fn enable(&mut self) {
         self.boundary_update_time.enable();
         self.grid_insertion_time.enable();
@@ -35,6 +36,7 @@ impl CollisionDetectionCounters {
         self.contact_sorting_time.enable();
     }
 
+    /// Disables all the performance counters for collision detection.
     pub fn disable(&mut self) {
         self.boundary_update_time.disable();
         self.grid_insertion_time.disable();
@@ -42,6 +44,7 @@ impl CollisionDetectionCounters {
         self.contact_sorting_time.disable();
     }
 
+    /// Resets all the counters to zero for collision detection.
     pub fn reset(&mut self) {
         self.ncontacts = 0;
         self.boundary_update_time.reset();
