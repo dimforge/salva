@@ -44,7 +44,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut coupling_manager = ColliderCouplingSet::new();
 
     // Liquid.
-    let nparticles = 20;
+    let nparticles = 15;
     let mut fluid = helper::cube_fluid(nparticles, nparticles, nparticles, particle_rad, 1000.0);
     fluid.transform_by(&Isometry3::translation(
         0.0,

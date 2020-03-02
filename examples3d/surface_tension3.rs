@@ -43,7 +43,7 @@ pub fn init_world(testbed: &mut Testbed) {
     // Initialize the fluid and give it some surface tension. This will make the fluid take a spherical shape.
     let surface_tension = Akinci2013SurfaceTension::new(1.0, 0.0);
     let viscosity = ArtificialViscosity::new(0.01, 0.01);
-    let mut fluid = helper::cube_fluid(10, 10, 10, particle_rad, 1000.0);
+    let mut fluid = helper::cube_fluid(7, 7, 7, particle_rad, 1000.0);
     fluid.transform_by(&Isometry3::translation(0.0, 0.08, 0.0));
     fluid.nonpressure_forces.push(Box::new(surface_tension));
     fluid.nonpressure_forces.push(Box::new(viscosity));
