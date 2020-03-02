@@ -149,7 +149,7 @@ impl<N: RealField> LiquidWorld<N> {
         //        }
 
         self.counters.step_time.pause();
-        println!("Counters: {}", self.counters);
+        //        println!("Counters: {}", self.counters);
     }
 
     /// Add a fluid to the liquid world.
