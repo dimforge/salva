@@ -84,6 +84,7 @@ pub fn init_world(testbed: &mut Testbed) {
         joint_constraints,
         force_generators,
     );
+    testbed.set_ground_handle(Some(ground_handle));
     testbed.set_liquid_world(liquid_world, coupling_manager);
     testbed.mechanical_world_mut().set_timestep(1.0 / 200.0);
     testbed.set_fluid_rendering_mode(FluidRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
