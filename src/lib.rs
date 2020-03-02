@@ -76,7 +76,6 @@ macro_rules! par_reduce_sum {
 }
 
 pub mod counters;
-#[cfg(feature = "nphysics")]
 pub mod coupling;
 pub mod geometry;
 pub mod helper;
