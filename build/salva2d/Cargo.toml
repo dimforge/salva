@@ -16,6 +16,7 @@ default = [ "dim2" ]
 dim2    = [ ]
 parallel = [ "rayon" ]
 nphysics = [ "ncollide2d", "nphysics2d" ]
+sampling = [ "ncollide2d" ]
 
 [lib]
 name = "salva2d"
@@ -23,9 +24,12 @@ path = "../../src/lib.rs"
 required-features = [ "dim2" ]
 
 [dependencies]
+num-traits = "0.2"
+fnv = "1.0"
 itertools = "0.8"
-nalgebra  = "0.19"
+generational-arena = "0.2"
+nalgebra  = "0.20"
 instant = { version = "0.1", features = [ "now" ] }
 rayon = { version = "1.0", optional = true }
-ncollide2d = { version = "0.21", optional = true }
-nphysics2d = { version = "0.13", optional = true }
+ncollide2d = { version = "0.22", optional = true }
+nphysics2d = { version = "0.14", optional = true }

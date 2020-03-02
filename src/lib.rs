@@ -43,14 +43,50 @@ extern crate nphysics2d as nphysics;
 #[cfg(all(feature = "dim3", feature = "nphysics"))]
 extern crate nphysics3d as nphysics;
 
-#[cfg(feature = "nphysics")]
+macro_rules! par_iter {
+    ($t: expr) => {{
+        #[cfg(not(feature = "parallel"))]
+        let it = $t.iter();
+
+        #[cfg(feature = "parallel")]
+        let it = $t.par_iter();
+        it
+    }};
+}
+
+macro_rules! par_iter_mut {
+    ($t: expr) => {{
+        #[cfg(not(feature = "parallel"))]
+        let it = $t.iter_mut();
+
+        #[cfg(feature = "parallel")]
+        let it = $t.par_iter_mut();
+        it
+    }};
+}
+
+macro_rules! par_reduce_sum {
+    ($identity: expr, $t: expr) => {{
+        #[cfg(not(feature = "parallel"))]
+        let res = $t.fold($identity, |a, b| a + b);
+        #[cfg(feature = "parallel")]
+        let res = $t.reduce(|| $identity, |a, b| a + b);
+        res
+    }};
+}
+
+pub mod counters;
 pub mod coupling;
 pub mod geometry;
+pub mod helper;
 pub mod kernel;
 mod liquid_world;
 pub mod object;
+#[cfg(feature = "sampling")]
+pub mod sampling;
 pub mod solver;
 mod timestep_manager;
+pub(crate) mod z_order;
 
 pub use crate::liquid_world::LiquidWorld;
 pub use crate::timestep_manager::TimestepManager;

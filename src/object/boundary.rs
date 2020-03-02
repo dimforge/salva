@@ -1,9 +1,7 @@
-use crate::math::{Point, Vector};
+use crate::math::{Isometry, Point, Vector};
+use crate::object::{ContiguousArena, ContiguousArenaIndex};
 use na::{self, RealField};
 use std::sync::RwLock;
-
-/// The unique identifiant of a boundary object.
-pub type BoundaryHandle = usize;
 
 /// A boundary object.
 ///
@@ -13,8 +11,12 @@ pub struct Boundary<N: RealField> {
     pub positions: Vec<Point<N>>,
     /// The artificial velocities of each boundary particle.
     pub velocities: Vec<Vector<N>>,
+    /// The volume computed for each boundary particle.
+    pub volumes: Vec<N>,
     /// The forces applied to each particle of this boundary object.
-    pub forces: RwLock<Vec<Vector<N>>>,
+    /// If this is set to `None` (which is the default), the boundary won't receive any
+    /// force for fluids.
+    pub forces: Option<RwLock<Vec<Vector<N>>>>,
 }
 
 impl<N: RealField> Boundary<N> {
@@ -24,11 +26,13 @@ impl<N: RealField> Boundary<N> {
         let velocities = std::iter::repeat(Vector::zeros())
             .take(num_particles)
             .collect();
+        let volumes = std::iter::repeat(N::zero()).take(num_particles).collect();
 
         Self {
             positions: particle_positions,
             velocities,
-            forces: RwLock::new(Vec::new()),
+            volumes,
+            forces: None,
         }
     }
 
@@ -37,24 +41,53 @@ impl<N: RealField> Boundary<N> {
         self.positions.len()
     }
 
+    /// Transforms all the particle positions of this boundary by the given isometry.
+    pub fn transform_by(&mut self, pose: &Isometry<N>) {
+        self.positions.iter_mut().for_each(|p| *p = pose * *p);
+    }
+
     /// Apply a force `f` to the `i`-th particle of this boundary object.
     ///
     /// This call relies on thread-safe interior mutability.
     pub fn apply_force(&self, i: usize, f: Vector<N>) {
-        let mut forces = self.forces.write().unwrap();
-        forces[i] += f;
+        if let Some(forces) = &self.forces {
+            let mut forces = forces.write().unwrap();
+            forces[i] += f;
+        }
     }
 
     /// Clears all the forces applied to this boundary object's particles.
     pub fn clear_forces(&mut self, resize_buffer: bool) {
-        let forces = self.forces.get_mut().unwrap();
+        if let Some(forces) = &mut self.forces {
+            let forces = forces.get_mut().unwrap();
 
-        if resize_buffer {
-            forces.resize(self.positions.len(), Vector::zeros());
-        }
+            if resize_buffer {
+                forces.resize(self.positions.len(), Vector::zeros());
+            }
 
-        for f in forces {
-            f.fill(N::zero())
+            for f in forces {
+                f.fill(N::zero())
+            }
         }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+/// The unique identifier of a boundary object.
+pub struct BoundaryHandle(ContiguousArenaIndex);
+/// A set of all boundary objects.
+pub type BoundarySet<N> = ContiguousArena<BoundaryHandle, Boundary<N>>;
+
+impl From<ContiguousArenaIndex> for BoundaryHandle {
+    #[inline]
+    fn from(i: ContiguousArenaIndex) -> Self {
+        BoundaryHandle(i)
+    }
+}
+
+impl Into<ContiguousArenaIndex> for BoundaryHandle {
+    #[inline]
+    fn into(self) -> ContiguousArenaIndex {
+        self.0
     }
 }

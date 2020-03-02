@@ -24,14 +24,20 @@ jobs:
           name: build salva2d
           command: cargo build --verbose -p salva2d;
       - run:
+          name: build salva2d (all features)
+          command: cargo build --verbose -p salva2d --all-features;
+      - run:
           name: build salva3d
           command: cargo build --verbose -p salva3d;
       - run:
-          name: build examples-2d
-          command: cargo build -j 1 --verbose -p examples2d;
-      - run:
-          name: build examples-3d
-          command: cargo build -j 1 --verbose -p examples3d;
+          name: build salva3d (all features)
+          command: cargo build --verbose -p salva3d --all-features;
+#      - run:
+#          name: build examples-2d
+#          command: cargo build -j 1 --verbose -p examples2d;
+#      - run:
+#          name: build examples-3d
+#          command: cargo build -j 1 --verbose -p examples3d;
       - run:
           name: test salva2d
           command: cargo test --verbose -p salva2d;
@@ -47,16 +53,16 @@ jobs:
           command: cargo install -f cargo-web;
       - run:
           name: build salva2d
-          command: cargo web build --verbose --target wasm32-unknown-unknown -p salva2d;
+          command: cd build/salva2d && cargo web build --verbose --target wasm32-unknown-unknown;
       - run:
           name: build salva3d
-          command: cargo web build --verbose --target wasm32-unknown-unknown -p salva3d;
-      - run:
-          name: build examples-2d
-          command: cargo web build --verbose --target wasm32-unknown-unknown -p examples2d;
-      - run:
-          name: build examples-3d
-          command: cargo web build --verbose --target wasm32-unknown-unknown -p examples3d;
+          command: cd build/salva3d && cargo web build --verbose --target wasm32-unknown-unknown;
+#      - run:
+#          name: build examples-2d
+#          command: cd examples2d && cargo web build --verbose --target wasm32-unknown-unknown;
+#      - run:
+#          name: build examples-3d
+#          command: cd examples3d && cargo web build --verbose --target wasm32-unknown-unknown;
 
 
 workflows:

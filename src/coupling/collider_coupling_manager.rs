@@ -1,14 +1,17 @@
+use crate::coupling::CouplingManager;
 use crate::geometry::{HGrid, HGridEntry};
 use crate::math::{Point, Vector};
 use crate::object::Fluid;
-use crate::object::{Boundary, BoundaryHandle};
+use crate::object::{BoundaryHandle, BoundarySet};
+use crate::TimestepManager;
 use na::{RealField, Unit};
 use ncollide::bounding_volume::BoundingVolume;
 use ncollide::query::PointQuery;
 use ncollide::shape::FeatureId;
 use nphysics::math::ForceType;
-use nphysics::object::{BodyHandle, BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
+use nphysics::object::{BodySet, ColliderAnchor, ColliderHandle, ColliderSet};
 use std::collections::HashMap;
+use std::sync::RwLock;
 
 /// The way a collider is coupled to a boundary object.
 pub enum CouplingMethod<N: RealField> {
@@ -21,18 +24,18 @@ pub enum CouplingMethod<N: RealField> {
     DynamicContactSampling,
 }
 
-struct ColliderCoupling<N: RealField> {
+struct ColliderCouplingEntry<N: RealField> {
     coupling_method: CouplingMethod<N>,
     boundary: BoundaryHandle,
     features: Vec<FeatureId>,
 }
 
-/// Structure managing all the couplings between colliders from nphysics with boundaries and fluids from salva.
-pub struct ColliderCouplingManager<N: RealField, CollHandle: ColliderHandle> {
-    entries: HashMap<CollHandle, ColliderCoupling<N>>,
+/// Structure managing all the coupling between colliders from nphysics with boundaries and fluids from salva.
+pub struct ColliderCouplingSet<N: RealField, CollHandle: ColliderHandle> {
+    entries: HashMap<CollHandle, ColliderCouplingEntry<N>>,
 }
 
-impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHandle> {
+impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle> {
     /// Create a new collider coupling manager.
     pub fn new() -> Self {
         Self {
@@ -41,55 +44,129 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
     }
 
     /// Register a coupling between a boundary and a collider.
+    /// There can be only up to one coupling between a collider and a boundary object. If a coupling
+    /// already exists for this collider when calling this function, the handle of the previously coupled
+    /// boundary is returned.
     pub fn register_coupling(
         &mut self,
         boundary: BoundaryHandle,
         collider: CollHandle,
         coupling_method: CouplingMethod<N>,
-    ) {
-        let _ = self.entries.insert(
+    ) -> Option<BoundaryHandle> {
+        let old = self.entries.insert(
             collider,
-            ColliderCoupling {
+            ColliderCouplingEntry {
                 coupling_method,
                 boundary,
                 features: Vec::new(),
             },
         );
+
+        old.map(|e| e.boundary)
     }
 
-    pub(crate) fn update_boundaries<Handle, Colliders>(
-        &mut self,
-        h: N,
-        colliders: &Colliders,
-        boundaries: &mut [Boundary<N>],
-        fluids: &[Fluid<N>],
-        fluids_delta_pos: &mut [Vec<Vector<N>>],
-        hgrid: &HGrid<N, HGridEntry>,
-    ) where
-        Handle: BodyHandle,
-        Colliders: ColliderSet<N, Handle, Handle = CollHandle>,
-    {
-        let mut num_boundary_particles = 0;
+    /// Unregister a coupling between a boundary and a collider.
+    /// Note that this does not remove the boundary itself from the liquid world.
+    /// Returns the handle of the boundary this collider was coupled with.
+    pub fn unregister_coupling(&mut self, collider: CollHandle) -> Option<BoundaryHandle> {
+        let deleted = self.entries.remove(&collider);
+        deleted.map(|e| e.boundary)
+    }
 
-        self.entries.retain(|collider, coupling| {
+    /// Use this collider coupling set as a coupling manager.
+    pub fn as_manager_mut<'a, Colliders, Bodies>(
+        &'a mut self,
+        colliders: &'a Colliders,
+        bodies: &'a mut Bodies,
+    ) -> ColliderCouplingManager<N, Colliders, Bodies>
+    where
+        Colliders: ColliderSet<N, Bodies::Handle, Handle = CollHandle>,
+        Bodies: BodySet<N>,
+    {
+        ColliderCouplingManager {
+            coupling: self,
+            colliders,
+            bodies,
+        }
+    }
+}
+
+/// A manager for coupling colliders from nphysics2d/nphysics3D with the boundary
+/// objects from salva.
+pub struct ColliderCouplingManager<'a, N: RealField, Colliders, Bodies>
+where
+    N: RealField,
+    Colliders: ColliderSet<N, Bodies::Handle>,
+    Bodies: BodySet<N>,
+{
+    coupling: &'a mut ColliderCouplingSet<N, Colliders::Handle>,
+    colliders: &'a Colliders,
+    bodies: &'a mut Bodies,
+}
+
+impl<'a, N, Colliders, Bodies> CouplingManager<N>
+    for ColliderCouplingManager<'a, N, Colliders, Bodies>
+where
+    N: RealField,
+    Colliders: ColliderSet<N, Bodies::Handle>,
+    Bodies: BodySet<N>,
+{
+    fn update_boundaries(
+        &mut self,
+        timestep: &TimestepManager<N>,
+        h: N,
+        particle_radius: N,
+        hgrid: &HGrid<N, HGridEntry>,
+        fluids: &mut [Fluid<N>],
+        boundaries: &mut BoundarySet<N>,
+    ) {
+        for (collider, coupling) in &mut self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
-                colliders.get(*collider),
+                self.colliders.get(*collider),
                 boundaries.get_mut(coupling.boundary),
             ) {
+                // Update the boundary's ability to receive forces.
+                let body = self.bodies.get(collider.body());
+                if let Some(body) = body {
+                    if body.status_dependent_ndofs() == 0 {
+                        boundary.forces = None;
+                    } else {
+                        boundary.forces = Some(RwLock::new(Vec::new()));
+                        boundary.clear_forces(true);
+                    }
+                }
+
+                // Update positions and velocities.
                 boundary.positions.clear();
                 boundary.velocities.clear();
+                boundary.volumes.clear();
                 coupling.features.clear();
 
                 match &coupling.coupling_method {
                     CouplingMethod::StaticSampling(points) => {
                         for pt in points {
                             boundary.positions.push(collider.position() * pt);
-                            // XXX: actually set the velocity of this point.
-                            boundary.velocities.push(Vector::zeros());
+                            // FIXME: how do we get the point-velocity of deformable bodies correctly?
+                            let velocity = body.map(|b| {
+                                if let ColliderAnchor::OnBodyPart { body_part, .. } =
+                                    collider.anchor()
+                                {
+                                    b.velocity_at_point(body_part.1, pt).linear
+                                } else {
+                                    Vector::zeros()
+                                }
+                            });
+
+                            boundary
+                                .velocities
+                                .push(velocity.unwrap_or(Vector::zeros()));
                         }
+
+                        boundary.volumes.resize(points.len(), N::zero());
                     }
                     CouplingMethod::DynamicContactSampling => {
-                        let prediction = h; // * na::convert(0.5);
+                        let prediction = h * na::convert(0.5);
+                        let margin = particle_radius * na::convert(0.1);
                         let collider_pos = collider.position();
                         let aabb = collider
                             .shape()
@@ -102,11 +179,9 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                         {
                             match particle {
                                 HGridEntry::FluidParticle(fluid_id, particle_id) => {
-                                    let fluid = &fluids[*fluid_id];
-                                    let particle_delta =
-                                        &mut fluids_delta_pos[*fluid_id][*particle_id];
-                                    let particle_pos =
-                                        fluid.positions[*particle_id] + *particle_delta;
+                                    let fluid = &mut fluids[*fluid_id];
+                                    let particle_pos = fluid.positions[*particle_id]
+                                        + fluid.velocities[*particle_id] * timestep.dt();
 
                                     if aabb.contains_local_point(&particle_pos) {
                                         let (proj, feature) =
@@ -121,16 +196,37 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                                             Unit::try_new_and_get(dpt, N::default_epsilon())
                                         {
                                             if proj.is_inside {
-                                                *particle_delta -=
-                                                    *normal * (depth + na::convert(0.0001));
+                                                fluid.positions[*particle_id] -=
+                                                    *normal * (depth + margin);
+
+                                                let vel_err =
+                                                    normal.dot(&fluid.velocities[*particle_id]);
+
+                                                if vel_err > N::zero() {
+                                                    fluid.velocities[*particle_id] -=
+                                                        *normal * vel_err;
+                                                }
                                             } else if depth > h + prediction {
                                                 continue;
                                             }
                                         }
 
-                                        num_boundary_particles += 1;
+                                        let velocity = body.map(|b| {
+                                            if let ColliderAnchor::OnBodyPart {
+                                                body_part, ..
+                                            } = collider.anchor()
+                                            {
+                                                b.velocity_at_point(body_part.1, &proj.point).linear
+                                            } else {
+                                                Vector::zeros()
+                                            }
+                                        });
 
+                                        boundary
+                                            .velocities
+                                            .push(velocity.unwrap_or(Vector::zeros()));
                                         boundary.positions.push(proj.point);
+                                        boundary.volumes.push(N::zero());
                                         coupling.features.push(feature);
                                     }
                                 }
@@ -143,84 +239,73 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingManager<N, CollHa
                 }
 
                 boundary.clear_forces(true);
-
-                true
-            } else {
-                false
             }
-        });
+        }
     }
 
-    pub(crate) fn transmit_forces<Bodies, Colliders>(
-        &self,
-        boundaries: &mut [Boundary<N>],
-        bodies: &mut Bodies,
-        colliders: &Colliders,
-    ) where
-        Colliders: ColliderSet<N, Bodies::Handle, Handle = CollHandle>,
-        Bodies: BodySet<N>,
-    {
-        for (collider, coupling) in &self.entries {
+    fn transmit_forces(&mut self, boundaries: &BoundarySet<N>) {
+        for (collider, coupling) in &self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
-                colliders.get(*collider),
-                boundaries.get_mut(coupling.boundary),
+                self.colliders.get(*collider),
+                boundaries.get(coupling.boundary),
             ) {
                 if boundary.positions.is_empty() {
                     continue;
                 }
 
-                let forces = boundary.forces.read().unwrap();
+                if let Some(forces) = &boundary.forces {
+                    let forces = forces.read().unwrap();
+                    match collider.anchor() {
+                        ColliderAnchor::OnBodyPart { body_part, .. } => {
+                            if let Some(body) = self.bodies.get_mut(body_part.0) {
+                                for (pos, force) in
+                                    boundary.positions.iter().zip(forces.iter().cloned())
+                                {
+                                    // FIXME: how do we deal with large density ratio?
+                                    // Is it only an issue with PBF?
+                                    // The following commented code was an attempt to limit the force applied
+                                    // to the bodies in order to avoid large forces.
+                                    //
+                                    //                                let ratio = na::convert::<_, N>(3.0)
+                                    //                                    * body.part(body_part.1).unwrap().inertia().mass();
+                                    //
+                                    //                                if ratio < na::convert(1.0) {
+                                    //                                    force *= ratio;
+                                    //                                }
 
-                match collider.anchor() {
-                    ColliderAnchor::OnBodyPart { body_part, .. } => {
-                        if let Some(body) = bodies.get_mut(body_part.0) {
-                            for (pos, force) in
-                                boundary.positions.iter().zip(forces.iter().cloned())
-                            {
-                                // FIXME: how do we deal with large density ratio?
-                                // Is it only an issue with PBF?
-                                // The following commented code was an attempt to limit the force applied
-                                // to the bodies in order to avoid large forces.
-                                //
-                                //                                let ratio = na::convert::<_, N>(3.0)
-                                //                                    * body.part(body_part.1).unwrap().inertia().mass();
-                                //
-                                //                                if ratio < na::convert(1.0) {
-                                //                                    force *= ratio;
-                                //                                }
-
-                                body.apply_force_at_point(
-                                    body_part.1,
-                                    &force,
-                                    pos,
-                                    ForceType::Force,
-                                    true,
-                                )
+                                    body.apply_force_at_point(
+                                        body_part.1,
+                                        &force,
+                                        pos,
+                                        ForceType::Force,
+                                        true,
+                                    )
+                                }
                             }
                         }
-                    }
-                    ColliderAnchor::OnDeformableBody { body, body_parts } => {
-                        if let Some(body) = bodies.get_mut(*body) {
-                            for (feature, pos, force) in itertools::multizip((
-                                coupling.features.iter(),
-                                boundary.positions.iter(),
-                                forces.iter(),
-                            )) {
-                                let subshape_id =
-                                    collider.shape().subshape_containing_feature(*feature);
-                                let part_id = if let Some(body_parts) = body_parts {
-                                    body_parts[subshape_id]
-                                } else {
-                                    subshape_id
-                                };
+                        ColliderAnchor::OnDeformableBody { body, body_parts } => {
+                            if let Some(body) = self.bodies.get_mut(*body) {
+                                for (feature, pos, force) in itertools::multizip((
+                                    coupling.features.iter(),
+                                    boundary.positions.iter(),
+                                    forces.iter(),
+                                )) {
+                                    let subshape_id =
+                                        collider.shape().subshape_containing_feature(*feature);
+                                    let part_id = if let Some(body_parts) = body_parts {
+                                        body_parts[subshape_id]
+                                    } else {
+                                        subshape_id
+                                    };
 
-                                body.apply_force_at_point(
-                                    part_id,
-                                    &force,
-                                    pos,
-                                    ForceType::Force,
-                                    true,
-                                )
+                                    body.apply_force_at_point(
+                                        part_id,
+                                        &force,
+                                        pos,
+                                        ForceType::Force,
+                                        true,
+                                    )
+                                }
                             }
                         }
                     }
