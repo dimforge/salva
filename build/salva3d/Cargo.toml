@@ -29,8 +29,8 @@ fnv = "1.0"
 itertools = "0.8"
 generational-arena = "0.2"
 instant = { version = "0.1", features = [ "now" ] }
-nalgebra   = { version = "0.19" }
+nalgebra   = { version = "0.20" }
 rayon = { version = "1.0", optional = true }
-ncollide3d = { version = "0.21", optional = true }
-nphysics3d = { version = "0.13", optional = true }
+ncollide3d = { version = "0.22", optional = true }
+nphysics3d = { version = "0.14", optional = true }
 

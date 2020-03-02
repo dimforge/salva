@@ -45,7 +45,8 @@ pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
         let mut ray = Ray::new(curr, dir);
         let mut entry_point = true;
 
-        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, false) {
+        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, N::max_value(), false)
+        {
             let impact = ray.point_at(toi);
             let quantized_pt = quantize_point(&origin, &impact, subdivision_size, entry_point, i);
             let _ = quantized_points.insert(quantized_pt);
@@ -108,7 +109,8 @@ pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
         let mut ray = Ray::new(curr, dir);
         let mut prev_impact = None;
 
-        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, false) {
+        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, N::max_value(), false)
+        {
             if let Some(prev) = prev_impact {
                 sample_segment(
                     &origin,
