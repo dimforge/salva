@@ -206,15 +206,26 @@ pub fn compute_contacts<N: RealField>(
     let neighbours: [(i64, i64); 5] = [(0, 0), (0, 1), (1, -1), (1, 0), (1, 1)];
     #[cfg(feature = "dim3")]
     let neighbours: [(i64, i64, i64); 14] = [
-        (0, 0, 0), (0, 0, 1), (0, 1, -1), (0, 1, 0), (0, 1, 1),
-        (1, -1, -1), (1, -1, 0), (1, -1, 1), (1, 0, -1),
-        (1, 0, 0), (1, 0, 1), (1, 1, -1), (1, 1, 0), (1, 1, 1)
+        (0, 0, 0),
+        (0, 0, 1),
+        (0, 1, -1),
+        (0, 1, 0),
+        (0, 1, 1),
+        (1, -1, -1),
+        (1, -1, 0),
+        (1, -1, 1),
+        (1, 0, -1),
+        (1, 0, 0),
+        (1, 0, 1),
+        (1, 1, -1),
+        (1, 1, 0),
+        (1, 1, 1),
     ];
 
     par_iter!(grid.inner_table()).for_each(|(curr_cell, curr_particles)| {
         for &val in neighbours.iter() {
             #[cfg(feature = "dim2")]
-            let neighbor_cell= {
+            let neighbor_cell = {
                 let (i, j) = val;
                 curr_cell + Vector::new(i, j)
             };
@@ -223,7 +234,6 @@ pub fn compute_contacts<N: RealField>(
                 let (i, j, k) = val;
                 curr_cell + Vector::new(i, j, k)
             };
-
             if let Some(neighbor_particles) = grid.cell(&neighbor_cell) {
                 compute_contacts_for_pair_of_cells(
                     h,
