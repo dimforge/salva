@@ -202,64 +202,36 @@ pub fn compute_contacts<N: RealField>(
             .resize_with(boundary.num_particles(), || RwLock::new(Vec::new()))
     }
 
+    let neighbours = if cfg!(feature="dim2") {
+        [(0, 0), (0, 1), (1, -1), (1, 0), (1, 1)]
+    } else {
+        [(0, 0, 0), (0, 0, 1), (0, 1, -1), (0, 1, 0), (0, 1, 1),
+         (1, -1, -1), (1, -1, 0), (1, -1, 1), (1, 0, -1),
+         (1, 0, 0), (1, 0, 1), (1, 1, -1), (1, 1, 0), (1, 1, 1)]
+    }
+
     par_iter!(grid.inner_table()).for_each(|(curr_cell, curr_particles)| {
-        #[cfg(feature = "dim2")]
-        for i in 0i64..=1 {
-            for j in -1..=1 {
-                // Avoid visiting the same pair of cells twice.
-                if i == 0 && j < 0 {
-                    continue;
-                }
-
-                let neighbor_cell = curr_cell + Vector::new(i, j);
-                if let Some(neighbor_particles) = grid.cell(&neighbor_cell) {
-                    compute_contacts_for_pair_of_cells(
-                        h,
-                        fluids,
-                        boundaries,
-                        fluid_fluid_contacts,
-                        fluid_boundary_contacts,
-                        boundary_boundary_contacts,
-                        curr_cell,
-                        curr_particles,
-                        &neighbor_cell,
-                        neighbor_particles,
-                    );
-                }
+        for val in neighbours.iter() {
+            let neighbor_cell = if cfg!(feature="dim2") {
+                let (i, j) = val;
+                curr_cell + Vector::new(i, j)
+            } else {
+                let (i, j, k) = val;
+                curr_cell + Vector::new(i, j, k)
             }
-        }
-
-        #[cfg(feature = "dim3")]
-        for i in 0i64..=1 {
-            for j in -1..=1 {
-                for k in -1..=1 {
-                    // Avoid visiting the same pair of cells twice.
-                    if i == 0 {
-                        if j == 0 {
-                            if k < 0 {
-                                continue;
-                            }
-                        } else if j < 0 {
-                            continue;
-                        }
-                    }
-
-                    let neighbor_cell = curr_cell + Vector::new(i, j, k);
-                    if let Some(neighbor_particles) = grid.cell(&neighbor_cell) {
-                        compute_contacts_for_pair_of_cells(
-                            h,
-                            fluids,
-                            boundaries,
-                            fluid_fluid_contacts,
-                            fluid_boundary_contacts,
-                            boundary_boundary_contacts,
-                            curr_cell,
-                            curr_particles,
-                            &neighbor_cell,
-                            neighbor_particles,
-                        );
-                    }
-                }
+            if let Some(neighbor_particles) = grid.cell(&neighbor_cell) {
+                compute_contacts_for_pair_of_cells(
+                    h,
+                    fluids,
+                    boundaries,
+                    fluid_fluid_contacts,
+                    fluid_boundary_contacts,
+                    boundary_boundary_contacts,
+                    curr_cell,
+                    curr_particles,
+                    &neighbor_cell,
+                    neighbor_particles,
+                );
             }
         }
     });
