@@ -12,7 +12,7 @@ Inflector  = "0.11"
 nalgebra   = "0.21"
 ncollide2d = "0.23"
 nphysics2d = "0.15"
-nphysics_testbed2d = { version = "0.8", features = [ "fluids" ] }
+nphysics_testbed2d = { version = "0.9", features = [ "fluids" ] }
 
 [dependencies.salva2d]
 path = "../build/salva2d"
