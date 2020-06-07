@@ -13,8 +13,8 @@ Inflector  = "0.11"
 nalgebra   = "0.21"
 ncollide3d = "0.23"
 kiss3d     = "0.24"
-nphysics3d = "0.15"
-nphysics_testbed3d = { version = "0.9", features = [ "fluids" ] }
+nphysics3d = "0.16"
+nphysics_testbed3d = { version = "0.10", features = [ "fluids" ] }
 
 [dependencies.salva3d]
 path = "../build/salva3d"
