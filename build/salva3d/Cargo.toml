@@ -8,7 +8,7 @@ homepage = "https://salva.rs"
 repository = "https://github.com/rustsim/salva"
 readme = "README.md"
 keywords = [ "physics", "dynamics", "particles", "fluids", "SPH" ]
-license = "BSD-3-Clause"
+license = "Apache-2.0"
 edition = "2018"
 
 [features]
