@@ -1,20 +1,21 @@
 use crate::counters::Counters;
 use crate::geometry::{self, HGrid, HGridEntry, ParticlesContacts};
+use crate::math::Real;
 use crate::object::Boundary;
 use crate::object::Fluid;
 use na::RealField;
 
 /// Structure responsible for computing and grouping all the contact between fluid and boundary particles.
-pub struct ContactManager<N: RealField> {
+pub struct ContactManager {
     /// All contacts detected between pairs of fluid partices.
-    pub fluid_fluid_contacts: Vec<ParticlesContacts<N>>,
+    pub fluid_fluid_contacts: Vec<ParticlesContacts>,
     /// All contacts detected between a fluid particle and a boundary particle.
-    pub fluid_boundary_contacts: Vec<ParticlesContacts<N>>,
+    pub fluid_boundary_contacts: Vec<ParticlesContacts>,
     /// All contacts detected between two boundary particles.
-    pub boundary_boundary_contacts: Vec<ParticlesContacts<N>>,
+    pub boundary_boundary_contacts: Vec<ParticlesContacts>,
 }
 
-impl<N: RealField> ContactManager<N> {
+impl ContactManager {
     /// Create a new contact manager.
     pub fn new() -> Self {
         Self {
@@ -48,9 +49,9 @@ impl<N: RealField> ContactManager<N> {
     pub fn update_contacts(
         &mut self,
         counters: &mut Counters,
-        h: N,
-        fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        h: Real,
+        fluids: &[Fluid],
+        boundaries: &[Boundary],
         hgrid: &HGrid<N, HGridEntry>,
     ) {
         geometry::compute_contacts(

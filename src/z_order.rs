@@ -7,7 +7,7 @@ pub fn apply_permutation<T: Clone>(permutation: &[usize], data: &[T]) -> Vec<T> 
     permutation.iter().map(|i| data[*i].clone()).collect()
 }
 
-pub fn compute_points_z_order<N: RealField>(points: &[Point<N>]) -> Vec<usize> {
+pub fn compute_points_z_order(points: &[Point<Real>]) -> Vec<usize> {
     let mut indices: Vec<_> = (0..points.len()).collect();
     indices.sort_unstable_by(|i, j| {
         z_order_floats(points[*i].coords.as_slice(), points[*j].coords.as_slice())
@@ -21,7 +21,7 @@ pub fn compute_points_z_order<N: RealField>(points: &[Point<N>]) -> Vec<usize> {
 // Algorithm 1
 //
 // http://compgeom.com/~piyush/papers/tvcg_stann.pdf
-pub fn z_order_floats<N: RealField>(p1: &[N], p2: &[N]) -> Option<Ordering> {
+pub fn z_order_floats(p1: &[N], p2: &[N]) -> Option<Ordering> {
     assert_eq!(
         p1.len(),
         p2.len(),
@@ -41,7 +41,7 @@ pub fn z_order_floats<N: RealField>(p1: &[N], p2: &[N]) -> Option<Ordering> {
     p1[dim].partial_cmp(&p2[dim])
 }
 
-fn xor_msb_float<N: RealField>(a: N, b: N) -> i16 {
+fn xor_msb_float(a: Real, b: Real) -> i16 {
     let fa = na::try_convert::<_, f64>(a).unwrap();
     let fb = na::try_convert::<_, f64>(b).unwrap();
     let (mantissa1, exponent1, _sign1) = fa.integer_decode();

@@ -1,4 +1,4 @@
-use crate::math::{Isometry, Point, Vector};
+use crate::math::{Isometry, Point, Real, Vector};
 use crate::object::{ContiguousArena, ContiguousArenaIndex};
 use crate::solver::NonPressureForce;
 use na::{self, RealField};
@@ -6,35 +6,35 @@ use na::{self, RealField};
 /// A fluid object.
 ///
 /// A fluid object is composed of movable particles with additional properties like viscosity.
-pub struct Fluid<N: RealField> {
+pub struct Fluid {
     /// Nonpressure forces this fluid is subject to.
-    pub nonpressure_forces: Vec<Box<dyn NonPressureForce<N>>>,
+    pub nonpressure_forces: Vec<Box<dyn NonPressureForce<Real>>>,
     /// The world-space position of the fluid particles.
-    pub positions: Vec<Point<N>>,
+    pub positions: Vec<Point<Real>>,
     /// The velocities of the fluid particles.
-    pub velocities: Vec<Vector<N>>,
+    pub velocities: Vec<Vector<Real>>,
     /// The accelerations of the fluid particles.
-    pub accelerations: Vec<Vector<N>>,
+    pub accelerations: Vec<Vector<Real>>,
     /// The volume of the fluid particles.
-    pub volumes: Vec<N>,
+    pub volumes: Vec<Real>,
     /// The rest density of this fluid.
-    pub density0: N,
+    pub density0: Real,
     /// Mask indicating what particles have been deleted.
     deleted_particles: Vec<bool>,
     /// Indicates if a bit of the `deleted_particles` mask has been set.
     num_deleted_particles: usize,
     /// The particles radius.
-    particle_radius: N,
+    particle_radius: Real,
 }
 
-impl<N: RealField> Fluid<N> {
+impl Fluid {
     /// Initializes a new fluid object with the given particle positions, particle radius, density, and viscosity.
     ///
     /// The particle radius should be the same as the radius used to initialize the liquid world.
     pub fn new(
-        particle_positions: Vec<Point<N>>,
-        particle_radius: N, // XXX: remove this parameter since it is already defined by the liquid world.
-        density0: N,
+        particle_positions: Vec<Point<Real>>,
+        particle_radius: Real, // XXX: remove this parameter since it is already defined by the liquid world.
+        density0: Real,
     ) -> Self {
         let num_particles = particle_positions.len();
         let velocities: Vec<_> = std::iter::repeat(Vector::zeros())
@@ -99,7 +99,7 @@ impl<N: RealField> Fluid<N> {
         Self::particle_volume(self.particle_radius)
     }
 
-    fn particle_volume(particle_radius: N) -> N {
+    fn particle_volume(particle_radius: Real) -> N {
         // The volume of a fluid is computed as the volume of a cuboid of half-width equal to particle_radius.
         // It is multiplied by 0.8 so that there is no pressure when the cuboids are aligned on a grid.
         // This mass computation method is inspired from the SplishSplash project.
@@ -115,7 +115,11 @@ impl<N: RealField> Fluid<N> {
     ///
     /// If `velocities` is `None` the velocity of each particle will be initialized at zero.
     /// If it is not `None`, then it must be a slice with the same length than `positions`.
-    pub fn add_particles(&mut self, positions: &[Point<N>], velocities: Option<&[Vector<N>]>) {
+    pub fn add_particles(
+        &mut self,
+        positions: &[Point<Real>],
+        velocities: Option<&[Vector<Real>]>,
+    ) {
         let nparticles = self.positions.len() + positions.len();
         let particle_volume = self.default_particle_volume();
 
@@ -151,7 +155,7 @@ impl<N: RealField> Fluid<N> {
     }
 
     /// Apply the given transformation to each particle of this fluid.
-    pub fn transform_by(&mut self, t: &Isometry<N>) {
+    pub fn transform_by(&mut self, t: &Isometry<Real>) {
         self.positions.iter_mut().for_each(|p| *p = t * *p)
     }
 
@@ -162,7 +166,7 @@ impl<N: RealField> Fluid<N> {
 
     /// Computes the AABB of this fluid.
     #[cfg(feature = "nphysics")]
-    pub fn compute_aabb(&self, particle_radius: N) -> ncollide::bounding_volume::AABB<N> {
+    pub fn compute_aabb(&self, particle_radius: Real) -> ncollide::bounding_volume::AABB<Real> {
         use ncollide::bounding_volume::{self, BoundingVolume};
         bounding_volume::local_point_cloud_aabb(&self.positions).loosened(particle_radius)
     }
@@ -188,7 +192,7 @@ impl<N: RealField> Fluid<N> {
 /// The unique identifier of a boundary object.
 pub struct FluidHandle(ContiguousArenaIndex);
 /// The set of all fluid objects.
-pub type FluidSet<N> = ContiguousArena<FluidHandle, Fluid<N>>;
+pub type FluidSet = ContiguousArena<FluidHandle, Fluid>;
 
 impl From<ContiguousArenaIndex> for FluidHandle {
     #[inline]

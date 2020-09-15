@@ -5,23 +5,23 @@ use na::{self, RealField};
 
 use crate::geometry::ParticlesContacts;
 
-use crate::math::Vector;
+use crate::math::{Real, Vector};
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
 #[derive(Clone)]
 /// Implements the viscosity model introduced with the XSPH method.
-pub struct XSPHViscosity<N: RealField> {
+pub struct XSPHViscosity {
     /// The viscosity coefficient when interacting with boundaries.
-    pub boundary_viscosity_coefficient: N,
+    pub boundary_viscosity_coefficient: Real,
     /// The fluid viscosity coefficient.
-    pub fluid_viscosity_coefficient: N,
+    pub fluid_viscosity_coefficient: Real,
 }
 
-impl<N: RealField> XSPHViscosity<N> {
+impl XSPHViscosity<Real> {
     /// Initializes the XSPH viscosity with the given viscosity coefficients.
-    pub fn new(fluid_viscosity_coefficient: N, boundary_viscosity_coefficient: N) -> Self {
+    pub fn new(fluid_viscosity_coefficient: Real, boundary_viscosity_coefficient: Real) -> Self {
         Self {
             boundary_viscosity_coefficient,
             fluid_viscosity_coefficient,
@@ -29,15 +29,15 @@ impl<N: RealField> XSPHViscosity<N> {
     }
 }
 
-impl<N: RealField> NonPressureForce<N> for XSPHViscosity<N> {
+impl NonPressureForce<Real> for XSPHViscosity<Real> {
     fn solve(
         &mut self,
-        timestep: &TimestepManager<N>,
-        _kernel_radius: N,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid_boundaries_contacts: &ParticlesContacts<N>,
-        fluid: &mut Fluid<N>,
-        boundaries: &[Boundary<N>],
+        timestep: &TimestepManager,
+        _kernel_radius: Real,
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid_boundaries_contacts: &ParticlesContacts,
+        fluid: &mut Fluid,
+        boundaries: &[Boundary],
         densities: &[N],
     ) {
         let boundary_viscosity_coefficient = self.boundary_viscosity_coefficient;

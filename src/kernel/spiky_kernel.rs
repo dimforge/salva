@@ -1,4 +1,5 @@
 use crate::kernel::Kernel;
+use crate::math::Real;
 use na::RealField;
 
 /// The Spiky smoothing kernel.
@@ -8,7 +9,7 @@ use na::RealField;
 pub struct SpikyKernel;
 
 impl Kernel for SpikyKernel {
-    fn scalar_apply<N: RealField>(r: N, h: N) -> N {
+    fn scalar_apply(r: Real, h: Real) -> N {
         assert!(r >= N::zero());
 
         #[cfg(feature = "dim2")]
@@ -23,7 +24,7 @@ impl Kernel for SpikyKernel {
         }
     }
 
-    fn scalar_apply_diff<N: RealField>(r: N, h: N) -> N {
+    fn scalar_apply_diff(r: Real, h: Real) -> N {
         assert!(r >= N::zero());
 
         #[cfg(feature = "dim2")]

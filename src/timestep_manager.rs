@@ -2,36 +2,37 @@
 
 use na::RealField;
 
+use crate::math::Real;
 use crate::object::Fluid;
 
 /// Structure responsible for regulating the timestep length of the simulation.
-pub struct TimestepManager<N: RealField> {
-    cfl_coeff: N,
+pub struct TimestepManager {
+    cfl_coeff: Real,
     min_num_substeps: u32,
     max_num_substeps: u32,
-    dt: N,
-    inv_dt: N,
-    total_step_size: N,
-    remaining_time: N,
-    particle_radius: N,
+    dt: Real,
+    inv_dt: Real,
+    total_step_size: Real,
+    remaining_time: Real,
+    particle_radius: Real,
 }
 
-impl<N: RealField> TimestepManager<N> {
+impl TimestepManager {
     /// Initialize a new timestep manager with default parameters.
-    pub fn new(particle_radius: N) -> Self {
+    pub fn new(particle_radius: Real) -> Self {
         Self {
             cfl_coeff: na::convert(0.4),
             min_num_substeps: 1,
             max_num_substeps: 10,
             particle_radius,
-            dt: N::zero(),
-            inv_dt: N::zero(),
-            total_step_size: N::zero(),
-            remaining_time: N::zero(),
+            dt: Real::zero(),
+            inv_dt: Real::zero(),
+            total_step_size: Real::zero(),
+            remaining_time: Real::zero(),
         }
     }
 
-    fn max_substep(&self, fluids: &[Fluid<N>]) -> N {
+    fn max_substep(&self, fluids: &[Fluid]) -> N {
         let mut max_sq_vel = N::zero();
         for (v, a) in fluids
             .iter()
@@ -44,7 +45,7 @@ impl<N: RealField> TimestepManager<N> {
     }
 
     /// Resets the remaining time of the timestep manager.
-    pub fn reset(&mut self, total_step_size: N) {
+    pub fn reset(&mut self, total_step_size: Real) {
         self.total_step_size = total_step_size;
         self.remaining_time = total_step_size;
     }
@@ -71,7 +72,7 @@ impl<N: RealField> TimestepManager<N> {
 
     /// Advance to the next substep.
     #[inline]
-    pub fn advance(&mut self, fluids: &[Fluid<N>]) {
+    pub fn advance(&mut self, fluids: &[Fluid]) {
         let substep = self.compute_substep(fluids);
         self.dt = substep;
         self.inv_dt = if substep.is_zero() {
@@ -82,7 +83,7 @@ impl<N: RealField> TimestepManager<N> {
         self.remaining_time -= self.dt;
     }
 
-    fn compute_substep(&self, _fluids: &[Fluid<N>]) -> N {
+    fn compute_substep(&self, _fluids: &[Fluid]) -> N {
         return self.total_step_size;
         // FIXME
         //        let min_substep = self.total_step_size / na::convert(self.max_num_substeps as f64);

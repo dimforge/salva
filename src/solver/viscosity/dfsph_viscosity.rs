@@ -4,31 +4,31 @@ use rayon::prelude::*;
 use na::{self, RealField};
 
 use crate::geometry::ParticlesContacts;
-use crate::math::{Vector, SPATIAL_DIM};
+use crate::math::{Real, Vector, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
 #[cfg(feature = "dim2")]
-type BetaMatrix<N> = na::Matrix3<N>;
+type BetaMatrix<Real> = na::Matrix3<Real>;
 #[cfg(feature = "dim3")]
-type BetaMatrix<N> = na::Matrix6<N>;
+type BetaMatrix<Real> = na::Matrix6<Real>;
 #[cfg(feature = "dim2")]
-type BetaGradientMatrix<N> = na::Matrix3x2<N>;
+type BetaGradientMatrix<Real> = na::Matrix3x2<Real>;
 #[cfg(feature = "dim3")]
-type BetaGradientMatrix<N> = na::Matrix6x3<N>;
+type BetaGradientMatrix<Real> = na::Matrix6x3<Real>;
 #[cfg(feature = "dim2")]
-type StrainRate<N> = na::Vector3<N>;
+type StrainRate<Real> = na::Vector3<Real>;
 #[cfg(feature = "dim3")]
-type StrainRate<N> = na::Vector6<N>;
+type StrainRate<Real> = na::Vector6<Real>;
 
 #[derive(Copy, Clone, Debug)]
-struct StrainRates<N: RealField> {
-    target: StrainRate<N>,
-    error: StrainRate<N>,
+struct StrainRates {
+    target: StrainRate<Real>,
+    error: StrainRate<Real>,
 }
 
-impl<N: RealField> StrainRates<N> {
+impl StrainRates<Real> {
     pub fn new() -> Self {
         Self {
             target: StrainRate::zeros(),
@@ -37,8 +37,8 @@ impl<N: RealField> StrainRates<N> {
     }
 }
 
-fn compute_strain_rate<N: RealField>(gradient: &Vector<N>, v_ji: &Vector<N>) -> StrainRate<N> {
-    let _2: N = na::convert(2.0f64);
+fn compute_strain_rate(gradient: &Vector<Real>, v_ji: &Vector<Real>) -> StrainRate<Real> {
+    let _2: Real = na::convert(2.0f64);
 
     #[cfg(feature = "dim3")]
     return StrainRate::new(
@@ -58,8 +58,8 @@ fn compute_strain_rate<N: RealField>(gradient: &Vector<N>, v_ji: &Vector<N>) -> 
     );
 }
 
-fn compute_gradient_matrix<N: RealField>(gradient: &Vector<N>) -> BetaGradientMatrix<N> {
-    let _2: N = na::convert(2.0f64);
+fn compute_gradient_matrix(gradient: &Vector<Real>) -> BetaGradientMatrix<Real> {
+    let _2: Real = na::convert(2.0f64);
 
     #[cfg(feature = "dim2")]
         #[rustfmt::skip]
@@ -85,7 +85,7 @@ fn compute_gradient_matrix<N: RealField>(gradient: &Vector<N>) -> BetaGradientMa
 ///
 /// This does not include any viscosity with boundaries so it can be useful to
 /// combine this with another viscosity model and include only its boundary part.
-pub struct DFSPHViscosity<N: RealField> {
+pub struct DFSPHViscosity {
     /// Minimum number of iterations that must be executed for viscosity resolution.
     pub min_viscosity_iter: usize,
     /// Maximum number of iterations that must be executed for viscosity resolution.
@@ -94,16 +94,16 @@ pub struct DFSPHViscosity<N: RealField> {
     ///
     /// The viscosity solver will continue iterating until the strain error drops bellow this
     /// threshold, or until the maximum number of iterations is reached.
-    pub max_viscosity_error: N,
+    pub max_viscosity_error: Real,
     /// The viscosity coefficient.
-    pub viscosity_coefficient: N,
-    betas: Vec<BetaMatrix<N>>,
-    strain_rates: Vec<StrainRates<N>>,
+    pub viscosity_coefficient: Real,
+    betas: Vec<BetaMatrix<Real>>,
+    strain_rates: Vec<StrainRates<Real>>,
 }
 
-impl<N: RealField> DFSPHViscosity<N> {
+impl DFSPHViscosity<Real> {
     /// Initialize a new DFSPH visocisity solver.
-    pub fn new(viscosity_coefficient: N) -> Self {
+    pub fn new(viscosity_coefficient: Real) -> Self {
         assert!(
             viscosity_coefficient >= N::zero() && viscosity_coefficient <= N::one(),
             "The viscosity coefficient must be between 0.0 and 1.0."
@@ -119,7 +119,7 @@ impl<N: RealField> DFSPHViscosity<N> {
         }
     }
 
-    fn init(&mut self, fluid: &Fluid<N>) {
+    fn init(&mut self, fluid: &Fluid) {
         if self.betas.len() != fluid.num_particles() {
             self.betas
                 .resize(fluid.num_particles(), BetaMatrix::zeros());
@@ -130,11 +130,11 @@ impl<N: RealField> DFSPHViscosity<N> {
 
     fn compute_betas(
         &mut self,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid: &Fluid,
         densities: &[N],
     ) {
-        let _2: N = na::convert(2.0f64);
+        let _2: Real = na::convert(2.0f64);
 
         par_iter_mut!(self.betas)
             .enumerate()
@@ -199,15 +199,15 @@ impl<N: RealField> DFSPHViscosity<N> {
 
     fn compute_strain_rates(
         &mut self,
-        timestep: &TimestepManager<N>,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        timestep: &TimestepManager,
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid: &Fluid,
         densities: &[N],
         compute_error: bool,
     ) -> N {
         let mut max_error = N::zero();
         let viscosity_coefficient = self.viscosity_coefficient;
-        let _2: N = na::convert(2.0f64);
+        let _2: Real = na::convert(2.0f64);
 
         let it = par_iter_mut!(self.strain_rates)
             .enumerate()
@@ -251,16 +251,16 @@ impl<N: RealField> DFSPHViscosity<N> {
 
     fn compute_accelerations(
         &self,
-        timestep: &TimestepManager<N>,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &mut Fluid<N>,
+        timestep: &TimestepManager,
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid: &mut Fluid,
         densities: &[N],
     ) {
         let strain_rates = &self.strain_rates;
         let betas = &self.betas;
         let volumes = &fluid.volumes;
         let density0 = fluid.density0;
-        let _2: N = na::convert(2.0);
+        let _2: Real = na::convert(2.0);
 
         par_iter_mut!(fluid.accelerations)
             .enumerate()
@@ -288,15 +288,15 @@ impl<N: RealField> DFSPHViscosity<N> {
     }
 }
 
-impl<N: RealField> NonPressureForce<N> for DFSPHViscosity<N> {
+impl NonPressureForce<Real> for DFSPHViscosity<Real> {
     fn solve(
         &mut self,
-        timestep: &TimestepManager<N>,
-        _kernel_radius: N,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        _fluid_boundaries_contacts: &ParticlesContacts<N>,
-        fluid: &mut Fluid<N>,
-        _boundaries: &[Boundary<N>],
+        timestep: &TimestepManager,
+        _kernel_radius: Real,
+        fluid_fluid_contacts: &ParticlesContacts,
+        _fluid_boundaries_contacts: &ParticlesContacts,
+        fluid: &mut Fluid,
+        _boundaries: &[Boundary],
         densities: &[N],
     ) {
         self.init(fluid);

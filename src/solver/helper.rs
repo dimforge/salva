@@ -1,5 +1,6 @@
 use crate::geometry::ParticlesContacts;
 use crate::kernel::Kernel;
+use crate::math::Real;
 use crate::object::{Boundary, Fluid};
 use na::RealField;
 
@@ -7,11 +8,11 @@ use na::RealField;
 use rayon::prelude::*;
 
 pub fn update_fluid_contacts<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>(
-    kernel_radius: N,
-    fluid_fluid_contacts: &mut [ParticlesContacts<N>],
-    fluid_boundary_contacts: &mut [ParticlesContacts<N>],
-    fluids: &[Fluid<N>],
-    boundaries: &[Boundary<N>],
+    kernel_radius: Real,
+    fluid_fluid_contacts: &mut [ParticlesContacts],
+    fluid_boundary_contacts: &mut [ParticlesContacts],
+    fluids: &[Fluid],
+    boundaries: &[Boundary],
 ) {
     for contacts in fluid_fluid_contacts.iter_mut() {
         par_iter_mut!(contacts.contacts_mut()).for_each(|contacts| {
@@ -44,9 +45,9 @@ pub fn update_fluid_contacts<N: RealField, KernelDensity: Kernel, KernelGradient
 }
 
 pub fn update_boundary_contacts<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>(
-    kernel_radius: N,
-    boundary_boundary_contacts: &mut [ParticlesContacts<N>],
-    boundaries: &[Boundary<N>],
+    kernel_radius: Real,
+    boundary_boundary_contacts: &mut [ParticlesContacts],
+    boundaries: &[Boundary],
 ) {
     for contacts in boundary_boundary_contacts.iter_mut() {
         par_iter_mut!(contacts.contacts_mut()).for_each(|contacts| {

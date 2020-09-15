@@ -14,14 +14,14 @@ use crate::TimestepManager;
 // From https://cg.informatik.uni-freiburg.de/publications/2007_SCA_SPH.pdf
 /// Surface tension method introduced by the WCSPH method.
 #[derive(Clone)]
-pub struct WCSPHSurfaceTension<N: RealField> {
-    fluid_tension_coefficient: N,
-    boundary_tension_coefficient: N,
+pub struct WCSPHSurfaceTension {
+    fluid_tension_coefficient: Real,
+    boundary_tension_coefficient: Real,
 }
 
-impl<N: RealField> WCSPHSurfaceTension<N> {
+impl WCSPHSurfaceTension<Real> {
     /// Initializes a surface tension with the given surface tension coefficient and boundary adhesion coefficients.
-    pub fn new(fluid_tension_coefficient: N, boundary_tension_coefficient: N) -> Self {
+    pub fn new(fluid_tension_coefficient: Real, boundary_tension_coefficient: Real) -> Self {
         Self {
             fluid_tension_coefficient,
             boundary_tension_coefficient,
@@ -29,15 +29,15 @@ impl<N: RealField> WCSPHSurfaceTension<N> {
     }
 }
 
-impl<N: RealField> NonPressureForce<N> for WCSPHSurfaceTension<N> {
+impl NonPressureForce<Real> for WCSPHSurfaceTension<Real> {
     fn solve(
         &mut self,
-        _timestep: &TimestepManager<N>,
-        _kernel_radius: N,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        _fluid_boundaries_contacts: &ParticlesContacts<N>,
-        fluid: &mut Fluid<N>,
-        boundaries: &[Boundary<N>],
+        _timestep: &TimestepManager,
+        _kernel_radius: Real,
+        fluid_fluid_contacts: &ParticlesContacts,
+        _fluid_boundaries_contacts: &ParticlesContacts,
+        fluid: &mut Fluid,
+        boundaries: &[Boundary],
         _densities: &[N],
     ) {
         let fluid_tension_coefficient = self.fluid_tension_coefficient;

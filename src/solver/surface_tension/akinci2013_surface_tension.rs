@@ -5,7 +5,7 @@ use na::{self, RealField, Unit};
 
 use crate::geometry::ParticlesContacts;
 
-use crate::math::Vector;
+use crate::math::{Real, Vector};
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
@@ -15,17 +15,17 @@ use crate::TimestepManager;
 ///
 /// This combines both cohesion forces as well as curvature minimization forces.
 /// This also includes adhesion forces for fluid/boundary interactions.
-pub struct Akinci2013SurfaceTension<N: RealField> {
-    fluid_tension_coefficient: N,
-    boundary_adhesion_coefficient: N,
-    normals: Vec<Vector<N>>,
+pub struct Akinci2013SurfaceTension {
+    fluid_tension_coefficient: Real,
+    boundary_adhesion_coefficient: Real,
+    normals: Vec<Vector<Real>>,
 }
 
-impl<N: RealField> Akinci2013SurfaceTension<N> {
+impl Akinci2013SurfaceTension<Real> {
     /// Initializes a surface tension with the given surface tension coefficient and boundary adhesion coefficients.
     ///
     /// Both those coefficients are typically in [0.0, 1.0].
-    pub fn new(fluid_tension_coefficient: N, boundary_adhesion_coefficient: N) -> Self {
+    pub fn new(fluid_tension_coefficient: Real, boundary_adhesion_coefficient: Real) -> Self {
         Self {
             fluid_tension_coefficient,
             boundary_adhesion_coefficient,
@@ -33,7 +33,7 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
         }
     }
 
-    fn init(&mut self, fluid: &Fluid<N>) {
+    fn init(&mut self, fluid: &Fluid) {
         if self.normals.len() != fluid.num_particles() {
             self.normals.resize(fluid.num_particles(), Vector::zeros());
         }
@@ -41,9 +41,9 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
 
     fn compute_normals(
         &mut self,
-        kernel_radius: N,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        kernel_radius: Real,
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid: &Fluid,
         densities: &[N],
     ) {
         par_iter_mut!(self.normals)
@@ -67,13 +67,13 @@ impl<N: RealField> Akinci2013SurfaceTension<N> {
     }
 }
 
-fn cohesion_kernel<N: RealField>(r: N, h: N) -> N {
+fn cohesion_kernel(r: Real, h: Real) -> N {
     #[cfg(feature = "dim3")]
     let normalizer = na::convert::<_, N>(32.0f64) / (N::pi() * h.powi(9));
     // FIXME: not sure this is the right formula for the 2D version.
     #[cfg(feature = "dim2")]
     let normalizer = na::convert::<_, N>(32.0f64) / (N::pi() * h.powi(8));
-    let _2: N = na::convert(2.0f64);
+    let _2: Real = na::convert(2.0f64);
 
     let coeff = if r <= h / _2 {
         _2 * (h - r).powi(3) * r.powi(3) - h.powi(6) / na::convert(64.0f64)
@@ -86,12 +86,12 @@ fn cohesion_kernel<N: RealField>(r: N, h: N) -> N {
     normalizer * coeff
 }
 
-fn adhesion_kernel<N: RealField>(r: N, h: N) -> N {
-    let _2: N = na::convert(2.0f64);
+fn adhesion_kernel(r: Real, h: Real) -> N {
+    let _2: Real = na::convert(2.0f64);
 
     if r > h / _2 && r <= h {
-        let _4: N = na::convert(4.0f64);
-        let _6: N = na::convert(6.0f64);
+        let _4: Real = na::convert(4.0f64);
+        let _6: Real = na::convert(6.0f64);
 
         #[cfg(feature = "dim3")]
         let normalizer = na::convert::<_, N>(0.007) / h.powf(na::convert(3.25f64));
@@ -108,19 +108,19 @@ fn adhesion_kernel<N: RealField>(r: N, h: N) -> N {
     }
 }
 
-impl<N: RealField> NonPressureForce<N> for Akinci2013SurfaceTension<N> {
+impl NonPressureForce<Real> for Akinci2013SurfaceTension<Real> {
     fn solve(
         &mut self,
-        _timestep: &TimestepManager<N>,
-        kernel_radius: N,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid_boundaries_contacts: &ParticlesContacts<N>,
-        fluid: &mut Fluid<N>,
-        boundaries: &[Boundary<N>],
+        _timestep: &TimestepManager,
+        kernel_radius: Real,
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid_boundaries_contacts: &ParticlesContacts,
+        fluid: &mut Fluid,
+        boundaries: &[Boundary],
         densities: &[N],
     ) {
         self.init(fluid);
-        let _2: N = na::convert(2.0f64);
+        let _2: Real = na::convert(2.0f64);
 
         self.compute_normals(kernel_radius, fluid_fluid_contacts, fluid, densities);
 

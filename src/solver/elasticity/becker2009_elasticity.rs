@@ -7,14 +7,14 @@ use na::{self, RealField};
 
 use crate::geometry::{self, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel};
-use crate::math::{Matrix, Point, RotationMatrix, SpatialVector, Vector};
+use crate::math::{Matrix, Point, Real, RotationMatrix, SpatialVector, Vector};
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
-fn elasticity_coefficients<N: RealField>(young_modulus: N, poisson_ratio: N) -> (N, N, N) {
+fn elasticity_coefficients(young_modulus: Real, poisson_ratio: Real) -> (N, N, N) {
     let _1 = N::one();
-    let _2: N = na::convert(2.0);
+    let _2: Real = na::convert(2.0);
 
     let d0 =
         (young_modulus * (_1 - poisson_ratio)) / ((_1 + poisson_ratio) * (_1 - _2 * poisson_ratio));
@@ -24,7 +24,7 @@ fn elasticity_coefficients<N: RealField>(young_modulus: N, poisson_ratio: N) -> 
     (d0, d1, d2)
 }
 
-fn sym_mat_mul_vec<N: RealField>(mat: &SpatialVector<N>, v: &Vector<N>) -> Vector<N> {
+fn sym_mat_mul_vec(mat: &SpatialVector<Real>, v: &Vector<Real>) -> Vector<Real> {
     #[cfg(feature = "dim2")]
     return Vector::new(mat.x * v.x + mat.z * v.y, mat.z * v.x + mat.y * v.y);
 
@@ -43,16 +43,16 @@ pub struct Becker2009Elasticity<
     KernelDensity: Kernel = CubicSplineKernel,
     KernelGradient: Kernel = CubicSplineKernel,
 > {
-    d0: N,
-    d1: N,
-    d2: N,
+    d0: Real,
+    d1: Real,
+    d2: Real,
     nonlinear_strain: bool,
-    volumes0: Vec<N>,
-    positions0: Vec<Point<N>>,
-    contacts0: ParticlesContacts<N>,
-    rotations: Vec<RotationMatrix<N>>,
-    deformation_gradient_tr: Vec<Matrix<N>>,
-    stress: Vec<SpatialVector<N>>,
+    volumes0: Vec<Real>,
+    positions0: Vec<Point<Real>>,
+    contacts0: ParticlesContacts,
+    rotations: Vec<RotationMatrix<Real>>,
+    deformation_gradient_tr: Vec<Matrix<Real>>,
+    stress: Vec<SpatialVector<Real>>,
     phantom: PhantomData<(KernelDensity, KernelGradient)>,
 }
 
@@ -64,7 +64,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
     /// If `nonlinear_strain` is `true`, the nonlinear version of the strain tensor is used.
     /// This allows a more realistic simulation of large deformation. However this is slightly more
     /// computationally intensive.
-    pub fn new(young_modulus: N, poisson_ratio: N, nonlinear_strain: bool) -> Self {
+    pub fn new(young_modulus: Real, poisson_ratio: Real, nonlinear_strain: bool) -> Self {
         let (d0, d1, d2) = elasticity_coefficients(young_modulus, poisson_ratio);
 
         Self {
@@ -82,7 +82,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
         }
     }
 
-    fn init(&mut self, kernel_radius: N, fluid: &Fluid<N>) {
+    fn init(&mut self, kernel_radius: Real, fluid: &Fluid) {
         let nparticles = fluid.positions.len();
 
         if self.positions0.len() != nparticles {
@@ -113,8 +113,8 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
         }
     }
 
-    fn compute_rotations(&mut self, _kernel_radius: N, fluid: &Fluid<N>) {
-        let _2: N = na::convert(2.0f64);
+    fn compute_rotations(&mut self, _kernel_radius: Real, fluid: &Fluid) {
+        let _2: Real = na::convert(2.0f64);
 
         let contacts0 = &self.contacts0;
         let positions0 = &self.positions0;
@@ -137,9 +137,9 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
             })
     }
 
-    fn compute_stresses(&mut self, _kernel_radius: N, fluid: &Fluid<N>) {
-        let _2: N = na::convert(2.0f64);
-        let _0_5: N = na::convert(0.564);
+    fn compute_stresses(&mut self, _kernel_radius: Real, fluid: &Fluid) {
+        let _2: Real = na::convert(2.0f64);
+        let _0_5: Real = na::convert(0.564);
 
         let contacts0 = &self.contacts0;
         let rotations = &self.rotations;
@@ -262,22 +262,22 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
     }
 }
 
-impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureForce<N>
+impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureForce<Real>
     for Becker2009Elasticity<N, KernelDensity, KernelGradient>
 {
     fn solve(
         &mut self,
-        _timestep: &TimestepManager<N>,
-        kernel_radius: N,
-        _fluid_fluid_contacts: &ParticlesContacts<N>,
-        _fluid_boundaries_contacts: &ParticlesContacts<N>,
-        fluid: &mut Fluid<N>,
-        _boundaries: &[Boundary<N>],
+        _timestep: &TimestepManager,
+        kernel_radius: Real,
+        _fluid_fluid_contacts: &ParticlesContacts,
+        _fluid_boundaries_contacts: &ParticlesContacts,
+        fluid: &mut Fluid,
+        _boundaries: &[Boundary],
         _densities: &[N],
     ) {
         self.init(kernel_radius, fluid);
 
-        let _0_5: N = na::convert(0.5f64);
+        let _0_5: Real = na::convert(0.5f64);
         self.compute_rotations(kernel_radius, fluid);
         self.compute_stresses(kernel_radius, fluid);
 
