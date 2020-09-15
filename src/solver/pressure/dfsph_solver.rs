@@ -8,7 +8,7 @@ use na::{self, RealField};
 use crate::counters::Counters;
 use crate::geometry::{ContactManager, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel};
-use crate::math::{Vector, DIM};
+use crate::math::{Real, Vector, DIM};
 use crate::object::{Boundary, Fluid};
 use crate::solver::{helper, PressureSolver};
 use crate::TimestepManager;
@@ -27,7 +27,7 @@ pub struct DFSPHSolver<
     ///
     /// The pressure solver will continue iterating until the density error drops bellow this
     /// threshold, or until the maximum number of pressure iterations is reached.
-    pub max_density_error: N,
+    pub max_density_error: Real,
     /// Minimum number of iterations that must be executed for divergence resolution.
     pub min_divergence_iter: usize,
     /// Maximum number of iterations that must be executed for divergence resolution.
@@ -36,13 +36,13 @@ pub struct DFSPHSolver<
     ///
     /// The pressure solver will continue iterating until the divergence error drops bellow this
     /// threshold, or until the maximum number of pressure iterations is reached.
-    pub max_divergence_error: N,
+    pub max_divergence_error: Real,
     min_neighbors_for_divergence_solve: usize,
-    alphas: Vec<Vec<N>>,
-    densities: Vec<Vec<N>>,
-    predicted_densities: Vec<Vec<N>>,
-    divergences: Vec<Vec<N>>,
-    velocity_changes: Vec<Vec<Vector<N>>>,
+    alphas: Vec<Vec<Real>>,
+    densities: Vec<Vec<Real>>,
+    predicted_densities: Vec<Vec<Real>>,
+    divergences: Vec<Vec<Real>>,
+    velocity_changes: Vec<Vec<Vector<Real>>>,
     phantoms: PhantomData<(KernelDensity, KernelGradient)>,
 }
 
@@ -73,8 +73,8 @@ where
 
     fn compute_boundary_volumes(
         &mut self,
-        boundary_boundary_contacts: &[ParticlesContacts<N>],
-        boundaries: &mut [Boundary<N>],
+        boundary_boundary_contacts: &[ParticlesContacts],
+        boundaries: &mut [Boundary],
     ) {
         for boundary_id in 0..boundaries.len() {
             par_iter_mut!(boundaries[boundary_id].volumes)
@@ -99,11 +99,11 @@ where
 
     fn compute_predicted_densities(
         &mut self,
-        timestep: &TimestepManager<N>,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluid_boundary_contacts: &[ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        timestep: &TimestepManager,
+        fluid_fluid_contacts: &[ParticlesContacts],
+        fluid_boundary_contacts: &[ParticlesContacts],
+        fluids: &[Fluid],
+        boundaries: &[Boundary],
     ) -> N {
         let velocity_changes = &self.velocity_changes;
         let densities = &self.densities;
@@ -166,10 +166,10 @@ where
     // NOTE: this actually computes alpha_i / density_i
     fn compute_alphas(
         &mut self,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluid_boundary_contacts: &[ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        fluid_fluid_contacts: &[ParticlesContacts],
+        fluid_boundary_contacts: &[ParticlesContacts],
+        fluids: &[Fluid],
+        boundaries: &[Boundary],
     ) {
         for fluid_id in 0..fluids.len() {
             let fluid_fluid_contacts = &fluid_fluid_contacts[fluid_id];
@@ -219,11 +219,11 @@ where
 
     fn compute_velocity_changes(
         &mut self,
-        timestep: &TimestepManager<N>,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluid_boundary_contacts: &[ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        timestep: &TimestepManager,
+        fluid_fluid_contacts: &[ParticlesContacts],
+        fluid_boundary_contacts: &[ParticlesContacts],
+        fluids: &[Fluid],
+        boundaries: &[Boundary],
     ) {
         let alphas = &self.alphas;
         let predicted_densities = &self.predicted_densities;
@@ -280,10 +280,10 @@ where
 
     fn compute_divergences(
         &mut self,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluid_boundary_contacts: &[ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        fluid_fluid_contacts: &[ParticlesContacts],
+        fluid_boundary_contacts: &[ParticlesContacts],
+        fluids: &[Fluid],
+        boundaries: &[Boundary],
     ) -> N {
         let velocity_changes = &self.velocity_changes;
         let min_neighbors_for_divergence_solve = self.min_neighbors_for_divergence_solve;
@@ -359,11 +359,11 @@ where
 
     fn compute_velocity_changes_for_divergence(
         &mut self,
-        timestep: &TimestepManager<N>,
-        fluid_fluid_contacts: &[ParticlesContacts<N>],
-        fluid_boundary_contacts: &[ParticlesContacts<N>],
-        fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        timestep: &TimestepManager,
+        fluid_fluid_contacts: &[ParticlesContacts],
+        fluid_boundary_contacts: &[ParticlesContacts],
+        fluids: &[Fluid],
+        boundaries: &[Boundary],
     ) {
         let alphas = &self.alphas;
         let divergences = &self.divergences;
@@ -410,7 +410,7 @@ where
         }
     }
 
-    fn update_positions(&mut self, timestep: &TimestepManager<N>, fluids: &mut [Fluid<N>]) {
+    fn update_positions(&mut self, timestep: &TimestepManager, fluids: &mut [Fluid]) {
         for (fluid, velocity_changes) in fluids.iter_mut().zip(self.velocity_changes.iter()) {
             par_iter_mut!(fluid.positions)
                 .zip(par_iter!(fluid.velocities))
@@ -421,7 +421,7 @@ where
         }
     }
 
-    fn update_velocities(&mut self, fluids: &mut [Fluid<N>]) {
+    fn update_velocities(&mut self, fluids: &mut [Fluid]) {
         for (fluid, delta) in fluids.iter_mut().zip(self.velocity_changes.iter()) {
             par_iter_mut!(fluid.velocities)
                 .zip(par_iter!(delta))
@@ -433,10 +433,10 @@ where
 
     fn pressure_solve(
         &mut self,
-        timestep: &TimestepManager<N>,
-        contact_manager: &mut ContactManager<N>,
-        fluids: &mut [Fluid<N>],
-        boundaries: &[Boundary<N>],
+        timestep: &TimestepManager,
+        contact_manager: &mut ContactManager,
+        fluids: &mut [Fluid],
+        boundaries: &[Boundary],
     ) {
         for i in 0..self.max_pressure_iter {
             let avg_err = self.compute_predicted_densities(
@@ -468,10 +468,10 @@ where
     fn divergence_solve(
         &mut self,
         counters: &mut Counters,
-        timestep: &TimestepManager<N>,
-        contact_manager: &mut ContactManager<N>,
-        fluids: &mut [Fluid<N>],
-        boundaries: &[Boundary<N>],
+        timestep: &TimestepManager,
+        contact_manager: &mut ContactManager,
+        fluids: &mut [Fluid],
+        boundaries: &[Boundary],
     ) {
         for i in 0..self.max_divergence_iter {
             let avg_err = self.compute_divergences(
@@ -505,8 +505,8 @@ where
 
     fn integrate_and_clear_accelerations(
         &mut self,
-        timestep: &TimestepManager<N>,
-        fluids: &mut [Fluid<N>],
+        timestep: &TimestepManager,
+        fluids: &mut [Fluid],
     ) {
         for (velocity_changes, fluid) in self.velocity_changes.iter_mut().zip(fluids.iter_mut()) {
             par_iter_mut!(velocity_changes)
@@ -519,14 +519,14 @@ where
     }
 }
 
-impl<N, KernelDensity, KernelGradient> PressureSolver<N>
+impl<N, KernelDensity, KernelGradient> PressureSolver
     for DFSPHSolver<N, KernelDensity, KernelGradient>
 where
     N: RealField,
     KernelDensity: Kernel,
     KernelGradient: Kernel,
 {
-    fn init_with_fluids(&mut self, fluids: &[Fluid<N>]) {
+    fn init_with_fluids(&mut self, fluids: &[Fluid]) {
         // Resize every buffer.
         self.alphas.resize(fluids.len(), Vec::new());
         self.densities.resize(fluids.len(), Vec::new());
@@ -563,16 +563,16 @@ where
         }
     }
 
-    fn init_with_boundaries(&mut self, _boundaries: &[Boundary<N>]) {}
+    fn init_with_boundaries(&mut self, _boundaries: &[Boundary]) {}
 
     fn predict_advection(
         &mut self,
-        timestep: &TimestepManager<N>,
-        kernel_radius: N,
-        contact_manager: &ContactManager<N>,
-        gravity: &Vector<N>,
-        fluids: &mut [Fluid<N>],
-        boundaries: &[Boundary<N>],
+        timestep: &TimestepManager,
+        kernel_radius: Real,
+        contact_manager: &ContactManager,
+        gravity: &Vector<Real>,
+        fluids: &mut [Fluid],
+        boundaries: &[Boundary],
     ) {
         for fluid in fluids.iter_mut() {
             par_iter_mut!(fluid.accelerations).for_each(|acceleration| {
@@ -608,10 +608,10 @@ where
 
     fn evaluate_kernels(
         &mut self,
-        kernel_radius: N,
-        contact_manager: &mut ContactManager<N>,
-        fluids: &[Fluid<N>],
-        boundaries: &[Boundary<N>],
+        kernel_radius: Real,
+        contact_manager: &mut ContactManager,
+        fluids: &[Fluid],
+        boundaries: &[Boundary],
     ) {
         helper::update_fluid_contacts::<_, KernelDensity, KernelGradient>(
             kernel_radius,
@@ -630,9 +630,9 @@ where
 
     fn compute_densities(
         &mut self,
-        contact_manager: &ContactManager<N>,
-        fluids: &[Fluid<N>],
-        boundaries: &mut [Boundary<N>],
+        contact_manager: &ContactManager,
+        fluids: &[Fluid],
+        boundaries: &mut [Boundary],
     ) {
         self.compute_boundary_volumes(&contact_manager.boundary_boundary_contacts, boundaries);
 
@@ -670,12 +670,12 @@ where
     fn step(
         &mut self,
         counters: &mut Counters,
-        timestep: &mut TimestepManager<N>,
-        gravity: &Vector<N>,
-        contact_manager: &mut ContactManager<N>,
-        kernel_radius: N,
-        fluids: &mut [Fluid<N>],
-        boundaries: &[Boundary<N>],
+        timestep: &mut TimestepManager,
+        gravity: &Vector<Real>,
+        contact_manager: &mut ContactManager,
+        kernel_radius: Real,
+        fluids: &mut [Fluid],
+        boundaries: &[Boundary],
     ) {
         counters.solver.pressure_resolution_time.resume();
 

@@ -5,23 +5,23 @@ use na::{self, RealField};
 
 use crate::geometry::ParticlesContacts;
 
-use crate::math::Vector;
+use crate::math::{Real, Vector};
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
 // http://peridynamics.com/publications/2014-He-RSS.pdf
 /// Surface tension method introduced by He et al. 2014
-pub struct He2014SurfaceTension<N: RealField> {
-    fluid_tension_coefficient: N,
-    boundary_tension_coefficient: N,
-    gradcs: Vec<N>,
-    colors: Vec<N>,
+pub struct He2014SurfaceTension {
+    fluid_tension_coefficient: Real,
+    boundary_tension_coefficient: Real,
+    gradcs: Vec<Real>,
+    colors: Vec<Real>,
 }
 
-impl<N: RealField> He2014SurfaceTension<N> {
+impl He2014SurfaceTension<Real> {
     /// Initializes a surface tension with the given surface tension coefficient and boundary adhesion coefficients.
-    pub fn new(fluid_tension_coefficient: N, boundary_tension_coefficient: N) -> Self {
+    pub fn new(fluid_tension_coefficient: Real, boundary_tension_coefficient: Real) -> Self {
         Self {
             fluid_tension_coefficient,
             boundary_tension_coefficient,
@@ -30,7 +30,7 @@ impl<N: RealField> He2014SurfaceTension<N> {
         }
     }
 
-    fn init(&mut self, fluid: &Fluid<N>) {
+    fn init(&mut self, fluid: &Fluid) {
         if self.gradcs.len() != fluid.num_particles() {
             self.gradcs.resize(fluid.num_particles(), N::zero());
             self.colors.resize(fluid.num_particles(), N::zero());
@@ -39,10 +39,10 @@ impl<N: RealField> He2014SurfaceTension<N> {
 
     fn compute_colors(
         &mut self,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid_boundary_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
-        boundaries: &[Boundary<N>],
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid_boundary_contacts: &ParticlesContacts,
+        fluid: &Fluid,
+        boundaries: &[Boundary],
         densities: &[N],
     ) {
         par_iter_mut!(self.colors)
@@ -76,8 +76,8 @@ impl<N: RealField> He2014SurfaceTension<N> {
 
     fn compute_gradc(
         &mut self,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid: &Fluid<N>,
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid: &Fluid,
         densities: &[N],
     ) {
         let colors = &self.colors;
@@ -105,19 +105,19 @@ impl<N: RealField> He2014SurfaceTension<N> {
     }
 }
 
-impl<N: RealField> NonPressureForce<N> for He2014SurfaceTension<N> {
+impl NonPressureForce<Real> for He2014SurfaceTension<Real> {
     fn solve(
         &mut self,
-        _timestep: &TimestepManager<N>,
-        _kernel_radius: N,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid_boundary_contacts: &ParticlesContacts<N>,
-        fluid: &mut Fluid<N>,
-        boundaries: &[Boundary<N>],
+        _timestep: &TimestepManager,
+        _kernel_radius: Real,
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid_boundary_contacts: &ParticlesContacts,
+        fluid: &mut Fluid,
+        boundaries: &[Boundary],
         densities: &[N],
     ) {
         self.init(fluid);
-        let _2: N = na::convert(2.0f64);
+        let _2: Real = na::convert(2.0f64);
 
         self.compute_colors(
             fluid_fluid_contacts,

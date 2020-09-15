@@ -1,7 +1,7 @@
 use crate::counters::Counters;
 use crate::coupling::CouplingManager;
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
-use crate::math::Vector;
+use crate::math::{Real, Vector};
 use crate::object::{Boundary, BoundaryHandle, BoundarySet};
 use crate::object::{Fluid, FluidHandle, FluidSet};
 use crate::solver::PressureSolver;
@@ -9,21 +9,21 @@ use crate::TimestepManager;
 use na::RealField;
 
 /// The physics world for simulating fluids with boundaries.
-pub struct LiquidWorld<N: RealField> {
+pub struct LiquidWorld {
     /// Performance counters of the whole fluid simulation engine.
     pub counters: Counters,
     nsubsteps_since_sort: usize,
-    particle_radius: N,
-    h: N,
-    fluids: FluidSet<N>,
-    boundaries: BoundarySet<N>,
-    solver: Box<dyn PressureSolver<N>>,
-    contact_manager: ContactManager<N>,
-    timestep_manager: TimestepManager<N>,
+    particle_radius: Real,
+    h: Real,
+    fluids: FluidSet,
+    boundaries: BoundarySet,
+    solver: Box<dyn PressureSolver>,
+    contact_manager: ContactManager,
+    timestep_manager: TimestepManager,
     hgrid: HGrid<N, HGridEntry>,
 }
 
-impl<N: RealField> LiquidWorld<N> {
+impl LiquedWorld {
     /// Initialize a new liquid world.
     ///
     /// # Parameters
@@ -32,9 +32,9 @@ impl<N: RealField> LiquidWorld<N> {
     /// - `smoothing_factor`: the smoothing factor used to compute the SPH kernel radius.
     ///    The kernel radius will be computed as `particle_radius * smoothing_factor * 2.0.
     pub fn new(
-        solver: impl PressureSolver<N> + 'static,
-        particle_radius: N,
-        smoothing_factor: N,
+        solver: impl PressureSolver + 'static,
+        particle_radius: Real,
+        smoothing_factor: Real,
     ) -> Self {
         let h = particle_radius * smoothing_factor * na::convert(2.0);
         Self {
@@ -54,16 +54,16 @@ impl<N: RealField> LiquidWorld<N> {
     /// Advances the simulation by `dt` milliseconds.
     ///
     /// All the fluid particles will be affected by an acceleration equal to `gravity`.
-    pub fn step(&mut self, dt: N, gravity: &Vector<N>) {
+    pub fn step(&mut self, dt: Real, gravity: &Vector<Real>) {
         self.step_with_coupling(dt, gravity, &mut ())
     }
 
     /// Advances the simulation by `dt` milliseconds, taking into account coupling with an external rigid-body engine.
     pub fn step_with_coupling(
         &mut self,
-        dt: N,
-        gravity: &Vector<N>,
-        coupling: &mut impl CouplingManager<N>,
+        dt: Real,
+        gravity: &Vector<Real>,
+        coupling: &mut impl CouplingManager,
     ) {
         self.counters.reset();
         self.counters.step_time.start();
@@ -153,42 +153,42 @@ impl<N: RealField> LiquidWorld<N> {
     }
 
     /// Add a fluid to the liquid world.
-    pub fn add_fluid(&mut self, fluid: Fluid<N>) -> FluidHandle {
+    pub fn add_fluid(&mut self, fluid: Fluid) -> FluidHandle {
         self.fluids.insert(fluid)
     }
 
     /// Add a boundary to the liquid world.
-    pub fn add_boundary(&mut self, boundary: Boundary<N>) -> BoundaryHandle {
+    pub fn add_boundary(&mut self, boundary: Boundary) -> BoundaryHandle {
         self.boundaries.insert(boundary)
     }
 
     /// Add a fluid to the liquid world.
-    pub fn remove_fluid(&mut self, handle: FluidHandle) -> Option<Fluid<N>> {
+    pub fn remove_fluid(&mut self, handle: FluidHandle) -> Option<Fluid> {
         self.fluids.remove(handle)
     }
 
     /// Add a boundary to the liquid world.
-    pub fn remove_boundary(&mut self, handle: BoundaryHandle) -> Option<Boundary<N>> {
+    pub fn remove_boundary(&mut self, handle: BoundaryHandle) -> Option<Boundary> {
         self.boundaries.remove(handle)
     }
 
     /// The set of fluids on this liquid world.
-    pub fn fluids(&self) -> &FluidSet<N> {
+    pub fn fluids(&self) -> &FluidSet {
         &self.fluids
     }
 
     /// The mutable set of fluids on this liquid world.
-    pub fn fluids_mut(&mut self) -> &mut FluidSet<N> {
+    pub fn fluids_mut(&mut self) -> &mut FluidSet {
         &mut self.fluids
     }
 
     /// The set of boundaries on this liquid world.
-    pub fn boundaries(&self) -> &BoundarySet<N> {
+    pub fn boundaries(&self) -> &BoundarySet {
         &self.boundaries
     }
 
     /// The mutable set of boundaries on this liquid world.
-    pub fn boundaries_mut(&mut self) -> &mut BoundarySet<N> {
+    pub fn boundaries_mut(&mut self) -> &mut BoundarySet {
         &mut self.boundaries
     }
 

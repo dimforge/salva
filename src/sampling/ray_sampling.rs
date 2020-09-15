@@ -1,4 +1,4 @@
-use crate::math::{Isometry, Point, Vector, DIM};
+use crate::math::{Isometry, Point, Real, Vector, DIM};
 use na::RealField;
 use ncollide::bounding_volume::{BoundingVolume, AABB};
 use ncollide::query::{Ray, RayCast};
@@ -6,31 +6,31 @@ use ncollide::shape::Shape;
 use std::collections::HashSet;
 
 /// Samples the surface of `shape` with a method based on ray-casting.
-pub fn shape_surface_ray_sample<N: RealField, S: ?Sized + Shape<N>>(
+pub fn shape_surface_ray_sample<N: RealField, S: ?Sized + Shape<Real>>(
     shape: &S,
-    particle_rad: N,
-) -> Option<Vec<Point<N>>> {
+    particle_rad: Real,
+) -> Option<Vec<Point<Real>>> {
     let rc = shape.as_ray_cast()?;
     let aabb = shape.local_aabb();
     Some(surface_ray_sample(rc, &aabb, particle_rad))
 }
 
 /// Samples the volume of `shape` with a method based on ray-casting.
-pub fn shape_volume_ray_sample<N: RealField, S: ?Sized + Shape<N>>(
+pub fn shape_volume_ray_sample<N: RealField, S: ?Sized + Shape<Real>>(
     shape: &S,
-    particle_rad: N,
-) -> Option<Vec<Point<N>>> {
+    particle_rad: Real,
+) -> Option<Vec<Point<Real>>> {
     let rc = shape.as_ray_cast()?;
     let aabb = shape.local_aabb();
     Some(volume_ray_sample(rc, &aabb, particle_rad))
 }
 
 /// Samples the surface of `shape` with a method based on ray-casting.
-pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
+pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<Real>>(
     shape: &S,
-    volume: &AABB<N>,
-    particle_rad: N,
-) -> Vec<Point<N>> {
+    volume: &AABB<Real>,
+    particle_rad: Real,
+) -> Vec<Point<Real>> {
     let mut quantized_points = HashSet::new();
     let subdivision_size = particle_rad * na::convert(2.0);
 
@@ -91,11 +91,11 @@ pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
 }
 
 /// Samples the volume of `shape` with a method based on ray-casting.
-pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
+pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<Real>>(
     shape: &S,
-    volume: &AABB<N>,
-    particle_rad: N,
-) -> Vec<Point<N>> {
+    volume: &AABB<Real>,
+    particle_rad: Real,
+) -> Vec<Point<Real>> {
     let mut quantized_points = HashSet::new();
     let subdivision_size = particle_rad * na::convert(2.0);
 
@@ -167,12 +167,12 @@ pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<N>>(
     unquantize_points(&origin, subdivision_size, &quantized_points)
 }
 
-fn sample_segment<N: RealField>(
-    origin: &Point<N>,
-    start: &Point<N>,
-    a: N,
-    b: N,
-    subdivision_size: N,
+fn sample_segment(
+    origin: &Point<Real>,
+    start: &Point<Real>,
+    a: Real,
+    b: Real,
+    subdivision_size: Real,
     dimension: usize,
     out: &mut HashSet<Point<u32>>,
 ) {
@@ -194,11 +194,11 @@ fn sample_segment<N: RealField>(
     }
 }
 
-fn unquantize_points<N: RealField>(
-    origin: &Point<N>,
-    subdivision_size: N,
+fn unquantize_points(
+    origin: &Point<Real>,
+    subdivision_size: Real,
     quantized_points: &HashSet<Point<u32>>,
-) -> Vec<Point<N>> {
+) -> Vec<Point<Real>> {
     quantized_points
         .iter()
         .map(|qpt| {
@@ -210,10 +210,10 @@ fn unquantize_points<N: RealField>(
         .collect()
 }
 
-fn quantize_point<N: RealField>(
-    origin: &Point<N>,
-    point: &Point<N>,
-    subdivision_size: N,
+fn quantize_point(
+    origin: &Point<Real>,
+    point: &Point<Real>,
+    subdivision_size: Real,
     entry_point: bool,
     leading_dimension: usize,
 ) -> Point<u32> {

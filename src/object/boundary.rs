@@ -1,4 +1,4 @@
-use crate::math::{Isometry, Point, Vector};
+use crate::math::{Isometry, Point, Real, Vector};
 use crate::object::{ContiguousArena, ContiguousArenaIndex};
 use na::{self, RealField};
 use std::sync::RwLock;
@@ -6,22 +6,22 @@ use std::sync::RwLock;
 /// A boundary object.
 ///
 /// A boundary object is composed of static particles, or of particles coupled with non-fluid bodies.
-pub struct Boundary<N: RealField> {
+pub struct Boundary {
     /// The world-space position of the boundary particles.
-    pub positions: Vec<Point<N>>,
+    pub positions: Vec<Point<Real>>,
     /// The artificial velocities of each boundary particle.
-    pub velocities: Vec<Vector<N>>,
+    pub velocities: Vec<Vector<Real>>,
     /// The volume computed for each boundary particle.
-    pub volumes: Vec<N>,
+    pub volumes: Vec<Real>,
     /// The forces applied to each particle of this boundary object.
     /// If this is set to `None` (which is the default), the boundary won't receive any
     /// force for fluids.
-    pub forces: Option<RwLock<Vec<Vector<N>>>>,
+    pub forces: Option<RwLock<Vec<Vector<Real>>>>,
 }
 
-impl<N: RealField> Boundary<N> {
+impl Boundary {
     /// Initialize a boundary object with the given particles.
-    pub fn new(particle_positions: Vec<Point<N>>) -> Self {
+    pub fn new(particle_positions: Vec<Point<Real>>) -> Self {
         let num_particles = particle_positions.len();
         let velocities = std::iter::repeat(Vector::zeros())
             .take(num_particles)
@@ -42,14 +42,14 @@ impl<N: RealField> Boundary<N> {
     }
 
     /// Transforms all the particle positions of this boundary by the given isometry.
-    pub fn transform_by(&mut self, pose: &Isometry<N>) {
+    pub fn transform_by(&mut self, pose: &Isometry<Real>) {
         self.positions.iter_mut().for_each(|p| *p = pose * *p);
     }
 
     /// Apply a force `f` to the `i`-th particle of this boundary object.
     ///
     /// This call relies on thread-safe interior mutability.
-    pub fn apply_force(&self, i: usize, f: Vector<N>) {
+    pub fn apply_force(&self, i: usize, f: Vector<Real>) {
         if let Some(forces) = &self.forces {
             let mut forces = forces.write().unwrap();
             forces[i] += f;
@@ -76,7 +76,7 @@ impl<N: RealField> Boundary<N> {
 /// The unique identifier of a boundary object.
 pub struct BoundaryHandle(ContiguousArenaIndex);
 /// A set of all boundary objects.
-pub type BoundarySet<N> = ContiguousArena<BoundaryHandle, Boundary<N>>;
+pub type BoundarySet = ContiguousArena<BoundaryHandle, Boundary>;
 
 impl From<ContiguousArenaIndex> for BoundaryHandle {
     #[inline]

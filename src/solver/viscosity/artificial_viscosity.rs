@@ -5,7 +5,7 @@ use na::{self, RealField};
 
 use crate::geometry::ParticlesContacts;
 
-use crate::math::Vector;
+use crate::math::{Real, Vector};
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
@@ -13,24 +13,24 @@ use crate::TimestepManager;
 // See http://www.astro.lu.se/~david/teaching/SPH/notes/annurev.aa.30.090192.pdf
 /// Implements artificial viscosity.
 #[derive(Clone)]
-pub struct ArtificialViscosity<N: RealField> {
+pub struct ArtificialViscosity {
     /// The coefficient of the linear part of the viscosity.
-    pub alpha: N,
+    pub alpha: Real,
     /// The coefficient of the quadratic part of the viscosity.
-    pub beta: N,
+    pub beta: Real,
     /// The speed of sound.
-    pub speed_of_sound: N,
+    pub speed_of_sound: Real,
     /// The fluid viscosity coefficient.
-    pub fluid_viscosity_coefficient: N,
+    pub fluid_viscosity_coefficient: Real,
     /// The viscosity coefficient when interacting with boundaries.
-    pub boundary_viscosity_coefficient: N,
+    pub boundary_viscosity_coefficient: Real,
 }
 
-impl<N: RealField> ArtificialViscosity<N> {
+impl ArtificialViscosity<Real> {
     /// Initializes the artificial viscosity with the given viscosity coefficients.
-    pub fn new(fluid_viscosity_coefficient: N, boundary_viscosity_coefficient: N) -> Self {
+    pub fn new(fluid_viscosity_coefficient: Real, boundary_viscosity_coefficient: Real) -> Self {
         Self {
-            alpha: N::one(),
+            alpha: Real::one(),
             beta: na::convert(0.0),
             speed_of_sound: na::convert(10.0),
             fluid_viscosity_coefficient,
@@ -39,15 +39,15 @@ impl<N: RealField> ArtificialViscosity<N> {
     }
 }
 
-impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
+impl NonPressureForce<Real> for ArtificialViscosity<Real> {
     fn solve(
         &mut self,
-        _timestep: &TimestepManager<N>,
-        kernel_radius: N,
-        fluid_fluid_contacts: &ParticlesContacts<N>,
-        fluid_boundaries_contacts: &ParticlesContacts<N>,
-        fluid: &mut Fluid<N>,
-        boundaries: &[Boundary<N>],
+        _timestep: &TimestepManager,
+        kernel_radius: Real,
+        fluid_fluid_contacts: &ParticlesContacts,
+        fluid_boundaries_contacts: &ParticlesContacts,
+        fluid: &mut Fluid,
+        boundaries: &[Boundary],
         densities: &[N],
     ) {
         let fluid_viscosity_coefficient = self.fluid_viscosity_coefficient;
@@ -59,7 +59,7 @@ impl<N: RealField> NonPressureForce<N> for ArtificialViscosity<N> {
         let volumes = &fluid.volumes;
         let positions = &fluid.positions;
         let velocities = &fluid.velocities;
-        let _0_5: N = na::convert(0.5);
+        let _0_5: Real = na::convert(0.5);
 
         par_iter_mut!(fluid.accelerations)
             .enumerate()

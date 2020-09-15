@@ -1,4 +1,5 @@
 use crate::kernel::Kernel;
+use crate::math::Real;
 use na::RealField;
 
 /// The Viscosity smoothing kernel.
@@ -8,11 +9,11 @@ use na::RealField;
 pub struct ViscosityKernel;
 
 impl Kernel for ViscosityKernel {
-    fn scalar_apply<N: RealField>(r: N, h: N) -> N {
+    fn scalar_apply(r: Real, h: Real) -> N {
         assert!(r >= N::zero());
 
-        let _2: N = na::convert(2.0);
-        let _3: N = na::convert(3.0);
+        let _2: Real = na::convert(2.0);
+        let _3: Real = na::convert(3.0);
 
         #[cfg(feature = "dim2")]
         let normalizer = na::convert::<_, N>(10.0) / (_3 * N::pi() * h.powi(2));
@@ -27,11 +28,11 @@ impl Kernel for ViscosityKernel {
         }
     }
 
-    fn scalar_apply_diff<N: RealField>(r: N, h: N) -> N {
+    fn scalar_apply_diff(r: Real, h: Real) -> N {
         assert!(r >= N::zero());
 
-        let _2: N = na::convert(2.0);
-        let _3: N = na::convert(3.0);
+        let _2: Real = na::convert(2.0);
+        let _3: Real = na::convert(3.0);
 
         #[cfg(feature = "dim2")]
         let normalizer = na::convert::<_, N>(10.0) / (_3 * N::pi() * h.powi(2));

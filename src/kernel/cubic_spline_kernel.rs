@@ -1,4 +1,5 @@
 use crate::kernel::Kernel;
+use crate::math::Real;
 use na::RealField;
 
 /// The cubic spline smoothing kernel.
@@ -8,7 +9,7 @@ use na::RealField;
 pub struct CubicSplineKernel;
 
 impl Kernel for CubicSplineKernel {
-    fn scalar_apply<N: RealField>(r: N, h: N) -> N {
+    fn scalar_apply(r: Real, h: Real) -> N {
         assert!(r >= N::zero());
 
         #[cfg(feature = "dim2")]
@@ -16,7 +17,7 @@ impl Kernel for CubicSplineKernel {
         #[cfg(feature = "dim3")]
         let normalizer = na::convert::<_, N>(8.0) / (N::pi() * h * h * h);
 
-        let _2: N = na::convert(2.0);
+        let _2: Real = na::convert(2.0);
         let q = r / h;
 
         let rhs = if q <= na::convert(0.5) {
@@ -37,8 +38,8 @@ impl Kernel for CubicSplineKernel {
         #[cfg(feature = "dim3")]
             let normalizer = N::one() / (N::pi() * h * h * h);
 
-        let _2: N = na::convert(2.0);
-        let _3: N = na::convert(3.0);
+        let _2: Real = na::convert(2.0);
+        let _3: Real = na::convert(3.0);
         let rhs = if q <= N::one() {
             N::one() - _3 / _2 * q * q * (N::one() - q / _2)
         } else if q <= _2 {
@@ -51,7 +52,7 @@ impl Kernel for CubicSplineKernel {
         */
     }
 
-    fn scalar_apply_diff<N: RealField>(r: N, h: N) -> N {
+    fn scalar_apply_diff(r: Real, h: Real) -> N {
         assert!(r >= N::zero());
 
         #[cfg(feature = "dim2")]
@@ -59,8 +60,8 @@ impl Kernel for CubicSplineKernel {
         #[cfg(feature = "dim3")]
         let normalizer = na::convert::<_, N>(8.0) / (N::pi() * h * h * h);
 
-        let _2: N = na::convert(2.0);
-        let _3: N = na::convert(3.0);
+        let _2: Real = na::convert(2.0);
+        let _3: Real = na::convert(3.0);
         let q = r / h;
 
         let rhs = if q <= na::convert(0.5) {
@@ -81,8 +82,8 @@ impl Kernel for CubicSplineKernel {
         #[cfg(feature = "dim3")]
             let normalizer = N::one() / (N::pi() * h * h * h);
 
-        let _2: N = na::convert(2.0);
-        let _3: N = na::convert(3.0);
+        let _2: Real = na::convert(2.0);
+        let _3: Real = na::convert(3.0);
         let rhs = if q <= N::one() {
             -_3 * q * (N::one() - q * na::convert(3.0 / 4.0))
         } else if q <= _2 {

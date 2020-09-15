@@ -1,6 +1,6 @@
 use crate::coupling::CouplingManager;
 use crate::geometry::{HGrid, HGridEntry};
-use crate::math::{Point, Vector};
+use crate::math::{Point, Real, Vector};
 use crate::object::Fluid;
 use crate::object::{BoundaryHandle, BoundarySet};
 use crate::TimestepManager;
@@ -14,25 +14,25 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 
 /// The way a collider is coupled to a boundary object.
-pub enum CouplingMethod<N: RealField> {
+pub enum CouplingMethod {
     /// The collider shape is approximated with the given sample points in local-space.
     ///
     /// It is recommanded that those points are separated by a distance smaller or equal to twice
     /// the particle radius used to initialize the LiquidWorld.
-    StaticSampling(Vec<Point<N>>),
+    StaticSampling(Vec<Point<Real>>),
     /// The colliser shape is approximated by a dynamic set of points automatically computed based on contacts with fluid particles.
     DynamicContactSampling,
 }
 
-struct ColliderCouplingEntry<N: RealField> {
-    coupling_method: CouplingMethod<N>,
+struct ColliderCouplingEntry {
+    coupling_method: CouplingMethod,
     boundary: BoundaryHandle,
     features: Vec<FeatureId>,
 }
 
 /// Structure managing all the coupling between colliders from nphysics with boundaries and fluids from salva.
 pub struct ColliderCouplingSet<N: RealField, CollHandle: ColliderHandle> {
-    entries: HashMap<CollHandle, ColliderCouplingEntry<N>>,
+    entries: HashMap<CollHandle, ColliderCouplingEntry<Real>>,
 }
 
 impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle> {
@@ -51,7 +51,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle
         &mut self,
         boundary: BoundaryHandle,
         collider: CollHandle,
-        coupling_method: CouplingMethod<N>,
+        coupling_method: CouplingMethod,
     ) -> Option<BoundaryHandle> {
         let old = self.entries.insert(
             collider,
@@ -81,7 +81,7 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle
     ) -> ColliderCouplingManager<N, Colliders, Bodies>
     where
         Colliders: ColliderSet<N, Bodies::Handle, Handle = CollHandle>,
-        Bodies: BodySet<N>,
+        Bodies: BodySet<Real>,
     {
         ColliderCouplingManager {
             coupling: self,
@@ -97,28 +97,27 @@ pub struct ColliderCouplingManager<'a, N: RealField, Colliders, Bodies>
 where
     N: RealField,
     Colliders: ColliderSet<N, Bodies::Handle>,
-    Bodies: BodySet<N>,
+    Bodies: BodySet<Real>,
 {
     coupling: &'a mut ColliderCouplingSet<N, Colliders::Handle>,
     colliders: &'a Colliders,
     bodies: &'a mut Bodies,
 }
 
-impl<'a, N, Colliders, Bodies> CouplingManager<N>
-    for ColliderCouplingManager<'a, N, Colliders, Bodies>
+impl<'a, N, Colliders, Bodies> CouplingManager for ColliderCouplingManager<'a, N, Colliders, Bodies>
 where
     N: RealField,
     Colliders: ColliderSet<N, Bodies::Handle>,
-    Bodies: BodySet<N>,
+    Bodies: BodySet<Real>,
 {
     fn update_boundaries(
         &mut self,
-        timestep: &TimestepManager<N>,
-        h: N,
-        particle_radius: N,
+        timestep: &TimestepManager,
+        h: Real,
+        particle_radius: Real,
         hgrid: &HGrid<N, HGridEntry>,
-        fluids: &mut [Fluid<N>],
-        boundaries: &mut BoundarySet<N>,
+        fluids: &mut [Fluid],
+        boundaries: &mut BoundarySet,
     ) {
         for (collider, coupling) in &mut self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
@@ -243,7 +242,7 @@ where
         }
     }
 
-    fn transmit_forces(&mut self, boundaries: &BoundarySet<N>) {
+    fn transmit_forces(&mut self, boundaries: &BoundarySet) {
         for (collider, coupling) in &self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
                 self.colliders.get(*collider),

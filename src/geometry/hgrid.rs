@@ -2,7 +2,7 @@ use fnv::FnvHasher;
 use na::RealField;
 use std::collections::HashMap;
 
-use crate::math::{Point, Vector, DIM};
+use crate::math::{Point, Real, Vector, DIM};
 
 use std::hash::BuildHasher;
 
@@ -21,12 +21,12 @@ impl BuildHasher for DeterministicState {
 #[derive(PartialEq, Debug, Clone)]
 pub struct HGrid<N: RealField, T> {
     cells: HashMap<Point<i64>, Vec<T>, DeterministicState>,
-    cell_width: N,
+    cell_width: Real,
 }
 
 impl<N: RealField, T> HGrid<N, T> {
     /// Initialize a grid where each cell has the width `cell_width`.
-    pub fn new(cell_width: N) -> Self {
+    pub fn new(cell_width: Real) -> Self {
         Self {
             cells: HashMap::with_hasher(DeterministicState),
             cell_width,
@@ -38,16 +38,16 @@ impl<N: RealField, T> HGrid<N, T> {
         self.cell_width
     }
 
-    fn quantify(value: N, cell_width: N) -> i64 {
+    fn quantify(value: Real, cell_width: Real) -> i64 {
         na::try_convert::<N, f64>((value / cell_width).floor()).unwrap() as i64
     }
 
-    fn quantify_ceil(value: N, cell_width: N) -> i64 {
+    fn quantify_ceil(value: Real, cell_width: Real) -> i64 {
         na::try_convert::<N, f64>((value / cell_width).ceil()).unwrap() as i64
     }
 
     /// Computes the logical grid cell containing `point`.
-    pub fn key(&self, point: &Point<N>) -> Point<i64> {
+    pub fn key(&self, point: &Point<Real>) -> Point<i64> {
         Point::from(point.coords.map(|e| Self::quantify(e, self.cell_width)))
     }
 
@@ -57,7 +57,7 @@ impl<N: RealField, T> HGrid<N, T> {
     }
 
     /// Inserts the given `element` into the cell containing the given `point`.
-    pub fn insert(&mut self, point: &Point<N>, element: T) {
+    pub fn insert(&mut self, point: &Point<Real>, element: T) {
         let key = self.key(point);
         self.cells.entry(key).or_insert(Vec::new()).push(element)
     }
@@ -65,7 +65,7 @@ impl<N: RealField, T> HGrid<N, T> {
     /// Returns the element attached to the cell containing the given `point`.
     ///
     /// Returns `None` if the cell is empty.
-    pub fn cell_containing_point(&self, point: &Point<N>) -> Option<&Vec<T>> {
+    pub fn cell_containing_point(&self, point: &Point<Real>) -> Option<&Vec<T>> {
         let key = self.key(point);
         self.cells.get(&key)
     }
@@ -93,7 +93,7 @@ impl<N: RealField, T> HGrid<N, T> {
     pub fn neighbor_cells(
         &self,
         cell: &Point<i64>,
-        radius: N,
+        radius: Real,
     ) -> impl Iterator<Item = (Point<i64>, &Vec<T>)> {
         let cells = &self.cells;
         let quantified_radius = Self::quantify_ceil(radius, self.cell_width);
@@ -104,8 +104,8 @@ impl<N: RealField, T> HGrid<N, T> {
 
     //    pub fn elements_close_to_point<'a>(
     //        &'a self,
-    //        point: &Point<N>,
-    //        radius: N,
+    //        point: &Point<Real>,
+    //        radius: Real,
     //    ) -> impl Iterator<Item = &T>
     //    {
     //        let key = self.key(point, self.cell_width);
@@ -121,8 +121,8 @@ impl<N: RealField, T> HGrid<N, T> {
     /// An iterator through all the cells intersecting the given AABB.
     pub fn cells_intersecting_aabb(
         &self,
-        mins: &Point<N>,
-        maxs: &Point<N>,
+        mins: &Point<Real>,
+        maxs: &Point<Real>,
     ) -> impl Iterator<Item = (Point<i64>, &Vec<T>)> {
         let cells = &self.cells;
         let start = self.key(mins);
@@ -132,7 +132,7 @@ impl<N: RealField, T> HGrid<N, T> {
             .filter_map(move |cell| cells.get(&cell).map(|c| (cell, c)))
     }
 
-    //    pub fn elements_containing_point(&self, point: &Point<N>) -> impl Iterator<Item = &T> {
+    //    pub fn elements_containing_point(&self, point: &Point<Real>) -> impl Iterator<Item = &T> {
     //        std::iter::empty()
     //    }
 }

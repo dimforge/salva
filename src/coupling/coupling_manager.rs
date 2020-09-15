@@ -7,7 +7,7 @@ use crate::TimestepManager;
 /// Trait that needs to be implemented by middlewares responsible for
 /// coupling bodies from a rigid-body physic framework (nphysics, bullet, PhysX, etc.)
 /// with boundary objects of salva.
-pub trait CouplingManager<N: RealField> {
+pub trait CouplingManager {
     /// Updates the boundary objects from the coupled bodies.
     ///
     /// The goal of this method is to update the particles composing the boundary
@@ -16,29 +16,29 @@ pub trait CouplingManager<N: RealField> {
     /// This also updates the velocity at those particles.
     fn update_boundaries(
         &mut self,
-        timestep: &TimestepManager<N>,
-        h: N,
-        particle_radius: N,
+        timestep: &TimestepManager,
+        h: Real,
+        particle_radius: Real,
         hgrid: &HGrid<N, HGridEntry>,
-        fluids: &mut [Fluid<N>],
-        boundaries: &mut BoundarySet<N>,
+        fluids: &mut [Fluid],
+        boundaries: &mut BoundarySet,
     );
 
     /// Transmit forces from salva's boundary objects to the coupled bodies.
-    fn transmit_forces(&mut self, boundaries: &BoundarySet<N>);
+    fn transmit_forces(&mut self, boundaries: &BoundarySet);
 }
 
-impl<N: RealField> CouplingManager<N> for () {
+impl CouplingManager for () {
     fn update_boundaries(
         &mut self,
-        _: &TimestepManager<N>,
-        _: N,
-        _: N,
+        _: &TimestepManager,
+        _: Real,
+        _: Real,
         _: &HGrid<N, HGridEntry>,
-        _: &mut [Fluid<N>],
-        _: &mut BoundarySet<N>,
+        _: &mut [Fluid],
+        _: &mut BoundarySet,
     ) {
     }
 
-    fn transmit_forces(&mut self, _: &BoundarySet<N>) {}
+    fn transmit_forces(&mut self, _: &BoundarySet) {}
 }

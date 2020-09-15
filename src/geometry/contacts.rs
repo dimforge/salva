@@ -1,6 +1,6 @@
 use crate::counters::Counters;
 use crate::geometry::HGrid;
-use crate::math::{Point, Vector};
+use crate::math::{Point, Real, Vector};
 use crate::object::Boundary;
 use crate::object::Fluid;
 use na::RealField;
@@ -37,7 +37,7 @@ impl HGridEntry {
 /// only result in a force applied by the particle `j` to the particle `i`. The force applied by
 /// `i` on `j` will result from another contacts.
 /// In other words, for each par of distinct fluid particles, there will be be two symmetric contacts.
-pub struct Contact<N: RealField> {
+pub struct Contact {
     /// The index of the first particle involved in this contact.
     pub i: usize,
     /// The index of the first fluid involved in this contact.
@@ -48,13 +48,13 @@ pub struct Contact<N: RealField> {
     pub j_model: usize,
     /// The kernel evaluated at `xi - xj` where `xi` is the position of the
     /// particle `i`, and `xj` is the position of the particle `j`.
-    pub weight: N,
+    pub weight: Real,
     /// The kernel gradient evaluated at `xi - xj` where `xi` is the position of the
     /// particle `i`, and `xj` is the position of the particle `j`.
-    pub gradient: Vector<N>,
+    pub gradient: Vector<Real>,
 }
 
-impl<N: RealField> Contact<N> {
+impl Contact<Real> {
     /// Flips this contact by swapping `i` with `j`, `i_model` with `j_model`, and by negating the gradient.
     pub fn flip(&self) -> Self {
         Self {
@@ -80,13 +80,13 @@ impl<N: RealField> Contact<N> {
 
 #[derive(Debug)]
 /// The set of contacts affecting the particles of a single fluid.
-pub struct ParticlesContacts<N: RealField> {
+pub struct ParticlesContacts {
     // All the particle contact for one model.
     // `self.contacts[i]` contains all the contacts involving the particle `i`.
-    contacts: Vec<RwLock<Vec<Contact<N>>>>,
+    contacts: Vec<RwLock<Vec<Contact<Real>>>>,
 }
 
-impl<N: RealField> ParticlesContacts<N> {
+impl ParticlesContacts {
     /// Creates an empty set of contacts.
     pub fn new() -> Self {
         Self {
@@ -95,26 +95,26 @@ impl<N: RealField> ParticlesContacts<N> {
     }
 
     /// The set of contacts affecting the particle `i`.
-    pub fn particle_contacts(&self, i: usize) -> &RwLock<Vec<Contact<N>>> {
+    pub fn particle_contacts(&self, i: usize) -> &RwLock<Vec<Contact<Real>>> {
         &self.contacts[i]
     }
 
     /// The set of mutable contacts affecting the particle `i`.
-    pub fn particle_contacts_mut(&mut self, i: usize) -> &mut RwLock<Vec<Contact<N>>> {
+    pub fn particle_contacts_mut(&mut self, i: usize) -> &mut RwLock<Vec<Contact<Real>>> {
         &mut self.contacts[i]
     }
 
     /// All the contacts in this set.
     ///
     /// The `self.contacts()[i]` contains all the contact affecting the particle `i`.
-    pub fn contacts(&self) -> &[RwLock<Vec<Contact<N>>>] {
+    pub fn contacts(&self) -> &[RwLock<Vec<Contact<Real>>>] {
         &self.contacts[..]
     }
 
     /// All the mutable contacts in this set.
     ///
     /// The `self.contacts()[i]` contains all the contact affecting the particle `i`.
-    pub fn contacts_mut(&mut self) -> &mut [RwLock<Vec<Contact<N>>>] {
+    pub fn contacts_mut(&mut self) -> &mut [RwLock<Vec<Contact<Real>>>] {
         &mut self.contacts[..]
     }
 
@@ -130,7 +130,7 @@ impl<N: RealField> ParticlesContacts<N> {
 }
 
 /// Insert all the particles from the given fluids into the `grid`.
-pub fn insert_fluids_to_grid<N: RealField>(fluids: &[Fluid<N>], grid: &mut HGrid<N, HGridEntry>) {
+pub fn insert_fluids_to_grid(fluids: &[Fluid], grid: &mut HGrid<N, HGridEntry>) {
     for (fluid_id, fluid) in fluids.iter().enumerate() {
         for (particle_id, point) in fluid.positions.iter().enumerate() {
             grid.insert(&point, HGridEntry::FluidParticle(fluid_id, particle_id));
@@ -139,10 +139,7 @@ pub fn insert_fluids_to_grid<N: RealField>(fluids: &[Fluid<N>], grid: &mut HGrid
 }
 
 /// Insert all the particles from the given boundaries into the `grid`.
-pub fn insert_boundaries_to_grid<N: RealField>(
-    boundaries: &[Boundary<N>],
-    grid: &mut HGrid<N, HGridEntry>,
-) {
+pub fn insert_boundaries_to_grid(boundaries: &[Boundary], grid: &mut HGrid<N, HGridEntry>) {
     for (boundary_id, boundary) in boundaries.iter().enumerate() {
         for (particle_id, point) in boundary.positions.iter().enumerate() {
             grid.insert(
@@ -154,14 +151,14 @@ pub fn insert_boundaries_to_grid<N: RealField>(
 }
 
 /// Compute all the contacts between the particles inserted in `grid`.
-pub fn compute_contacts<N: RealField>(
+pub fn compute_contacts(
     counters: &mut Counters,
     h: N,
-    fluids: &[Fluid<N>],
-    boundaries: &[Boundary<N>],
-    fluid_fluid_contacts: &mut Vec<ParticlesContacts<N>>,
-    fluid_boundary_contacts: &mut Vec<ParticlesContacts<N>>,
-    boundary_boundary_contacts: &mut Vec<ParticlesContacts<N>>,
+    fluids: &[Fluid],
+    boundaries: &[Boundary],
+    fluid_fluid_contacts: &mut Vec<ParticlesContacts>,
+    fluid_boundary_contacts: &mut Vec<ParticlesContacts>,
+    boundary_boundary_contacts: &mut Vec<ParticlesContacts>,
     grid: &HGrid<N, HGridEntry>,
 ) {
     // Needed so the loop in -1..=1 bellow works.
@@ -254,13 +251,13 @@ pub fn compute_contacts<N: RealField>(
     counters.cd.neighborhood_search_time.pause();
 }
 
-fn compute_contacts_for_pair_of_cells<N: RealField>(
+fn compute_contacts_for_pair_of_cells(
     h: N,
-    fluids: &[Fluid<N>],
-    boundaries: &[Boundary<N>],
-    fluid_fluid_contacts: &[ParticlesContacts<N>],
-    fluid_boundary_contacts: &[ParticlesContacts<N>],
-    boundary_boundary_contacts: &[ParticlesContacts<N>],
+    fluids: &[Fluid],
+    boundaries: &[Boundary],
+    fluid_fluid_contacts: &[ParticlesContacts],
+    fluid_boundary_contacts: &[ParticlesContacts],
+    boundary_boundary_contacts: &[ParticlesContacts],
     curr_cell: &Point<i64>,
     curr_particles: &[HGridEntry],
     neighbor_cell: &Point<i64>,
@@ -376,11 +373,7 @@ fn compute_contacts_for_pair_of_cells<N: RealField>(
 }
 
 /// Compute all the contacts between the particles of a single fluid object.
-pub fn compute_self_contacts<N: RealField>(
-    h: N,
-    fluid: &Fluid<N>,
-    contacts: &mut ParticlesContacts<N>,
-) {
+pub fn compute_self_contacts(h: N, fluid: &Fluid, contacts: &mut ParticlesContacts) {
     contacts
         .contacts
         .iter_mut()

@@ -108,6 +108,9 @@ pub mod math {
     /// The maximum number of possible translations of a rigid body.
     pub const DIM: usize = 3;
 
+    /// The scalar type.
+    pub type Real = f32;
+
     /// The dimension of the ambient space.
     pub type Dim = U3;
 
@@ -118,46 +121,46 @@ pub mod math {
     pub type AngularDim = U3;
 
     /// The point type.
-    pub type Point<N> = Point3<N>;
+    pub type Point<Real> = Point3<Real>;
 
     /// The angular vector type.
-    pub type AngularVector<N> = Vector3<N>;
+    pub type AngularVector<Real> = Vector3<Real>;
 
     /// The vector type.
-    pub type Vector<N> = Vector3<N>;
+    pub type Vector<Real> = Vector3<Real>;
 
     /// The vector type with dimension `SpatialDim × 1`.
-    pub type SpatialVector<N> = Vector6<N>;
+    pub type SpatialVector<Real> = Vector6<Real>;
 
     /// The orientation type.
-    pub type Orientation<N> = Vector3<N>;
+    pub type Orientation<Real> = Vector3<Real>;
 
     /// The transformation matrix type.
-    pub type Isometry<N> = Isometry3<N>;
+    pub type Isometry<Real> = Isometry3<Real>;
 
     /// The rotation type.
-    pub type Rotation<N> = UnitQuaternion<N>;
+    pub type Rotation<Real> = UnitQuaternion<Real>;
 
     /// The rotation matrix type.
-    pub type RotationMatrix<N> = Rotation3<N>;
+    pub type RotationMatrix<Real> = Rotation3<Real>;
 
     /// The translation type.
-    pub type Translation<N> = Translation3<N>;
+    pub type Translation<Real> = Translation3<Real>;
 
     /// The inertia tensor type.
-    pub type AngularInertia<N> = Matrix3<N>;
+    pub type AngularInertia<Real> = Matrix3<Real>;
 
     /// The inertia matrix type.
-    pub type InertiaMatrix<N> = Matrix6<N>;
+    pub type InertiaMatrix<Real> = Matrix6<Real>;
 
     /// Square matrix with dimension `Dim × Dim`.
-    pub type Matrix<N> = Matrix3<N>;
+    pub type Matrix<Real> = Matrix3<Real>;
 
     /// Square matrix with dimension `SpatialDim × SpatialDim`.
-    pub type SpatialMatrix<N> = Matrix6<N>;
+    pub type SpatialMatrix<Real> = Matrix6<Real>;
 
     /// The type of a constraint jacobian in twist coordinates.
-    pub type Jacobian<N> = MatrixMN<N, U6, Dynamic>;
+    pub type Jacobian<Real> = MatrixMN<N, U6, Dynamic>;
 
     /// The type of a slice of the constraint jacobian in twist coordinates.
     pub type JacobianSlice<'a, N> = MatrixSlice6xX<'a, N>;
@@ -166,7 +169,7 @@ pub mod math {
     pub type JacobianSliceMut<'a, N> = MatrixSliceMut6xX<'a, N>;
 
     /// The cross-product matrix for the given vector.
-    pub fn gcross_matrix<N: RealField>(v: &Vector<N>) -> Matrix<N> {
+    pub fn gcross_matrix(v: &Vector<Real>) -> Matrix<Real> {
         v.cross_matrix()
     }
 }
@@ -187,6 +190,9 @@ pub mod math {
     /// The maximum number of possible translations of a rigid body.
     pub const DIM: usize = 2;
 
+    /// The scalar type.
+    pub type Real = f32;
+
     /// The dimension of the ambient space.
     pub type Dim = U2;
 
@@ -197,46 +203,46 @@ pub mod math {
     pub type SpatialDim = U3;
 
     /// The point type.
-    pub type Point<N> = Point2<N>;
+    pub type Point<Real> = Point2<Real>;
 
     /// The vector type with dimension `SpatialDim × 1`.
-    pub type SpatialVector<N> = Vector3<N>;
+    pub type SpatialVector<Real> = Vector3<Real>;
 
     /// The angular vector type.
-    pub type AngularVector<N> = Vector1<N>;
+    pub type AngularVector<Real> = Vector1<Real>;
 
     /// The vector type.
-    pub type Vector<N> = Vector2<N>;
+    pub type Vector<Real> = Vector2<Real>;
 
     /// The orientation type.
-    pub type Orientation<N> = Vector1<N>;
+    pub type Orientation<Real> = Vector1<Real>;
 
     /// The transformation matrix type.
-    pub type Isometry<N> = Isometry2<N>;
+    pub type Isometry<Real> = Isometry2<Real>;
 
     /// The rotation type.
-    pub type Rotation<N> = UnitComplex<N>;
+    pub type Rotation<Real> = UnitComplex<Real>;
 
     /// The rotation matrix type.
-    pub type RotationMatrix<N> = Rotation2<N>;
+    pub type RotationMatrix<Real> = Rotation2<Real>;
 
     /// The translation type.
-    pub type Translation<N> = Translation2<N>;
+    pub type Translation<Real> = Translation2<Real>;
 
     /// The inertia tensor type.
-    pub type AngularInertia<N> = Matrix1<N>;
+    pub type AngularInertia<Real> = Matrix1<Real>;
 
     /// The inertia matrix type.
-    pub type InertiaMatrix<N> = Matrix3<N>;
+    pub type InertiaMatrix<Real> = Matrix3<Real>;
 
     /// Square matrix with dimension `Dim × Dim`.
-    pub type Matrix<N> = Matrix2<N>;
+    pub type Matrix<Real> = Matrix2<Real>;
 
     /// Square matrix with dimension `SpatialDim × SpatialDim`.
-    pub type SpatialMatrix<N> = Matrix3<N>;
+    pub type SpatialMatrix<Real> = Matrix3<Real>;
 
     /// The type of a constraint jacobian in twist coordinates.
-    pub type Jacobian<N> = MatrixMN<N, U3, Dynamic>;
+    pub type Jacobian<Real> = MatrixMN<N, U3, Dynamic>;
 
     /// The type of a slice of the constraint jacobian in twist coordinates.
     pub type JacobianSlice<'a, N> = MatrixSlice3xX<'a, N>;
@@ -245,7 +251,7 @@ pub mod math {
     pub type JacobianSliceMut<'a, N> = MatrixSliceMut3xX<'a, N>;
 
     /// The cross-product matrix for the given vector, generalized in 2D.
-    pub fn gcross_matrix<N: RealField>(v: &Vector<N>) -> RowVector2<N> {
+    pub fn gcross_matrix(v: &Vector<Real>) -> RowVector2<Real> {
         RowVector2::new(-v.y, v.x)
     }
 }

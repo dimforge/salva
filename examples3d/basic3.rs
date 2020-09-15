@@ -86,6 +86,8 @@ pub fn init_world(testbed: &mut Testbed) {
     ];
 
     for pose in wall_poses.iter() {
+        let samples =
+            salva3d::sampling::shape_surface_ray_sample(&*wall_shape, particle_rad).unwrap();
         let co = ColliderDesc::new(wall_shape.clone())
             .position(*pose)
             .build(BodyPartHandle(ground_handle, 0));
@@ -95,10 +97,12 @@ pub fn init_world(testbed: &mut Testbed) {
         coupling_manager.register_coupling(
             bo_handle,
             co_handle,
-            CouplingMethod::DynamicContactSampling,
+            CouplingMethod::StaticSampling(samples),
         );
     }
 
+    let samples =
+        salva3d::sampling::shape_surface_ray_sample(&*ground_shape, particle_rad).unwrap();
     let co = ColliderDesc::new(ground_shape).build(BodyPartHandle(ground_handle, 0));
     let co_handle = colliders.insert(co);
     let bo_handle = liquid_world.add_boundary(Boundary::new(Vec::new()));
@@ -106,7 +110,7 @@ pub fn init_world(testbed: &mut Testbed) {
     coupling_manager.register_coupling(
         bo_handle,
         co_handle,
-        CouplingMethod::DynamicContactSampling,
+        CouplingMethod::StaticSampling(samples),
     );
 
     /*
