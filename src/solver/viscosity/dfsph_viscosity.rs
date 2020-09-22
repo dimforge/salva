@@ -1,8 +1,6 @@
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use na::{self, RealField};
-
 use crate::geometry::ParticlesContacts;
 use crate::math::{Real, Vector, SPATIAL_DIM};
 use crate::object::{Boundary, Fluid};
@@ -28,7 +26,7 @@ struct StrainRates {
     error: StrainRate<Real>,
 }
 
-impl StrainRates<Real> {
+impl StrainRates {
     pub fn new() -> Self {
         Self {
             target: StrainRate::zeros(),
@@ -38,7 +36,7 @@ impl StrainRates<Real> {
 }
 
 fn compute_strain_rate(gradient: &Vector<Real>, v_ji: &Vector<Real>) -> StrainRate<Real> {
-    let _2: Real = na::convert(2.0f64);
+    let _2: Real = na::convert::<_, Real>(2.0f64);
 
     #[cfg(feature = "dim3")]
     return StrainRate::new(
@@ -59,25 +57,25 @@ fn compute_strain_rate(gradient: &Vector<Real>, v_ji: &Vector<Real>) -> StrainRa
 }
 
 fn compute_gradient_matrix(gradient: &Vector<Real>) -> BetaGradientMatrix<Real> {
-    let _2: Real = na::convert(2.0f64);
+    let _2: Real = na::convert::<_, Real>(2.0f64);
 
     #[cfg(feature = "dim2")]
         #[rustfmt::skip]
         return BetaGradientMatrix::new(
-        gradient.x * _2, N::zero(),
-        N::zero(), gradient.y * _2,
+        gradient.x * _2, na::zero::<Real>(),
+        na::zero::<Real>(), gradient.y * _2,
         gradient.y, gradient.x,
     );
 
     #[cfg(feature = "dim3")]
         #[rustfmt::skip]
         return BetaGradientMatrix::new(
-        gradient.x * _2, N::zero(), N::zero(),
-        N::zero(), gradient.y * _2, N::zero(),
-        N::zero(), N::zero(), gradient.z * _2,
-        gradient.y, gradient.x, N::zero(),
-        gradient.z, N::zero(), gradient.x,
-        N::zero(), gradient.z, gradient.y,
+        gradient.x * _2, na::zero::<Real>(), na::zero::<Real>(),
+        na::zero::<Real>(), gradient.y * _2, na::zero::<Real>(),
+        na::zero::<Real>(), na::zero::<Real>(), gradient.z * _2,
+        gradient.y, gradient.x, na::zero::<Real>(),
+        gradient.z, na::zero::<Real>(), gradient.x,
+        na::zero::<Real>(), gradient.z, gradient.y,
     );
 }
 
@@ -98,21 +96,22 @@ pub struct DFSPHViscosity {
     /// The viscosity coefficient.
     pub viscosity_coefficient: Real,
     betas: Vec<BetaMatrix<Real>>,
-    strain_rates: Vec<StrainRates<Real>>,
+    strain_rates: Vec<StrainRates>,
 }
 
-impl DFSPHViscosity<Real> {
+impl DFSPHViscosity {
     /// Initialize a new DFSPH visocisity solver.
     pub fn new(viscosity_coefficient: Real) -> Self {
         assert!(
-            viscosity_coefficient >= N::zero() && viscosity_coefficient <= N::one(),
+            viscosity_coefficient >= na::zero::<Real>()
+                && viscosity_coefficient <= na::one::<Real>(),
             "The viscosity coefficient must be between 0.0 and 1.0."
         );
 
         Self {
             min_viscosity_iter: 1,
             max_viscosity_iter: 50,
-            max_viscosity_error: na::convert(0.01),
+            max_viscosity_error: na::convert::<_, Real>(0.01),
             viscosity_coefficient,
             betas: Vec::new(),
             strain_rates: Vec::new(),
@@ -132,9 +131,9 @@ impl DFSPHViscosity<Real> {
         &mut self,
         fluid_fluid_contacts: &ParticlesContacts,
         fluid: &Fluid,
-        densities: &[N],
+        densities: &[Real],
     ) {
-        let _2: Real = na::convert(2.0f64);
+        let _2: Real = na::convert::<_, Real>(2.0f64);
 
         par_iter_mut!(self.betas)
             .enumerate()
@@ -162,10 +161,10 @@ impl DFSPHViscosity<Real> {
                 // Preconditionner.
                 let mut inv_diag = denominator.diagonal();
                 inv_diag.apply(|n| {
-                    if n.abs() < na::convert(1.0e-6) {
-                        N::one()
+                    if n.abs() < na::convert::<_, Real>(1.0e-6) {
+                        na::one::<Real>()
                     } else {
-                        N::one() / n
+                        na::one::<Real>() / n
                     }
                 });
 
@@ -174,7 +173,7 @@ impl DFSPHViscosity<Real> {
                 }
 
                 if SPATIAL_DIM == 3 {
-                    if denominator.determinant().abs() < na::convert(1.0e-6) {
+                    if denominator.determinant().abs() < na::convert::<_, Real>(1.0e-6) {
                         *beta_i = BetaMatrix::zeros()
                     } else {
                         *beta_i = denominator
@@ -184,7 +183,7 @@ impl DFSPHViscosity<Real> {
                 }
                 let lu = denominator.lu();
 
-                if lu.determinant().abs() < na::convert(1.0e-6) {
+                if lu.determinant().abs() < na::convert::<_, Real>(1.0e-6) {
                     *beta_i = BetaMatrix::zeros();
                 } else {
                     *beta_i = lu.try_inverse().unwrap_or_else(|| BetaMatrix::zeros());
@@ -202,12 +201,12 @@ impl DFSPHViscosity<Real> {
         timestep: &TimestepManager,
         fluid_fluid_contacts: &ParticlesContacts,
         fluid: &Fluid,
-        densities: &[N],
+        densities: &[Real],
         compute_error: bool,
-    ) -> N {
-        let mut max_error = N::zero();
+    ) -> Real {
+        let mut max_error = na::zero::<Real>();
         let viscosity_coefficient = self.viscosity_coefficient;
-        let _2: Real = na::convert(2.0f64);
+        let _2: Real = na::convert::<_, Real>(2.0f64);
 
         let it = par_iter_mut!(self.strain_rates)
             .enumerate()
@@ -232,18 +231,19 @@ impl DFSPHViscosity<Real> {
 
                 if compute_error {
                     strain_rates_i.error = fluid_rate - strain_rates_i.target;
-                    strain_rates_i.error.lp_norm(1) / na::convert(6.0f64)
+                    strain_rates_i.error.lp_norm(1) / na::convert::<_, Real>(6.0f64)
                 } else {
-                    strain_rates_i.target = fluid_rate * (N::one() - viscosity_coefficient);
-                    N::zero()
+                    strain_rates_i.target =
+                        fluid_rate * (na::one::<Real>() - viscosity_coefficient);
+                    na::zero::<Real>()
                 }
             });
 
-        let err = par_reduce_sum!(N::zero(), it);
+        let err = par_reduce_sum!(na::zero::<Real>(), it);
 
         let nparts = fluid.num_particles();
         if nparts != 0 {
-            max_error = max_error.max(err / na::convert(nparts as f64));
+            max_error = max_error.max(err / na::convert::<_, Real>(nparts as f64));
         }
 
         max_error
@@ -254,13 +254,13 @@ impl DFSPHViscosity<Real> {
         timestep: &TimestepManager,
         fluid_fluid_contacts: &ParticlesContacts,
         fluid: &mut Fluid,
-        densities: &[N],
+        densities: &[Real],
     ) {
         let strain_rates = &self.strain_rates;
         let betas = &self.betas;
         let volumes = &fluid.volumes;
         let density0 = fluid.density0;
-        let _2: Real = na::convert(2.0);
+        let _2: Real = na::convert::<_, Real>(2.0);
 
         par_iter_mut!(fluid.accelerations)
             .enumerate()
@@ -288,7 +288,7 @@ impl DFSPHViscosity<Real> {
     }
 }
 
-impl NonPressureForce<Real> for DFSPHViscosity<Real> {
+impl NonPressureForce for DFSPHViscosity {
     fn solve(
         &mut self,
         timestep: &TimestepManager,
@@ -297,7 +297,7 @@ impl NonPressureForce<Real> for DFSPHViscosity<Real> {
         _fluid_boundaries_contacts: &ParticlesContacts,
         fluid: &mut Fluid,
         _boundaries: &[Boundary],
-        densities: &[N],
+        densities: &[Real],
     ) {
         self.init(fluid);
 

@@ -9,24 +9,24 @@ use na::RealField;
 pub struct CubicSplineKernel;
 
 impl Kernel for CubicSplineKernel {
-    fn scalar_apply(r: Real, h: Real) -> N {
-        assert!(r >= N::zero());
+    fn scalar_apply(r: Real, h: Real) -> Real {
+        assert!(r >= na::zero::<Real>());
 
         #[cfg(feature = "dim2")]
-        let normalizer = na::convert::<_, N>(40.0 / 7.0) / (N::pi() * h * h);
+        let normalizer = na::convert::<_, Real>(40.0 / 7.0) / (Real::pi() * h * h);
         #[cfg(feature = "dim3")]
-        let normalizer = na::convert::<_, N>(8.0) / (N::pi() * h * h * h);
+        let normalizer = na::convert::<_, Real>(8.0) / (Real::pi() * h * h * h);
 
-        let _2: Real = na::convert(2.0);
+        let _2: Real = na::convert::<_, Real>(2.0);
         let q = r / h;
 
-        let rhs = if q <= na::convert(0.5) {
+        let rhs = if q <= na::convert::<_, Real>(0.5) {
             let q2 = q * q;
-            N::one() + (q2 * q - q2) * na::convert(6.0)
-        } else if q <= N::one() {
-            (N::one() - q).powi(3) * _2
+            na::one::<Real>() + (q2 * q - q2) * na::convert::<_, Real>(6.0)
+        } else if q <= na::one::<Real>() {
+            (na::one::<Real>() - q).powi(3) * _2
         } else {
-            N::zero()
+            na::zero::<Real>()
         };
 
         normalizer * rhs
@@ -34,43 +34,43 @@ impl Kernel for CubicSplineKernel {
         /*
         let q = r / h;
         #[cfg(feature = "dim2")]
-            let normalizer = na::convert::<_, N>(10.0 / 7.0) / (N::pi() * h * h);
+            let normalizer = na::convert::<_, Real>(10.0 / 7.0) / (Real::pi() * h * h);
         #[cfg(feature = "dim3")]
-            let normalizer = N::one() / (N::pi() * h * h * h);
+            let normalizer = na::one::<Real>() / (Real::pi() * h * h * h);
 
-        let _2: Real = na::convert(2.0);
-        let _3: Real = na::convert(3.0);
-        let rhs = if q <= N::one() {
-            N::one() - _3 / _2 * q * q * (N::one() - q / _2)
+        let _2: Real = na::convert::<_, Real>(2.0);
+        let _3: Real = na::convert::<_, Real>(3.0);
+        let rhs = if q <= na::one::<Real>() {
+            na::one::<Real>() - _3 / _2 * q * q * (na::one::<Real>() - q / _2)
         } else if q <= _2 {
-            (_2 - q).powi(3) / na::convert(4.0)
+            (_2 - q).powi(3) / na::convert::<_, Real>(4.0)
         } else {
-            N::zero()
+            na::zero::<Real>()
         };
 
         normalizer * rhs
         */
     }
 
-    fn scalar_apply_diff(r: Real, h: Real) -> N {
-        assert!(r >= N::zero());
+    fn scalar_apply_diff(r: Real, h: Real) -> Real {
+        assert!(r >= na::zero::<Real>());
 
         #[cfg(feature = "dim2")]
-        let normalizer = na::convert::<_, N>(40.0 / 7.0) / (N::pi() * h * h);
+        let normalizer = na::convert::<_, Real>(40.0 / 7.0) / (Real::pi() * h * h);
         #[cfg(feature = "dim3")]
-        let normalizer = na::convert::<_, N>(8.0) / (N::pi() * h * h * h);
+        let normalizer = na::convert::<_, Real>(8.0) / (Real::pi() * h * h * h);
 
-        let _2: Real = na::convert(2.0);
-        let _3: Real = na::convert(3.0);
+        let _2: Real = na::convert::<_, Real>(2.0);
+        let _3: Real = na::convert::<_, Real>(3.0);
         let q = r / h;
 
-        let rhs = if q <= na::convert(0.5) {
-            (q * _3 - _2) * q * na::convert(6.0)
-        } else if q <= N::one() {
-            let one_q = N::one() - q;
-            -one_q * one_q * na::convert(6.0)
+        let rhs = if q <= na::convert::<_, Real>(0.5) {
+            (q * _3 - _2) * q * na::convert::<_, Real>(6.0)
+        } else if q <= na::one::<Real>() {
+            let one_q = na::one::<Real>() - q;
+            -one_q * one_q * na::convert::<_, Real>(6.0)
         } else {
-            N::zero()
+            na::zero::<Real>()
         };
 
         normalizer * rhs / h
@@ -78,18 +78,18 @@ impl Kernel for CubicSplineKernel {
         /*
         let q = r / h;
         #[cfg(feature = "dim2")]
-            let normalizer = na::convert::<_, N>(10.0 / 7.0) / (N::pi() * h * h);
+            let normalizer = na::convert::<_, Real>(10.0 / 7.0) / (Real::pi() * h * h);
         #[cfg(feature = "dim3")]
-            let normalizer = N::one() / (N::pi() * h * h * h);
+            let normalizer = na::one::<Real>() / (Real::pi() * h * h * h);
 
-        let _2: Real = na::convert(2.0);
-        let _3: Real = na::convert(3.0);
-        let rhs = if q <= N::one() {
-            -_3 * q * (N::one() - q * na::convert(3.0 / 4.0))
+        let _2: Real = na::convert::<_, Real>(2.0);
+        let _3: Real = na::convert::<_, Real>(3.0);
+        let rhs = if q <= na::one::<Real>() {
+            -_3 * q * (na::one::<Real>() - q * na::convert::<_, Real>(3.0 / 4.0))
         } else if q <= _2 {
-            -(_2 - q).powi(2) * na::convert(3.0 / 4.0)
+            -(_2 - q).powi(2) * na::convert::<_, Real>(3.0 / 4.0)
         } else {
-            N::zero()
+            na::zero::<Real>()
         };
 
         normalizer * rhs

@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use na::{self, RealField};
+use approx::AbsDiffEq;
 
 use crate::geometry::{self, ParticlesContacts};
 use crate::kernel::{CubicSplineKernel, Kernel};
@@ -12,9 +12,9 @@ use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
 
-fn elasticity_coefficients(young_modulus: Real, poisson_ratio: Real) -> (N, N, N) {
-    let _1 = N::one();
-    let _2: Real = na::convert(2.0);
+fn elasticity_coefficients(young_modulus: Real, poisson_ratio: Real) -> (Real, Real, Real) {
+    let _1 = na::one::<Real>();
+    let _2: Real = na::convert::<_, Real>(2.0);
 
     let d0 =
         (young_modulus * (_1 - poisson_ratio)) / ((_1 + poisson_ratio) * (_1 - _2 * poisson_ratio));
@@ -39,7 +39,6 @@ fn sym_mat_mul_vec(mat: &SpatialVector<Real>, v: &Vector<Real>) -> Vector<Real> 
 // https://cg.informatik.uni-freiburg.de/publications/2009_NP_corotatedSPH.pdf
 /// Elasticity based on the method from Becker et al. 2009.
 pub struct Becker2009Elasticity<
-    N: RealField,
     KernelDensity: Kernel = CubicSplineKernel,
     KernelGradient: Kernel = CubicSplineKernel,
 > {
@@ -56,8 +55,8 @@ pub struct Becker2009Elasticity<
     phantom: PhantomData<(KernelDensity, KernelGradient)>,
 }
 
-impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
-    Becker2009Elasticity<N, KernelDensity, KernelGradient>
+impl<KernelDensity: Kernel, KernelGradient: Kernel>
+    Becker2009Elasticity<KernelDensity, KernelGradient>
 {
     /// Initialize elasticity from its young modulus and poisson ration.
     ///
@@ -87,7 +86,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
 
         if self.positions0.len() != nparticles {
             self.positions0 = fluid.positions.clone();
-            self.volumes0.resize(nparticles, N::zero());
+            self.volumes0.resize(nparticles, na::zero::<Real>());
             self.rotations
                 .resize(nparticles, RotationMatrix::identity());
             self.deformation_gradient_tr
@@ -114,7 +113,7 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
     }
 
     fn compute_rotations(&mut self, _kernel_radius: Real, fluid: &Fluid) {
-        let _2: Real = na::convert(2.0f64);
+        let _2: Real = na::convert::<_, Real>(2.0f64);
 
         let contacts0 = &self.contacts0;
         let positions0 = &self.positions0;
@@ -133,19 +132,19 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
 
                 // Extract the rotation matrix.
                 *rotation =
-                    RotationMatrix::from_matrix_eps(&a_pq, N::default_epsilon(), 20, *rotation);
+                    RotationMatrix::from_matrix_eps(&a_pq, Real::default_epsilon(), 20, *rotation);
             })
     }
 
     fn compute_stresses(&mut self, _kernel_radius: Real, fluid: &Fluid) {
-        let _2: Real = na::convert(2.0f64);
-        let _0_5: Real = na::convert(0.564);
+        let _2: Real = na::convert::<_, Real>(2.0f64);
+        let _0_5: Real = na::convert::<_, Real>(0.564);
 
         let contacts0 = &self.contacts0;
         let rotations = &self.rotations;
         let positions0 = &self.positions0;
 
-        // let _0 = N::zero();
+        // let _0 = na::zero::<Real>();
         // let c = Matrix::new(
         //     d0, d1, d1, _0, _0, _0,
         //     d1, d0, d1, _0, _0, _0,
@@ -195,9 +194,9 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
 
                         let stress012 = c_top_left
                             * Vector::new(
-                                jjt.m11 - N::one(),
-                                jjt.m22 - N::one(),
-                                jjt.m33 - N::one(),
+                                jjt.m11 - na::one::<Real>(),
+                                jjt.m22 - na::one::<Real>(),
+                                jjt.m33 - na::one::<Real>(),
                             )
                             * _0_5;
                         *stress = SpatialVector::new(
@@ -237,8 +236,9 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
                         let j = grad_tr + Matrix::identity();
                         let jjt = j * j.transpose();
 
-                        let stress01 =
-                            c_top_left * Vector::new(jjt.m11 - N::one(), jjt.m22 - N::one()) * _0_5;
+                        let stress01 = c_top_left
+                            * Vector::new(jjt.m11 - na::one::<Real>(), jjt.m22 - na::one::<Real>())
+                            * _0_5;
                         *stress = SpatialVector::new(stress01.x, stress01.y, jjt.m21 * _0_5 * d2);
                     } else {
                         // let strain = Vector::new(
@@ -262,8 +262,8 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>
     }
 }
 
-impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureForce<Real>
-    for Becker2009Elasticity<N, KernelDensity, KernelGradient>
+impl<KernelDensity: Kernel, KernelGradient: Kernel> NonPressureForce
+    for Becker2009Elasticity<KernelDensity, KernelGradient>
 {
     fn solve(
         &mut self,
@@ -273,11 +273,11 @@ impl<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel> NonPressureFor
         _fluid_boundaries_contacts: &ParticlesContacts,
         fluid: &mut Fluid,
         _boundaries: &[Boundary],
-        _densities: &[N],
+        _densities: &[Real],
     ) {
         self.init(kernel_radius, fluid);
 
-        let _0_5: Real = na::convert(0.5f64);
+        let _0_5: Real = na::convert::<_, Real>(0.5f64);
         self.compute_rotations(kernel_radius, fluid);
         self.compute_stresses(kernel_radius, fluid);
 

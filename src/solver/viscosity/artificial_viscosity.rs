@@ -1,8 +1,6 @@
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use na::{self, RealField};
-
 use crate::geometry::ParticlesContacts;
 
 use crate::math::{Real, Vector};
@@ -26,20 +24,20 @@ pub struct ArtificialViscosity {
     pub boundary_viscosity_coefficient: Real,
 }
 
-impl ArtificialViscosity<Real> {
+impl ArtificialViscosity {
     /// Initializes the artificial viscosity with the given viscosity coefficients.
     pub fn new(fluid_viscosity_coefficient: Real, boundary_viscosity_coefficient: Real) -> Self {
         Self {
-            alpha: Real::one(),
-            beta: na::convert(0.0),
-            speed_of_sound: na::convert(10.0),
+            alpha: na::one::<Real>(),
+            beta: na::convert::<_, Real>(0.0),
+            speed_of_sound: na::convert::<_, Real>(10.0),
             fluid_viscosity_coefficient,
             boundary_viscosity_coefficient,
         }
     }
 }
 
-impl NonPressureForce<Real> for ArtificialViscosity<Real> {
+impl NonPressureForce for ArtificialViscosity {
     fn solve(
         &mut self,
         _timestep: &TimestepManager,
@@ -48,7 +46,7 @@ impl NonPressureForce<Real> for ArtificialViscosity<Real> {
         fluid_boundaries_contacts: &ParticlesContacts,
         fluid: &mut Fluid,
         boundaries: &[Boundary],
-        densities: &[N],
+        densities: &[Real],
     ) {
         let fluid_viscosity_coefficient = self.fluid_viscosity_coefficient;
         let boundary_viscosity_coefficient = self.boundary_viscosity_coefficient;
@@ -59,7 +57,7 @@ impl NonPressureForce<Real> for ArtificialViscosity<Real> {
         let volumes = &fluid.volumes;
         let positions = &fluid.positions;
         let velocities = &fluid.velocities;
-        let _0_5: Real = na::convert(0.5);
+        let _0_5: Real = na::convert::<_, Real>(0.5);
 
         par_iter_mut!(fluid.accelerations)
             .enumerate()
@@ -67,7 +65,7 @@ impl NonPressureForce<Real> for ArtificialViscosity<Real> {
                 let mut fluid_acc = Vector::zeros();
                 let mut boundary_acc = Vector::zeros();
 
-                if self.fluid_viscosity_coefficient != N::zero() {
+                if self.fluid_viscosity_coefficient != na::zero::<Real>() {
                     for c in fluid_fluid_contacts
                         .particle_contacts(i)
                         .read()
@@ -79,9 +77,10 @@ impl NonPressureForce<Real> for ArtificialViscosity<Real> {
                             let v_ij = velocities[c.i] - velocities[c.j];
                             let vr = r_ij.dot(&v_ij);
 
-                            if vr < N::zero() {
+                            if vr < na::zero::<Real>() {
                                 let density_average = (densities[c.i] + densities[c.j]) * _0_5;
-                                let eta2 = kernel_radius * kernel_radius * na::convert(0.01);
+                                let eta2 =
+                                    kernel_radius * kernel_radius * na::convert::<_, Real>(0.01);
                                 let mu_ij = kernel_radius * vr / (r_ij.norm_squared() + eta2);
 
                                 fluid_acc += c.gradient
@@ -93,7 +92,7 @@ impl NonPressureForce<Real> for ArtificialViscosity<Real> {
                     }
                 }
 
-                if self.boundary_viscosity_coefficient != N::zero() {
+                if self.boundary_viscosity_coefficient != na::zero::<Real>() {
                     for c in fluid_boundaries_contacts
                         .particle_contacts(i)
                         .read()
@@ -104,9 +103,9 @@ impl NonPressureForce<Real> for ArtificialViscosity<Real> {
                         let v_ij = velocities[c.i] - boundaries[c.j_model].velocities[c.j];
                         let vr = r_ij.dot(&v_ij);
 
-                        if vr < N::zero() {
+                        if vr < na::zero::<Real>() {
                             let density_average = densities[c.i];
-                            let eta2 = kernel_radius * kernel_radius * na::convert(0.01);
+                            let eta2 = kernel_radius * kernel_radius * na::convert::<_, Real>(0.01);
                             let mu_ij = kernel_radius * vr / (r_ij.norm_squared() + eta2);
 
                             boundary_acc += c.gradient

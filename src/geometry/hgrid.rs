@@ -1,5 +1,5 @@
 use fnv::FnvHasher;
-use na::RealField;
+
 use std::collections::HashMap;
 
 use crate::math::{Point, Real, Vector, DIM};
@@ -19,12 +19,12 @@ impl BuildHasher for DeterministicState {
 
 /// A grid based on spacial hashing.
 #[derive(PartialEq, Debug, Clone)]
-pub struct HGrid<N: RealField, T> {
+pub struct HGrid<T> {
     cells: HashMap<Point<i64>, Vec<T>, DeterministicState>,
     cell_width: Real,
 }
 
-impl<N: RealField, T> HGrid<N, T> {
+impl<T> HGrid<T> {
     /// Initialize a grid where each cell has the width `cell_width`.
     pub fn new(cell_width: Real) -> Self {
         Self {
@@ -34,16 +34,16 @@ impl<N: RealField, T> HGrid<N, T> {
     }
 
     /// The width of a cell of this spacial grid.
-    pub fn cell_width(&self) -> N {
+    pub fn cell_width(&self) -> Real {
         self.cell_width
     }
 
     fn quantify(value: Real, cell_width: Real) -> i64 {
-        na::try_convert::<N, f64>((value / cell_width).floor()).unwrap() as i64
+        na::try_convert::<Real, f64>((value / cell_width).floor()).unwrap() as i64
     }
 
     fn quantify_ceil(value: Real, cell_width: Real) -> i64 {
-        na::try_convert::<N, f64>((value / cell_width).ceil()).unwrap() as i64
+        na::try_convert::<Real, f64>((value / cell_width).ceil()).unwrap() as i64
     }
 
     /// Computes the logical grid cell containing `point`.

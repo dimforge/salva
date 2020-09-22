@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use na::{self, RealField};
+use num::Zero;
 
 use crate::counters::Counters;
 use crate::geometry::{ContactManager, ParticlesContacts};
@@ -15,7 +15,6 @@ use crate::TimestepManager;
 
 /// A IISPH (Implicit Incompressible Smoothed Particle Hydrodynamics) pressure solver.
 pub struct IISPHSolver<
-    N: RealField,
     KernelDensity: Kernel = CubicSplineKernel,
     KernelGradient: Kernel = CubicSplineKernel,
 > {
@@ -40,9 +39,8 @@ pub struct IISPHSolver<
     phantoms: PhantomData<(KernelDensity, KernelGradient)>,
 }
 
-impl<N, KernelDensity, KernelGradient> IISPHSolver<N, KernelDensity, KernelGradient>
+impl<KernelDensity, KernelGradient> IISPHSolver<KernelDensity, KernelGradient>
 where
-    N: RealField,
     KernelDensity: Kernel,
     KernelGradient: Kernel,
 {
@@ -51,8 +49,8 @@ where
         Self {
             min_pressure_iter: 1,
             max_pressure_iter: 50,
-            max_density_error: na::convert(0.05),
-            omega: na::convert(0.5),
+            max_density_error: na::convert::<_, Real>(0.05),
+            omega: na::convert::<_, Real>(0.5),
             densities: Vec::new(),
             dii: Vec::new(),
             aii: Vec::new(),
@@ -74,7 +72,7 @@ where
             par_iter_mut!(boundaries[boundary_id].volumes)
                 .enumerate()
                 .for_each(|(i, volume)| {
-                    let mut denominator = N::zero();
+                    let mut denominator = na::zero::<Real>();
 
                     for c in boundary_boundary_contacts[boundary_id]
                         .particle_contacts(i)
@@ -86,7 +84,7 @@ where
                     }
 
                     assert!(!denominator.is_zero());
-                    *volume = N::one() / denominator;
+                    *volume = na::one::<Real>() / denominator;
                 })
         }
     }
@@ -101,14 +99,14 @@ where
     ) {
         let velocity_changes = &self.velocity_changes;
         let densities = &self.densities;
-        let _max_error = N::zero();
+        let _max_error = na::zero::<Real>();
 
         for fluid_id in 0..fluids.len() {
             let _it = par_iter_mut!(self.predicted_densities[fluid_id])
                 .enumerate()
                 .for_each(|(i, predicted_density)| {
                     let fluid_i = &fluids[fluid_id];
-                    let mut delta = N::zero();
+                    let mut delta = na::zero::<Real>();
 
                     for c in fluid_fluid_contacts[fluid_id]
                         .particle_contacts(i)
@@ -159,7 +157,7 @@ where
             let densities = &self.densities;
 
             par_iter_mut!(dii).enumerate().for_each(|(i, dii)| {
-                dii.fill(N::zero());
+                dii.fill(na::zero::<Real>());
 
                 let rhoi = densities[fluid_id][i];
                 let factor = -timestep.dt() * timestep.dt() / (rhoi * rhoi);
@@ -204,7 +202,7 @@ where
             let densities = &self.densities;
 
             par_iter_mut!(aii).enumerate().for_each(|(i, aii)| {
-                *aii = N::zero();
+                *aii = na::zero::<Real>();
                 let rhoi = densities[fluid_id][i];
                 let mi = fluids[fluid_id].particle_mass(i);
                 let factor = timestep.dt() * timestep.dt() * mi / (rhoi * rhoi);
@@ -250,7 +248,7 @@ where
             let pressures = &self.pressures;
 
             par_iter_mut!(dij_pjl).enumerate().for_each(|(i, dij_pjl)| {
-                dij_pjl.fill(N::zero());
+                dij_pjl.fill(na::zero::<Real>());
 
                 for c in fluid_fluid_contacts
                     .particle_contacts(i)
@@ -276,8 +274,8 @@ where
         fluid_boundary_contacts: &[ParticlesContacts],
         fluids: &[Fluid],
         boundaries: &[Boundary],
-    ) -> N {
-        let mut max_error = N::zero();
+    ) -> Real {
+        let mut max_error = na::zero::<Real>();
 
         for fluid_id in 0..fluids.len() {
             let fluid_fluid_contacts = &fluid_fluid_contacts[fluid_id];
@@ -295,8 +293,8 @@ where
             let it = par_iter_mut!(next_pressures)
                 .enumerate()
                 .map(|(i, next_pressure)| {
-                    if aii[i].abs() > na::convert(1.0e-9) {
-                        let mut sum = N::zero();
+                    if aii[i].abs() > na::convert::<_, Real>(1.0e-9) {
+                        let mut sum = na::zero::<Real>();
                         let pi = pressures[fluid_id][i];
                         let mi = fluid_i.particle_mass(i);
                         let rhoi = densities[fluid_id][i];
@@ -327,26 +325,27 @@ where
                             sum += mj * dij_pjl[c.i_model][c.i].dot(&c.gradient);
                         }
 
-                        *next_pressure = (N::one() - omega) * pi + omega * (derr - sum) / aii[i];
+                        *next_pressure =
+                            (na::one::<Real>() - omega) * pi + omega * (derr - sum) / aii[i];
 
-                        if *next_pressure > N::zero() {
-                            *next_pressure = next_pressure.max(N::zero());
+                        if *next_pressure > na::zero::<Real>() {
+                            *next_pressure = next_pressure.max(na::zero::<Real>());
                             (-sum - aii[i] * *next_pressure) / fluid_i.density0
                         } else {
                             // Clamp negative pressures.
-                            *next_pressure = N::zero();
-                            N::zero()
+                            *next_pressure = na::zero::<Real>();
+                            na::zero::<Real>()
                         }
                     } else {
-                        *next_pressure = N::zero();
-                        N::zero()
+                        *next_pressure = na::zero::<Real>();
+                        na::zero::<Real>()
                     }
                 });
-            let err = par_reduce_sum!(N::zero(), it);
+            let err = par_reduce_sum!(na::zero::<Real>(), it);
 
             let nparts = fluids[fluid_id].num_particles();
             if nparts != 0 {
-                max_error = max_error.max(err / na::convert(nparts as f64));
+                max_error = max_error.max(err / na::convert::<_, Real>(nparts as f64));
             }
         }
 
@@ -466,16 +465,14 @@ where
                 .zip(par_iter_mut!(fluid.accelerations))
                 .for_each(|(velocity_change, acceleration)| {
                     *velocity_change += *acceleration * timestep.dt();
-                    acceleration.fill(N::zero());
+                    acceleration.fill(na::zero::<Real>());
                 })
         }
     }
 }
 
-impl<N, KernelDensity, KernelGradient> PressureSolver
-    for IISPHSolver<N, KernelDensity, KernelGradient>
+impl<KernelDensity, KernelGradient> PressureSolver for IISPHSolver<KernelDensity, KernelGradient>
 where
-    N: RealField,
     KernelDensity: Kernel,
     KernelGradient: Kernel,
 {
@@ -493,14 +490,14 @@ where
         for i in 0..fluids.len() {
             let nparticles = fluids[i].num_particles();
 
-            self.densities[i].resize(nparticles, N::zero());
-            self.predicted_densities[i].resize(nparticles, N::zero());
+            self.densities[i].resize(nparticles, na::zero::<Real>());
+            self.predicted_densities[i].resize(nparticles, na::zero::<Real>());
             self.velocity_changes[i].resize(nparticles, Vector::zeros());
-            self.aii[i].resize(nparticles, N::zero());
+            self.aii[i].resize(nparticles, na::zero::<Real>());
             self.dii[i].resize(nparticles, Vector::zeros());
             self.dij_pjl[i].resize(nparticles, Vector::zeros());
-            self.pressures[i].resize(nparticles, N::zero());
-            self.next_pressures[i].resize(nparticles, N::zero());
+            self.pressures[i].resize(nparticles, na::zero::<Real>());
+            self.next_pressures[i].resize(nparticles, na::zero::<Real>());
 
             if fluids[i].num_deleted_particles() != 0 {
                 crate::helper::filter_from_mask(
@@ -565,7 +562,7 @@ where
         fluids: &[Fluid],
         boundaries: &[Boundary],
     ) {
-        helper::update_fluid_contacts::<_, KernelDensity, KernelGradient>(
+        helper::update_fluid_contacts::<KernelDensity, KernelGradient>(
             kernel_radius,
             &mut contact_manager.fluid_fluid_contacts,
             &mut contact_manager.fluid_boundary_contacts,
@@ -573,7 +570,7 @@ where
             boundaries,
         );
 
-        helper::update_boundary_contacts::<_, KernelDensity, KernelGradient>(
+        helper::update_boundary_contacts::<KernelDensity, KernelGradient>(
             kernel_radius,
             &mut contact_manager.boundary_boundary_contacts,
             boundaries,
@@ -592,7 +589,7 @@ where
             par_iter_mut!(self.densities[fluid_id])
                 .enumerate()
                 .for_each(|(i, density)| {
-                    *density = N::zero();
+                    *density = na::zero::<Real>();
 
                     for c in contact_manager.fluid_fluid_contacts[fluid_id]
                         .particle_contacts(i)
@@ -649,7 +646,7 @@ where
             boundaries,
         );
 
-        let _0_5: Real = na::convert(0.5);
+        let _0_5: Real = na::convert::<_, Real>(0.5);
         self.pressures
             .iter_mut()
             .flat_map(|v| v.iter_mut())
@@ -685,7 +682,7 @@ where
 
         self.velocity_changes
             .iter_mut()
-            .for_each(|vs| vs.iter_mut().for_each(|v| v.fill(N::zero())));
+            .for_each(|vs| vs.iter_mut().for_each(|v| v.fill(na::zero::<Real>())));
         counters.solver.pressure_resolution_time.pause();
     }
 }

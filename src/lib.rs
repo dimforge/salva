@@ -44,6 +44,7 @@ extern crate ncollide3d as ncollide;
 extern crate nphysics2d as nphysics;
 #[cfg(all(feature = "dim3", feature = "nphysics"))]
 extern crate nphysics3d as nphysics;
+extern crate num_traits as num;
 
 macro_rules! par_iter {
     ($t: expr) => {{
@@ -98,7 +99,7 @@ pub use crate::timestep_manager::TimestepManager;
 pub mod math {
     use na::{
         Dynamic, Isometry3, Matrix3, Matrix6, MatrixMN, MatrixSlice6xX, MatrixSliceMut6xX, Point3,
-        RealField, Rotation3, Translation3, UnitQuaternion, Vector3, Vector6, U3, U6,
+        Rotation3, Translation3, UnitQuaternion, Vector3, Vector6, U3, U6,
     };
 
     /// The maximum number of possible rotations and translations of a rigid body.
@@ -160,13 +161,13 @@ pub mod math {
     pub type SpatialMatrix<Real> = Matrix6<Real>;
 
     /// The type of a constraint jacobian in twist coordinates.
-    pub type Jacobian<Real> = MatrixMN<N, U6, Dynamic>;
+    pub type Jacobian<Real> = MatrixMN<Real, U6, Dynamic>;
 
     /// The type of a slice of the constraint jacobian in twist coordinates.
-    pub type JacobianSlice<'a, N> = MatrixSlice6xX<'a, N>;
+    pub type JacobianSlice<'a, Real> = MatrixSlice6xX<'a, Real>;
 
     /// The type of a mutable slice of the constraint jacobian in twist coordinates.
-    pub type JacobianSliceMut<'a, N> = MatrixSliceMut6xX<'a, N>;
+    pub type JacobianSliceMut<'a, Real> = MatrixSliceMut6xX<'a, Real>;
 
     /// The cross-product matrix for the given vector.
     pub fn gcross_matrix(v: &Vector<Real>) -> Matrix<Real> {
@@ -179,8 +180,8 @@ pub mod math {
 pub mod math {
     use na::{
         Dynamic, Isometry2, Matrix1, Matrix2, Matrix3, MatrixMN, MatrixSlice3xX, MatrixSliceMut3xX,
-        Point2, RealField, Rotation2, RowVector2, Translation2, UnitComplex, Vector1, Vector2,
-        Vector3, U1, U2, U3,
+        Point2, Rotation2, RowVector2, Translation2, UnitComplex, Vector1, Vector2, Vector3, U1,
+        U2, U3,
     };
 
     /// The maximum number of possible rotations and translations of a rigid body.
@@ -242,13 +243,13 @@ pub mod math {
     pub type SpatialMatrix<Real> = Matrix3<Real>;
 
     /// The type of a constraint jacobian in twist coordinates.
-    pub type Jacobian<Real> = MatrixMN<N, U3, Dynamic>;
+    pub type Jacobian<Real> = MatrixMN<Real, U3, Dynamic>;
 
     /// The type of a slice of the constraint jacobian in twist coordinates.
-    pub type JacobianSlice<'a, N> = MatrixSlice3xX<'a, N>;
+    pub type JacobianSlice<'a, Real> = MatrixSlice3xX<'a, Real>;
 
     /// The type of a mutable slice of the constraint jacobian in twist coordinates.
-    pub type JacobianSliceMut<'a, N> = MatrixSliceMut3xX<'a, N>;
+    pub type JacobianSliceMut<'a, Real> = MatrixSliceMut3xX<'a, Real>;
 
     /// The cross-product matrix for the given vector, generalized in 2D.
     pub fn gcross_matrix(v: &Vector<Real>) -> RowVector2<Real> {

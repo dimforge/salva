@@ -2,7 +2,6 @@ use crate::geometry::ParticlesContacts;
 use crate::math::Real;
 use crate::object::{Boundary, Fluid};
 use crate::TimestepManager;
-use na::RealField;
 
 /// Trait implemented by non-pressure forces.
 ///
@@ -21,7 +20,7 @@ pub trait NonPressureForce: Send + Sync {
         fluid_boundaries_contacts: &ParticlesContacts,
         fluid: &mut Fluid,
         boundaries: &[Boundary],
-        densities: &[N],
+        densities: &[Real],
     );
 
     /// Apply the given permutation to all relevant field of this non-pressure force.

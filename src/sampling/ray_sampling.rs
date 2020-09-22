@@ -1,12 +1,12 @@
 use crate::math::{Isometry, Point, Real, Vector, DIM};
-use na::RealField;
+
 use ncollide::bounding_volume::{BoundingVolume, AABB};
 use ncollide::query::{Ray, RayCast};
 use ncollide::shape::Shape;
 use std::collections::HashSet;
 
 /// Samples the surface of `shape` with a method based on ray-casting.
-pub fn shape_surface_ray_sample<N: RealField, S: ?Sized + Shape<Real>>(
+pub fn shape_surface_ray_sample<S: ?Sized + Shape<Real>>(
     shape: &S,
     particle_rad: Real,
 ) -> Option<Vec<Point<Real>>> {
@@ -16,7 +16,7 @@ pub fn shape_surface_ray_sample<N: RealField, S: ?Sized + Shape<Real>>(
 }
 
 /// Samples the volume of `shape` with a method based on ray-casting.
-pub fn shape_volume_ray_sample<N: RealField, S: ?Sized + Shape<Real>>(
+pub fn shape_volume_ray_sample<S: ?Sized + Shape<Real>>(
     shape: &S,
     particle_rad: Real,
 ) -> Option<Vec<Point<Real>>> {
@@ -26,31 +26,32 @@ pub fn shape_volume_ray_sample<N: RealField, S: ?Sized + Shape<Real>>(
 }
 
 /// Samples the surface of `shape` with a method based on ray-casting.
-pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<Real>>(
+pub fn surface_ray_sample<S: ?Sized + RayCast<Real>>(
     shape: &S,
     volume: &AABB<Real>,
     particle_rad: Real,
 ) -> Vec<Point<Real>> {
     let mut quantized_points = HashSet::new();
-    let subdivision_size = particle_rad * na::convert(2.0);
+    let subdivision_size = particle_rad * na::convert::<_, Real>(2.0);
 
     let volume = volume.loosened(subdivision_size);
     let maxs = volume.maxs();
-    let origin = volume.mins() + Vector::repeat(subdivision_size / na::convert(2.0));
+    let origin = volume.mins() + Vector::repeat(subdivision_size / na::convert::<_, Real>(2.0));
     let mut curr = origin;
 
     let mut perform_cast = |i, curr| {
         let mut dir = Vector::zeros();
-        dir[i] = N::one();
+        dir[i] = na::one::<Real>();
         let mut ray = Ray::new(curr, dir);
         let mut entry_point = true;
 
-        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, N::max_value(), false)
+        while let Some(toi) =
+            shape.toi_with_ray(&Isometry::identity(), &ray, Real::max_value(), false)
         {
             let impact = ray.point_at(toi);
             let quantized_pt = quantize_point(&origin, &impact, subdivision_size, entry_point, i);
             let _ = quantized_points.insert(quantized_pt);
-            ray.origin[i] += toi + subdivision_size / na::convert(10.0);
+            ray.origin[i] += toi + subdivision_size / na::convert::<_, Real>(10.0);
             entry_point = !entry_point;
         }
     };
@@ -91,25 +92,26 @@ pub fn surface_ray_sample<N: RealField, S: ?Sized + RayCast<Real>>(
 }
 
 /// Samples the volume of `shape` with a method based on ray-casting.
-pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<Real>>(
+pub fn volume_ray_sample<S: ?Sized + RayCast<Real>>(
     shape: &S,
     volume: &AABB<Real>,
     particle_rad: Real,
 ) -> Vec<Point<Real>> {
     let mut quantized_points = HashSet::new();
-    let subdivision_size = particle_rad * na::convert(2.0);
+    let subdivision_size = particle_rad * na::convert::<_, Real>(2.0);
 
     let volume = volume.loosened(subdivision_size);
     let maxs = volume.maxs();
-    let origin = volume.mins() + Vector::repeat(subdivision_size / na::convert(2.0));
+    let origin = volume.mins() + Vector::repeat(subdivision_size / na::convert::<_, Real>(2.0));
 
     let mut perform_cast = |i, curr| {
         let mut dir = Vector::zeros();
-        dir[i] = N::one();
+        dir[i] = na::one::<Real>();
         let mut ray = Ray::new(curr, dir);
         let mut prev_impact = None;
 
-        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, N::max_value(), false)
+        while let Some(toi) =
+            shape.toi_with_ray(&Isometry::identity(), &ray, Real::max_value(), false)
         {
             if let Some(prev) = prev_impact {
                 sample_segment(
@@ -126,7 +128,7 @@ pub fn volume_ray_sample<N: RealField, S: ?Sized + RayCast<Real>>(
                 prev_impact = Some(ray.origin[i] + toi);
             }
 
-            ray.origin[i] += toi + subdivision_size / na::convert(10.0);
+            ray.origin[i] += toi + subdivision_size / na::convert::<_, Real>(10.0);
         }
     };
 
@@ -205,7 +207,7 @@ fn unquantize_points(
             origin
                 + qpt
                     .coords
-                    .map(|e| na::convert::<_, N>(e as f64) * subdivision_size)
+                    .map(|e| na::convert::<_, Real>(e as f64) * subdivision_size)
         })
         .collect()
 }

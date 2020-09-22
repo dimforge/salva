@@ -1,5 +1,3 @@
-use na::RealField;
-
 use crate::counters::Counters;
 use crate::geometry::ContactManager;
 use crate::math::{Real, Vector};

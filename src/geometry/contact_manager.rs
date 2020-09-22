@@ -3,7 +3,6 @@ use crate::geometry::{self, HGrid, HGridEntry, ParticlesContacts};
 use crate::math::Real;
 use crate::object::Boundary;
 use crate::object::Fluid;
-use na::RealField;
 
 /// Structure responsible for computing and grouping all the contact between fluid and boundary particles.
 pub struct ContactManager {
@@ -52,7 +51,7 @@ impl ContactManager {
         h: Real,
         fluids: &[Fluid],
         boundaries: &[Boundary],
-        hgrid: &HGrid<N, HGridEntry>,
+        hgrid: &HGrid<HGridEntry>,
     ) {
         geometry::compute_contacts(
             counters,

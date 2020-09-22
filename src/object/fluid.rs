@@ -1,14 +1,15 @@
 use crate::math::{Isometry, Point, Real, Vector};
 use crate::object::{ContiguousArena, ContiguousArenaIndex};
 use crate::solver::NonPressureForce;
-use na::{self, RealField};
+
+use num::Zero;
 
 /// A fluid object.
 ///
 /// A fluid object is composed of movable particles with additional properties like viscosity.
 pub struct Fluid {
     /// Nonpressure forces this fluid is subject to.
-    pub nonpressure_forces: Vec<Box<dyn NonPressureForce<Real>>>,
+    pub nonpressure_forces: Vec<Box<dyn NonPressureForce>>,
     /// The world-space position of the fluid particles.
     pub positions: Vec<Point<Real>>,
     /// The velocities of the fluid particles.
@@ -90,24 +91,24 @@ impl Fluid {
     }
 
     /// The radius of this fluid's particles.
-    pub fn particle_radius(&self) -> N {
+    pub fn particle_radius(&self) -> Real {
         self.particle_radius
     }
 
     /// The default volume given to each of this fluid's particles.
-    pub fn default_particle_volume(&self) -> N {
+    pub fn default_particle_volume(&self) -> Real {
         Self::particle_volume(self.particle_radius)
     }
 
-    fn particle_volume(particle_radius: Real) -> N {
+    fn particle_volume(particle_radius: Real) -> Real {
         // The volume of a fluid is computed as the volume of a cuboid of half-width equal to particle_radius.
         // It is multiplied by 0.8 so that there is no pressure when the cuboids are aligned on a grid.
         // This mass computation method is inspired from the SplishSplash project.
         #[cfg(feature = "dim2")]
-        let particle_volume = particle_radius * particle_radius * na::convert(4.0 * 0.8);
+        let particle_volume = particle_radius * particle_radius * na::convert::<_, Real>(4.0 * 0.8);
         #[cfg(feature = "dim3")]
         let particle_volume =
-            particle_radius * particle_radius * particle_radius * na::convert(8.0 * 0.8);
+            particle_radius * particle_radius * particle_radius * na::convert::<_, Real>(8.0 * 0.8);
         particle_volume
     }
 
@@ -172,18 +173,18 @@ impl Fluid {
     }
 
     /// The mass of the `i`-th particle of this fluid.
-    pub fn particle_mass(&self, i: usize) -> N {
+    pub fn particle_mass(&self, i: usize) -> Real {
         self.volumes[i] * self.density0
     }
 
     /// The inverse mass of the `i`-th particle of this fluid.
     ///
     /// Returns 0 if the `i`-th particle has a zero mass.
-    pub fn particle_inv_mass(&self, i: usize) -> N {
+    pub fn particle_inv_mass(&self, i: usize) -> Real {
         if self.volumes[i].is_zero() {
-            N::zero()
+            na::zero::<Real>()
         } else {
-            N::one() / (self.volumes[i] * self.density0)
+            na::one::<Real>() / (self.volumes[i] * self.density0)
         }
     }
 }

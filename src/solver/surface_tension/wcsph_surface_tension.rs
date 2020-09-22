@@ -1,10 +1,9 @@
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use na::{self, RealField};
-
 use crate::geometry::ParticlesContacts;
 
+use crate::math::Real;
 use crate::object::{Boundary, Fluid};
 use crate::solver::NonPressureForce;
 use crate::TimestepManager;
@@ -19,7 +18,7 @@ pub struct WCSPHSurfaceTension {
     boundary_tension_coefficient: Real,
 }
 
-impl WCSPHSurfaceTension<Real> {
+impl WCSPHSurfaceTension {
     /// Initializes a surface tension with the given surface tension coefficient and boundary adhesion coefficients.
     pub fn new(fluid_tension_coefficient: Real, boundary_tension_coefficient: Real) -> Self {
         Self {
@@ -29,7 +28,7 @@ impl WCSPHSurfaceTension<Real> {
     }
 }
 
-impl NonPressureForce<Real> for WCSPHSurfaceTension<Real> {
+impl NonPressureForce for WCSPHSurfaceTension {
     fn solve(
         &mut self,
         _timestep: &TimestepManager,
@@ -38,7 +37,7 @@ impl NonPressureForce<Real> for WCSPHSurfaceTension<Real> {
         _fluid_boundaries_contacts: &ParticlesContacts,
         fluid: &mut Fluid,
         boundaries: &[Boundary],
-        _densities: &[N],
+        _densities: &[Real],
     ) {
         let fluid_tension_coefficient = self.fluid_tension_coefficient;
         let boundary_tension_coefficient = self.boundary_tension_coefficient;
@@ -49,7 +48,7 @@ impl NonPressureForce<Real> for WCSPHSurfaceTension<Real> {
         par_iter_mut!(fluid.accelerations)
             .enumerate()
             .for_each(|(i, acceleration_i)| {
-                if fluid_tension_coefficient != N::zero() {
+                if fluid_tension_coefficient != na::zero::<Real>() {
                     for c in fluid_fluid_contacts
                         .particle_contacts(i)
                         .read()
@@ -66,7 +65,7 @@ impl NonPressureForce<Real> for WCSPHSurfaceTension<Real> {
                     }
                 }
 
-                if boundary_tension_coefficient != N::zero() {
+                if boundary_tension_coefficient != na::zero::<Real>() {
                     for c in fluid_fluid_contacts
                         .particle_contacts(i)
                         .read()
