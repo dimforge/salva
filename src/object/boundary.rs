@@ -1,6 +1,6 @@
 use crate::math::{Isometry, Point, Real, Vector};
 use crate::object::{ContiguousArena, ContiguousArenaIndex};
-use na::{self, RealField};
+
 use std::sync::RwLock;
 
 /// A boundary object.
@@ -26,7 +26,9 @@ impl Boundary {
         let velocities = std::iter::repeat(Vector::zeros())
             .take(num_particles)
             .collect();
-        let volumes = std::iter::repeat(N::zero()).take(num_particles).collect();
+        let volumes = std::iter::repeat(na::zero::<Real>())
+            .take(num_particles)
+            .collect();
 
         Self {
             positions: particle_positions,
@@ -66,7 +68,7 @@ impl Boundary {
             }
 
             for f in forces {
-                f.fill(N::zero())
+                f.fill(na::zero::<Real>())
             }
         }
     }

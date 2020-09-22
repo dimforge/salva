@@ -2,12 +2,11 @@ use crate::geometry::ParticlesContacts;
 use crate::kernel::Kernel;
 use crate::math::Real;
 use crate::object::{Boundary, Fluid};
-use na::RealField;
 
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-pub fn update_fluid_contacts<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>(
+pub fn update_fluid_contacts<KernelDensity: Kernel, KernelGradient: Kernel>(
     kernel_radius: Real,
     fluid_fluid_contacts: &mut [ParticlesContacts],
     fluid_boundary_contacts: &mut [ParticlesContacts],
@@ -44,7 +43,7 @@ pub fn update_fluid_contacts<N: RealField, KernelDensity: Kernel, KernelGradient
     }
 }
 
-pub fn update_boundary_contacts<N: RealField, KernelDensity: Kernel, KernelGradient: Kernel>(
+pub fn update_boundary_contacts<KernelDensity: Kernel, KernelGradient: Kernel>(
     kernel_radius: Real,
     boundary_boundary_contacts: &mut [ParticlesContacts],
     boundaries: &[Boundary],

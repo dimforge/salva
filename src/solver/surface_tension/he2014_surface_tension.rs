@@ -1,8 +1,6 @@
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use na::{self, RealField};
-
 use crate::geometry::ParticlesContacts;
 
 use crate::math::{Real, Vector};
@@ -19,7 +17,7 @@ pub struct He2014SurfaceTension {
     colors: Vec<Real>,
 }
 
-impl He2014SurfaceTension<Real> {
+impl He2014SurfaceTension {
     /// Initializes a surface tension with the given surface tension coefficient and boundary adhesion coefficients.
     pub fn new(fluid_tension_coefficient: Real, boundary_tension_coefficient: Real) -> Self {
         Self {
@@ -32,8 +30,10 @@ impl He2014SurfaceTension<Real> {
 
     fn init(&mut self, fluid: &Fluid) {
         if self.gradcs.len() != fluid.num_particles() {
-            self.gradcs.resize(fluid.num_particles(), N::zero());
-            self.colors.resize(fluid.num_particles(), N::zero());
+            self.gradcs
+                .resize(fluid.num_particles(), na::zero::<Real>());
+            self.colors
+                .resize(fluid.num_particles(), na::zero::<Real>());
         }
     }
 
@@ -43,12 +43,12 @@ impl He2014SurfaceTension<Real> {
         fluid_boundary_contacts: &ParticlesContacts,
         fluid: &Fluid,
         boundaries: &[Boundary],
-        densities: &[N],
+        densities: &[Real],
     ) {
         par_iter_mut!(self.colors)
             .enumerate()
             .for_each(|(i, color_i)| {
-                let mut color = N::zero();
+                let mut color = na::zero::<Real>();
 
                 for c in fluid_fluid_contacts
                     .particle_contacts(i)
@@ -78,7 +78,7 @@ impl He2014SurfaceTension<Real> {
         &mut self,
         fluid_fluid_contacts: &ParticlesContacts,
         fluid: &Fluid,
-        densities: &[N],
+        densities: &[Real],
     ) {
         let colors = &self.colors;
 
@@ -86,7 +86,7 @@ impl He2014SurfaceTension<Real> {
             .enumerate()
             .for_each(|(i, gradc_i)| {
                 let mut gradc = Vector::zeros();
-                let _denom = N::zero();
+                let _denom = na::zero::<Real>();
 
                 for c in fluid_fluid_contacts
                     .particle_contacts(i)
@@ -105,7 +105,7 @@ impl He2014SurfaceTension<Real> {
     }
 }
 
-impl NonPressureForce<Real> for He2014SurfaceTension<Real> {
+impl NonPressureForce for He2014SurfaceTension {
     fn solve(
         &mut self,
         _timestep: &TimestepManager,
@@ -114,10 +114,10 @@ impl NonPressureForce<Real> for He2014SurfaceTension<Real> {
         fluid_boundary_contacts: &ParticlesContacts,
         fluid: &mut Fluid,
         boundaries: &[Boundary],
-        densities: &[N],
+        densities: &[Real],
     ) {
         self.init(fluid);
-        let _2: Real = na::convert(2.0f64);
+        let _2: Real = na::convert::<_, Real>(2.0f64);
 
         self.compute_colors(
             fluid_fluid_contacts,
@@ -140,7 +140,7 @@ impl NonPressureForce<Real> for He2014SurfaceTension<Real> {
             .for_each(|(i, acceleration_i)| {
                 let mi = volumes[i] * density0;
 
-                if fluid_tension_coefficient != N::zero() {
+                if fluid_tension_coefficient != na::zero::<Real>() {
                     for c in fluid_fluid_contacts
                         .particle_contacts(i)
                         .read()
@@ -157,7 +157,7 @@ impl NonPressureForce<Real> for He2014SurfaceTension<Real> {
                     }
                 }
 
-                if boundary_tension_coefficient != N::zero() {
+                if boundary_tension_coefficient != na::zero::<Real>() {
                     for c in fluid_boundary_contacts
                         .particle_contacts(i)
                         .read()
@@ -170,7 +170,7 @@ impl NonPressureForce<Real> for He2014SurfaceTension<Real> {
                             * (mi / densities[c.i] * mj / density0
                                 * gradsum
                                 * boundary_tension_coefficient
-                                * na::convert(0.25));
+                                * na::convert::<_, Real>(0.25));
                         *acceleration_i += f / mi;
 
                         boundaries[c.j_model].apply_force(c.j, -f);

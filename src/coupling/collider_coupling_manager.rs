@@ -31,11 +31,11 @@ struct ColliderCouplingEntry {
 }
 
 /// Structure managing all the coupling between colliders from nphysics with boundaries and fluids from salva.
-pub struct ColliderCouplingSet<N: RealField, CollHandle: ColliderHandle> {
-    entries: HashMap<CollHandle, ColliderCouplingEntry<Real>>,
+pub struct ColliderCouplingSet<CollHandle: ColliderHandle> {
+    entries: HashMap<CollHandle, ColliderCouplingEntry>,
 }
 
-impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle> {
+impl<CollHandle: ColliderHandle> ColliderCouplingSet<CollHandle> {
     /// Create a new collider coupling manager.
     pub fn new() -> Self {
         Self {
@@ -78,9 +78,9 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle
         &'a mut self,
         colliders: &'a Colliders,
         bodies: &'a mut Bodies,
-    ) -> ColliderCouplingManager<N, Colliders, Bodies>
+    ) -> ColliderCouplingManager<Colliders, Bodies>
     where
-        Colliders: ColliderSet<N, Bodies::Handle, Handle = CollHandle>,
+        Colliders: ColliderSet<Bodies::Handle, Handle = CollHandle>,
         Bodies: BodySet<Real>,
     {
         ColliderCouplingManager {
@@ -93,21 +93,19 @@ impl<N: RealField, CollHandle: ColliderHandle> ColliderCouplingSet<N, CollHandle
 
 /// A manager for coupling colliders from nphysics2d/nphysics3D with the boundary
 /// objects from salva.
-pub struct ColliderCouplingManager<'a, N: RealField, Colliders, Bodies>
+pub struct ColliderCouplingManager<'a, Colliders, Bodies>
 where
-    N: RealField,
-    Colliders: ColliderSet<N, Bodies::Handle>,
+    Colliders: ColliderSet<Real, Bodies::Handle>,
     Bodies: BodySet<Real>,
 {
-    coupling: &'a mut ColliderCouplingSet<N, Colliders::Handle>,
+    coupling: &'a mut ColliderCouplingSet<Colliders::Handle>,
     colliders: &'a Colliders,
     bodies: &'a mut Bodies,
 }
 
-impl<'a, N, Colliders, Bodies> CouplingManager for ColliderCouplingManager<'a, N, Colliders, Bodies>
+impl<'a, Colliders, Bodies> CouplingManager for ColliderCouplingManager<'a, Colliders, Bodies>
 where
-    N: RealField,
-    Colliders: ColliderSet<N, Bodies::Handle>,
+    Colliders: ColliderSet<Real, Bodies::Handle>,
     Bodies: BodySet<Real>,
 {
     fn update_boundaries(
@@ -115,7 +113,7 @@ where
         timestep: &TimestepManager,
         h: Real,
         particle_radius: Real,
-        hgrid: &HGrid<N, HGridEntry>,
+        hgrid: &HGrid<HGridEntry>,
         fluids: &mut [Fluid],
         boundaries: &mut BoundarySet,
     ) {
@@ -161,11 +159,11 @@ where
                                 .push(velocity.unwrap_or(Vector::zeros()));
                         }
 
-                        boundary.volumes.resize(points.len(), N::zero());
+                        boundary.volumes.resize(points.len(), na::zero::<Real>());
                     }
                     CouplingMethod::DynamicContactSampling => {
-                        let prediction = h * na::convert(0.5);
-                        let margin = particle_radius * na::convert(0.1);
+                        let prediction = h * na::convert::<_, Real>(0.5);
+                        let margin = particle_radius * na::convert::<_, Real>(0.1);
                         let collider_pos = collider.position();
                         let aabb = collider
                             .shape()
@@ -192,7 +190,7 @@ where
                                         let dpt = particle_pos - proj.point;
 
                                         if let Some((normal, depth)) =
-                                            Unit::try_new_and_get(dpt, N::default_epsilon())
+                                            Unit::try_new_and_get(dpt, Real::default_epsilon())
                                         {
                                             if proj.is_inside {
                                                 fluid.positions[*particle_id] -=
@@ -201,7 +199,7 @@ where
                                                 let vel_err =
                                                     normal.dot(&fluid.velocities[*particle_id]);
 
-                                                if vel_err > N::zero() {
+                                                if vel_err > na::zero::<Real>() {
                                                     fluid.velocities[*particle_id] -=
                                                         *normal * vel_err;
                                                 }
@@ -225,7 +223,7 @@ where
                                             .velocities
                                             .push(velocity.unwrap_or(Vector::zeros()));
                                         boundary.positions.push(proj.point);
-                                        boundary.volumes.push(N::zero());
+                                        boundary.volumes.push(na::zero::<Real>());
                                         coupling.features.push(feature);
                                     }
                                 }
@@ -265,10 +263,10 @@ where
                                     // The following commented code was an attempt to limit the force applied
                                     // to the bodies in order to avoid large forces.
                                     //
-                                    //                                let ratio = na::convert::<_, N>(3.0)
+                                    //                                let ratio = na::convert::<_, Real>(3.0)
                                     //                                    * body.part(body_part.1).unwrap().inertia().mass();
                                     //
-                                    //                                if ratio < na::convert(1.0) {
+                                    //                                if ratio < na::convert::<_, Real>(1.0) {
                                     //                                    force *= ratio;
                                     //                                }
 

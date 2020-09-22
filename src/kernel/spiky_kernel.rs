@@ -9,33 +9,33 @@ use na::RealField;
 pub struct SpikyKernel;
 
 impl Kernel for SpikyKernel {
-    fn scalar_apply(r: Real, h: Real) -> N {
-        assert!(r >= N::zero());
+    fn scalar_apply(r: Real, h: Real) -> Real {
+        assert!(r >= na::zero::<Real>());
 
         #[cfg(feature = "dim2")]
-        let normalizer = na::convert::<_, N>(10.0) / (N::pi() * h.powi(5));
+        let normalizer = na::convert::<_, Real>(10.0) / (Real::pi() * h.powi(5));
         #[cfg(feature = "dim3")]
-        let normalizer = na::convert::<_, N>(15.0) / (N::pi() * h.powi(6));
+        let normalizer = na::convert::<_, Real>(15.0) / (Real::pi() * h.powi(6));
 
         if r <= h {
             normalizer * (h - r).powi(3)
         } else {
-            N::zero()
+            na::zero::<Real>()
         }
     }
 
-    fn scalar_apply_diff(r: Real, h: Real) -> N {
-        assert!(r >= N::zero());
+    fn scalar_apply_diff(r: Real, h: Real) -> Real {
+        assert!(r >= na::zero::<Real>());
 
         #[cfg(feature = "dim2")]
-        let normalizer = na::convert::<_, N>(10.0) / (N::pi() * h.powi(5));
+        let normalizer = na::convert::<_, Real>(10.0) / (Real::pi() * h.powi(5));
         #[cfg(feature = "dim3")]
-        let normalizer = na::convert::<_, N>(15.0) / (N::pi() * h.powi(6));
+        let normalizer = na::convert::<_, Real>(15.0) / (Real::pi() * h.powi(6));
 
         if r <= h {
-            -normalizer * (h - r).powi(2) * na::convert(3.0)
+            -normalizer * (h - r).powi(2) * na::convert::<_, Real>(3.0)
         } else {
-            N::zero()
+            na::zero::<Real>()
         }
     }
 }

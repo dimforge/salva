@@ -1,8 +1,6 @@
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 
-use na::{self, RealField};
-
 use crate::geometry::ParticlesContacts;
 
 use crate::math::{Real, Vector};
@@ -19,7 +17,7 @@ pub struct XSPHViscosity {
     pub fluid_viscosity_coefficient: Real,
 }
 
-impl XSPHViscosity<Real> {
+impl XSPHViscosity {
     /// Initializes the XSPH viscosity with the given viscosity coefficients.
     pub fn new(fluid_viscosity_coefficient: Real, boundary_viscosity_coefficient: Real) -> Self {
         Self {
@@ -29,7 +27,7 @@ impl XSPHViscosity<Real> {
     }
 }
 
-impl NonPressureForce<Real> for XSPHViscosity<Real> {
+impl NonPressureForce for XSPHViscosity {
     fn solve(
         &mut self,
         timestep: &TimestepManager,
@@ -38,7 +36,7 @@ impl NonPressureForce<Real> for XSPHViscosity<Real> {
         fluid_boundaries_contacts: &ParticlesContacts,
         fluid: &mut Fluid,
         boundaries: &[Boundary],
-        densities: &[N],
+        densities: &[Real],
     ) {
         let boundary_viscosity_coefficient = self.boundary_viscosity_coefficient;
         let fluid_viscosity_coefficient = self.fluid_viscosity_coefficient;
@@ -53,7 +51,7 @@ impl NonPressureForce<Real> for XSPHViscosity<Real> {
                 let mut added_boundary_vel = Vector::zeros();
                 let vi = velocities[i];
 
-                if self.fluid_viscosity_coefficient != N::zero() {
+                if self.fluid_viscosity_coefficient != na::zero::<Real>() {
                     for c in fluid_fluid_contacts
                         .particle_contacts(i)
                         .read()
@@ -71,7 +69,7 @@ impl NonPressureForce<Real> for XSPHViscosity<Real> {
                     }
                 }
 
-                if self.boundary_viscosity_coefficient != N::zero() {
+                if self.boundary_viscosity_coefficient != na::zero::<Real>() {
                     for c in fluid_boundaries_contacts
                         .particle_contacts(i)
                         .read()

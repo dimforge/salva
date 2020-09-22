@@ -6,7 +6,6 @@ use crate::object::{Boundary, BoundaryHandle, BoundarySet};
 use crate::object::{Fluid, FluidHandle, FluidSet};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
-use na::RealField;
 
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld {
@@ -20,10 +19,10 @@ pub struct LiquidWorld {
     solver: Box<dyn PressureSolver>,
     contact_manager: ContactManager,
     timestep_manager: TimestepManager,
-    hgrid: HGrid<N, HGridEntry>,
+    hgrid: HGrid<HGridEntry>,
 }
 
-impl LiquedWorld {
+impl LiquidWorld {
     /// Initialize a new liquid world.
     ///
     /// # Parameters
@@ -36,7 +35,7 @@ impl LiquedWorld {
         particle_radius: Real,
         smoothing_factor: Real,
     ) -> Self {
-        let h = particle_radius * smoothing_factor * na::convert(2.0);
+        let h = particle_radius * smoothing_factor * na::convert::<_, Real>(2.0);
         Self {
             counters: Counters::new(),
             nsubsteps_since_sort: 0,
@@ -193,12 +192,12 @@ impl LiquedWorld {
     }
 
     /// The SPH kernel radius.
-    pub fn h(&self) -> N {
+    pub fn h(&self) -> Real {
         self.h
     }
 
     /// The radius of every particle on this liquid world.
-    pub fn particle_radius(&self) -> N {
+    pub fn particle_radius(&self) -> Real {
         self.particle_radius
     }
 }

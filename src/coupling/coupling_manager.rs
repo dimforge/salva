@@ -1,6 +1,5 @@
-use na::RealField;
-
 use crate::geometry::{HGrid, HGridEntry};
+use crate::math::Real;
 use crate::object::{BoundarySet, Fluid};
 use crate::TimestepManager;
 
@@ -19,7 +18,7 @@ pub trait CouplingManager {
         timestep: &TimestepManager,
         h: Real,
         particle_radius: Real,
-        hgrid: &HGrid<N, HGridEntry>,
+        hgrid: &HGrid<HGridEntry>,
         fluids: &mut [Fluid],
         boundaries: &mut BoundarySet,
     );
@@ -34,7 +33,7 @@ impl CouplingManager for () {
         _: &TimestepManager,
         _: Real,
         _: Real,
-        _: &HGrid<N, HGridEntry>,
+        _: &HGrid<HGridEntry>,
         _: &mut [Fluid],
         _: &mut BoundarySet,
     ) {

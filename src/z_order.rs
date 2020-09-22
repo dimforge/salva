@@ -1,5 +1,4 @@
-use crate::math::Point;
-use na::RealField;
+use crate::math::{Point, Real};
 use num_traits::float::FloatCore;
 use std::cmp::Ordering;
 
@@ -21,7 +20,7 @@ pub fn compute_points_z_order(points: &[Point<Real>]) -> Vec<usize> {
 // Algorithm 1
 //
 // http://compgeom.com/~piyush/papers/tvcg_stann.pdf
-pub fn z_order_floats(p1: &[N], p2: &[N]) -> Option<Ordering> {
+pub fn z_order_floats(p1: &[Real], p2: &[Real]) -> Option<Ordering> {
     assert_eq!(
         p1.len(),
         p2.len(),
