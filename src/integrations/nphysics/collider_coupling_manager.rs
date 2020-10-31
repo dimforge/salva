@@ -17,10 +17,10 @@ use std::sync::RwLock;
 pub enum CouplingMethod {
     /// The collider shape is approximated with the given sample points in local-space.
     ///
-    /// It is recommanded that those points are separated by a distance smaller or equal to twice
+    /// It is recommended that those points are separated by a distance smaller or equal to twice
     /// the particle radius used to initialize the LiquidWorld.
     StaticSampling(Vec<Point<Real>>),
-    /// The colliser shape is approximated by a dynamic set of points automatically computed based on contacts with fluid particles.
+    /// The collider shape is approximated by a dynamic set of points automatically computed based on contacts with fluid particles.
     DynamicContactSampling,
 }
 

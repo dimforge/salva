@@ -60,17 +60,20 @@ impl Kernel for CubicSplineKernel {
         #[cfg(feature = "dim3")]
         let normalizer = na::convert::<_, Real>(8.0) / (Real::pi() * h * h * h);
 
+        let _1: Real = na::convert::<_, Real>(1.0);
         let _2: Real = na::convert::<_, Real>(2.0);
         let _3: Real = na::convert::<_, Real>(3.0);
+        let _eps: Real = na::convert::<_, Real>(1.0e-5);
         let q = r / h;
 
-        let rhs = if q <= na::convert::<_, Real>(0.5) {
-            (q * _3 - _2) * q * na::convert::<_, Real>(6.0)
-        } else if q <= na::one::<Real>() {
-            let one_q = na::one::<Real>() - q;
-            -one_q * one_q * na::convert::<_, Real>(6.0)
-        } else {
+        let rhs = if q > _1 || q <= _eps {
             na::zero::<Real>()
+        } else if q <= na::convert::<_, Real>(0.5) {
+            (q * _3 - _2) * q * na::convert::<_, Real>(6.0)
+        } else {
+            // 0.5 < q <= 1.0
+            let one_q = _1 - q;
+            -one_q * one_q * na::convert::<_, Real>(6.0)
         };
 
         normalizer * rhs / h

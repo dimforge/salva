@@ -1,7 +1,7 @@
 use na::{Point3, Vector3};
 use salva3d::object::Fluid;
 
-pub fn cube_fluid(ni: usize, nj: usize, nk: usize, particle_rad: f32, density: f32) -> Fluid<f32> {
+pub fn cube_fluid(ni: usize, nj: usize, nk: usize, particle_rad: f32, density: f32) -> Fluid {
     let mut points = Vec::new();
     let half_extents = Vector3::new(ni as f32, nj as f32, nk as f32) * particle_rad;
 

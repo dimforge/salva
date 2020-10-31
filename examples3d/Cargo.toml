@@ -5,20 +5,20 @@ authors = [ "Sébastien Crozet <developer@crozet.re>" ]
 edition = "2018"
 
 [features]
-parallel = [ "nphysics_testbed3d/parallel"]
+parallel = [ "rapier_testbed3d/parallel"]
 
 [dependencies]
 num-traits = "0.2"
 Inflector  = "0.11"
-nalgebra   = "0.21"
-ncollide3d = "0.23"
-kiss3d     = "0.24"
-nphysics3d = "0.16"
-nphysics_testbed3d = { version = "0.10", features = [ "fluids" ] }
+nalgebra   = "0.23"
+ncollide3d = "0.26"
+kiss3d     = "0.27"
+rapier3d = "0.3"
+rapier_testbed3d = "0.3"
 
 [dependencies.salva3d]
 path = "../build/salva3d"
-features = [ "nphysics", "sampling" ]
+features = [ "rapier", "rapier-testbed", "sampling" ]
 
 [target.wasm32-unknown-unknown.dependencies]
 stdweb = "0.4"
@@ -32,7 +32,3 @@ stdweb = "0.4"
 [[bin]]
 name = "all_examples3"
 path = "./all_examples3.rs"
-
-[[bin]]
-name = "fluids3"
-path = "basic3.rs"

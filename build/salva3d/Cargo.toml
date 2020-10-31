@@ -16,7 +16,9 @@ default = [ "dim3" ]
 dim3    = [ ]
 parallel = [ "rayon" ]
 nphysics = [ "ncollide3d", "nphysics3d" ]
+rapier = [ "ncollide3d", "rapier3d" ]
 sampling = [ "ncollide3d" ]
+rapier-testbed = [ "rapier", "rapier_testbed3d", "kiss3d" ]
 
 [lib]
 name = "salva3d"
@@ -24,14 +26,16 @@ path = "../../src/lib.rs"
 required-features = [ "dim3" ]
 
 [dependencies]
-approx = "0.3"
+approx = "0.4"
 num-traits = "0.2"
 fnv = "1.0"
-itertools = "0.8"
+itertools = "0.9"
 generational-arena = "0.2"
 instant = { version = "0.1", features = [ "now" ] }
-nalgebra   = { version = "0.21" }
-rayon = { version = "1.0", optional = true }
-ncollide3d = { version = "0.23", optional = true }
-nphysics3d = { version = "0.16", optional = true }
-
+nalgebra   = { version = "0.23" }
+rayon = { version = "1.5", optional = true }
+ncollide3d = { version = "0.26", optional = true }
+nphysics3d = { version = "0.18", optional = true }
+rapier3d = { version = "0.3", optional = true }
+rapier_testbed3d = { version = "0.3", optional = true }
+kiss3d = { version = "0.27", optional = true }

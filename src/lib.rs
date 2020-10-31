@@ -36,15 +36,23 @@ The name of this library is inspired from the famous surrealist artist `Salvador
 #![doc(html_logo_url = "https://salva.rs/img/logo_salva_rustdoc.svg")]
 
 extern crate nalgebra as na;
-#[cfg(all(feature = "dim2", feature = "nphysics"))]
+#[cfg(all(feature = "dim2", feature = "ncollide2d"))]
 extern crate ncollide2d as ncollide;
-#[cfg(all(feature = "dim3", feature = "nphysics"))]
+#[cfg(all(feature = "dim3", feature = "ncollide3d"))]
 extern crate ncollide3d as ncollide;
 #[cfg(all(feature = "dim2", feature = "nphysics"))]
 extern crate nphysics2d as nphysics;
 #[cfg(all(feature = "dim3", feature = "nphysics"))]
 extern crate nphysics3d as nphysics;
 extern crate num_traits as num;
+#[cfg(all(feature = "dim2", feature = "rapier"))]
+extern crate rapier2d as rapier;
+#[cfg(all(feature = "dim3", feature = "rapier"))]
+extern crate rapier3d as rapier;
+#[cfg(all(feature = "dim2", feature = "rapier-testbed"))]
+extern crate rapier_testbed2d as rapier_testbed;
+#[cfg(all(feature = "dim3", feature = "rapier-testbed"))]
+extern crate rapier_testbed3d as rapier_testbed;
 
 macro_rules! par_iter {
     ($t: expr) => {{
@@ -82,6 +90,7 @@ pub mod counters;
 pub mod coupling;
 pub mod geometry;
 pub mod helper;
+pub mod integrations;
 pub mod kernel;
 mod liquid_world;
 pub mod object;
