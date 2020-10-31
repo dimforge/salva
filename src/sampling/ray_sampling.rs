@@ -2,27 +2,25 @@ use crate::math::{Isometry, Point, Real, Vector, DIM};
 
 use ncollide::bounding_volume::{BoundingVolume, AABB};
 use ncollide::query::{Ray, RayCast};
-use ncollide::shape::Shape;
+use rapier::geometry::Shape;
 use std::collections::HashSet;
 
 /// Samples the surface of `shape` with a method based on ray-casting.
-pub fn shape_surface_ray_sample<S: ?Sized + Shape<Real>>(
+pub fn shape_surface_ray_sample<S: ?Sized + Shape>(
     shape: &S,
     particle_rad: Real,
 ) -> Option<Vec<Point<Real>>> {
-    let rc = shape.as_ray_cast()?;
-    let aabb = shape.local_aabb();
-    Some(surface_ray_sample(rc, &aabb, particle_rad))
+    let aabb = shape.compute_aabb(&Isometry::identity());
+    Some(surface_ray_sample(shape, &aabb, particle_rad))
 }
 
 /// Samples the volume of `shape` with a method based on ray-casting.
-pub fn shape_volume_ray_sample<S: ?Sized + Shape<Real>>(
+pub fn shape_volume_ray_sample<S: ?Sized + Shape>(
     shape: &S,
     particle_rad: Real,
 ) -> Option<Vec<Point<Real>>> {
-    let rc = shape.as_ray_cast()?;
-    let aabb = shape.local_aabb();
-    Some(volume_ray_sample(rc, &aabb, particle_rad))
+    let aabb = shape.compute_aabb(&Isometry::identity());
+    Some(volume_ray_sample(shape, &aabb, particle_rad))
 }
 
 /// Samples the surface of `shape` with a method based on ray-casting.
@@ -45,9 +43,7 @@ pub fn surface_ray_sample<S: ?Sized + RayCast<Real>>(
         let mut ray = Ray::new(curr, dir);
         let mut entry_point = true;
 
-        while let Some(toi) =
-            shape.toi_with_ray(&Isometry::identity(), &ray, Real::max_value(), false)
-        {
+        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, Real::MAX, false) {
             let impact = ray.point_at(toi);
             let quantized_pt = quantize_point(&origin, &impact, subdivision_size, entry_point, i);
             let _ = quantized_points.insert(quantized_pt);
@@ -110,9 +106,7 @@ pub fn volume_ray_sample<S: ?Sized + RayCast<Real>>(
         let mut ray = Ray::new(curr, dir);
         let mut prev_impact = None;
 
-        while let Some(toi) =
-            shape.toi_with_ray(&Isometry::identity(), &ray, Real::max_value(), false)
-        {
+        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, Real::MAX, false) {
             if let Some(prev) = prev_impact {
                 sample_segment(
                     &origin,

@@ -27,7 +27,7 @@ impl LiquidWorld {
     ///
     /// # Parameters
     ///
-    /// - `particle_radius`: the radius of every particle on this world.
+    /// - `particle_radius`: the radius of every particle on this world.
     /// - `smoothing_factor`: the smoothing factor used to compute the SPH kernel radius.
     ///    The kernel radius will be computed as `particle_radius * smoothing_factor * 2.0.
     pub fn new(

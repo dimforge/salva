@@ -13,7 +13,7 @@ use crate::object::{Boundary, Fluid};
 use crate::solver::{helper, PressureSolver};
 use crate::TimestepManager;
 
-/// A DFSPH (Divergence Free Smoothed Particle Hydrodynamics) pressure solver.
+/// A DFSPH (Divergence Free Smoothed Particle Hydrodynamics) pressure solver.
 pub struct DFSPHSolver<
     KernelDensity: Kernel = CubicSplineKernel,
     KernelGradient: Kernel = CubicSplineKernel,
@@ -206,7 +206,7 @@ where
 
                     let denominator = squared_grad_sum + grad_sum.norm_squared();
 
-                    if denominator <= na::convert::<_, Real>(1.0e-6) {
+                    if denominator <= na::convert::<_, Real>(1.0e-5) {
                         *alpha_i = na::zero::<Real>();
                     } else {
                         *alpha_i = na::one::<Real>() / denominator;

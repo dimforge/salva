@@ -2,12 +2,12 @@
 
 extern crate nalgebra as na;
 extern crate ncollide3d;
-extern crate nphysics3d;
-extern crate nphysics_testbed3d;
+extern crate rapier3d;
+extern crate rapier_testbed3d;
 
 use inflector::Inflector;
 
-use nphysics_testbed3d::Testbed;
+use rapier_testbed3d::Testbed;
 
 mod basic3;
 mod custom_forces3;
