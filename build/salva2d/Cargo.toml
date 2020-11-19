@@ -15,7 +15,6 @@ edition = "2018"
 default = [ "dim2" ]
 dim2    = [ ]
 parallel = [ "rayon" ]
-nphysics = [ "ncollide2d", "nphysics2d" ]
 sampling = [ "ncollide2d" ]
 rapier = [ "ncollide2d", "rapier2d" ]
 rapier-testbed = [ "rapier", "rapier_testbed2d", "kiss3d" ]
@@ -35,7 +34,6 @@ nalgebra  = "0.23"
 instant = { version = "0.1", features = [ "now" ] }
 rayon = { version = "1.5", optional = true }
 ncollide2d = { version = "0.26", optional = true }
-nphysics2d = { version = "0.18", optional = true }
 rapier2d = { version = "0.3", optional = true }
 rapier_testbed2d = { version = "0.3", optional = true }
 kiss3d = { version = "0.27", optional = true }
