@@ -4,12 +4,9 @@ use na::{Isometry3, Point3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
 use rapier_testbed3d::Testbed;
-use salva3d::integrations::rapier::{
-    ColliderCouplingSet, ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
-};
+use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva3d::object::Boundary;
-use salva3d::solver::{ArtificialViscosity, DFSPHSolver};
-use salva3d::LiquidWorld;
+use salva3d::solver::ArtificialViscosity;
 use std::f32;
 
 #[path = "./helper.rs"]

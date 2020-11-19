@@ -1,17 +1,12 @@
 extern crate nalgebra as na;
 
-use na::{Isometry3, Point3, Unit, Vector3};
-use ncollide3d::shape::{Cuboid, ShapeHandle};
-use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
-use rapier3d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
+use na::{Point3, Unit, Vector3};
+use rapier3d::dynamics::{JointSet, RigidBodySet};
+use rapier3d::geometry::ColliderSet;
 use rapier_testbed3d::Testbed;
-use salva3d::integrations::rapier::{
-    ColliderCouplingSet, ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
-};
+use salva3d::integrations::rapier::{FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin};
 use salva3d::object::{Boundary, Fluid};
 use salva3d::solver::NonPressureForce;
-use salva3d::solver::{ArtificialViscosity, DFSPHSolver};
-use salva3d::LiquidWorld;
 use std::f32;
 
 #[path = "./helper.rs"]
@@ -26,8 +21,8 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     let gravity = Vector3::zeros();
     let mut plugin = FluidsTestbedPlugin::new();
-    let mut bodies = RigidBodySet::new();
-    let mut colliders = ColliderSet::new();
+    let bodies = RigidBodySet::new();
+    let colliders = ColliderSet::new();
     let joints = JointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 

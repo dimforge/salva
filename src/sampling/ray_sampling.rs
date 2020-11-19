@@ -33,8 +33,8 @@ pub fn surface_ray_sample<S: ?Sized + RayCast<Real>>(
     let subdivision_size = particle_rad * na::convert::<_, Real>(2.0);
 
     let volume = volume.loosened(subdivision_size);
-    let maxs = volume.maxs();
-    let origin = volume.mins() + Vector::repeat(subdivision_size / na::convert::<_, Real>(2.0));
+    let maxs = volume.maxs;
+    let origin = volume.mins + Vector::repeat(subdivision_size / na::convert::<_, Real>(2.0));
     let mut curr = origin;
 
     let mut perform_cast = |i, curr| {
@@ -97,8 +97,8 @@ pub fn volume_ray_sample<S: ?Sized + RayCast<Real>>(
     let subdivision_size = particle_rad * na::convert::<_, Real>(2.0);
 
     let volume = volume.loosened(subdivision_size);
-    let maxs = volume.maxs();
-    let origin = volume.mins() + Vector::repeat(subdivision_size / na::convert::<_, Real>(2.0));
+    let maxs = volume.maxs;
+    let origin = volume.mins + Vector::repeat(subdivision_size / na::convert::<_, Real>(2.0));
 
     let mut perform_cast = |i, curr| {
         let mut dir = Vector::zeros();
