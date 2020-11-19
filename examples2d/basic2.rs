@@ -1,16 +1,15 @@
 extern crate nalgebra as na;
 
-use na::{Isometry2, Point2, Point3, Vector2};
+use na::{Point2, Point3, Vector2};
 use ncollide2d::shape::Cuboid;
 use rapier2d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
-use rapier2d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
+use rapier2d::geometry::{ColliderBuilder, ColliderSet};
 use rapier_testbed2d::Testbed;
 use salva2d::integrations::rapier::{
-    ColliderCouplingSet, ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
+    ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
 };
 use salva2d::object::{Boundary, Fluid};
-use salva2d::solver::{ArtificialViscosity, DFSPHSolver};
-use salva2d::LiquidWorld;
+use salva2d::solver::ArtificialViscosity;
 use std::f32;
 
 const PARTICLE_RADIUS: f32 = 0.1;

@@ -1,16 +1,12 @@
 extern crate nalgebra as na;
 
-use na::{Isometry3, Point3, Vector3};
-use ncollide3d::shape::{Cuboid, ShapeHandle};
+use na::{Point3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
-use rapier3d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
+use rapier3d::geometry::{ColliderBuilder, ColliderSet};
 use rapier_testbed3d::Testbed;
-use salva3d::integrations::rapier::{
-    ColliderCouplingSet, ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
-};
+use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva3d::object::{Boundary, Fluid};
-use salva3d::solver::{Akinci2013SurfaceTension, ArtificialViscosity, DFSPHSolver, XSPHViscosity};
-use salva3d::LiquidWorld;
+use salva3d::solver::{Akinci2013SurfaceTension, XSPHViscosity};
 use std::f32;
 
 #[path = "./helper.rs"]

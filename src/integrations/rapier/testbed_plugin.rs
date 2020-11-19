@@ -1,6 +1,5 @@
 use super::FluidsPipeline;
 use crate::object::{Boundary, BoundaryHandle, Fluid, FluidHandle};
-use crate::LiquidWorld;
 use kiss3d::window::Window;
 use na::{Point3, Vector3};
 use rapier::math::{Point, Vector};
@@ -8,14 +7,24 @@ use rapier_testbed::objects::node::GraphicsNode;
 use rapier_testbed::{PhysicsState, TestbedPlugin};
 use std::collections::HashMap;
 
+/// How the fluids should be rendered by the testbed.
 #[derive(Copy, Clone, Debug)]
 pub enum FluidsRenderingMode {
-    VelocityColor { min: f32, max: f32 },
+    /// Use a red taint the closer to `max` the velocity is.
+    VelocityColor {
+        /// Fluids with a velocity smaller than this will not have any red taint.
+        min: f32,
+        /// Fluids with a velocity greater than this will be completely red.
+        max: f32,
+    },
+    /// Use a plain color.
     StaticColor,
 }
 
+/// A user-defined callback executed at each frame.
 pub type FluidCallback = Box<dyn FnMut(&mut Window, &mut PhysicsState, &mut FluidsPipeline, f32)>;
 
+/// A plugin for rendering fluids with the Rapier testbed.
 pub struct FluidsTestbedPlugin {
     callbacks: Vec<FluidCallback>,
     step_time: f64,
@@ -29,6 +38,7 @@ pub struct FluidsTestbedPlugin {
 }
 
 impl FluidsTestbedPlugin {
+    /// Initializes the plugin.
     pub fn new() -> Self {
         Self {
             step_time: 0.0,
@@ -43,6 +53,7 @@ impl FluidsTestbedPlugin {
         }
     }
 
+    /// Adds a callback to be executed at each frame.
     pub fn add_callback(
         &mut self,
         f: impl FnMut(&mut Window, &mut PhysicsState, &mut FluidsPipeline, f32) + 'static,
@@ -50,11 +61,13 @@ impl FluidsTestbedPlugin {
         self.callbacks.push(Box::new(f))
     }
 
+    /// Sets the fluids pipeline used by the testbed.
     pub fn set_pipeline(&mut self, fluids_pipeline: FluidsPipeline) {
         self.fluids_pipeline = fluids_pipeline;
         self.fluids_pipeline.liquid_world.counters.enable();
     }
 
+    /// Sets the color used to render the specified fluid.
     pub fn set_fluid_color(&mut self, fluid: FluidHandle, color: Point3<f32>) {
         let _ = self.f2color.insert(fluid, color);
 
@@ -63,10 +76,12 @@ impl FluidsTestbedPlugin {
         }
     }
 
+    /// Sets the way fluids are rendered.
     pub fn set_fluid_rendering_mode(&mut self, mode: FluidsRenderingMode) {
         self.fluid_rendering_mode = mode;
     }
 
+    /// Enables the rendering of boundary particles.
     pub fn enable_boundary_particles_rendering(&mut self, enabled: bool) {
         self.render_boundary_particles = enabled;
 
@@ -191,14 +206,6 @@ impl FluidNode {
         res
     }
 
-    pub fn select(&mut self) {
-        self.color = Point3::new(1.0, 0.0, 0.0);
-    }
-
-    pub fn unselect(&mut self) {
-        self.color = self.base_color;
-    }
-
     pub fn set_color(&mut self, color: Point3<f32>) {
         self.gfx.set_color(color.x, color.y, color.z);
         self.color = color;
@@ -253,10 +260,6 @@ impl FluidNode {
 
     pub fn update_with_fluid(&mut self, fluid: &Fluid, rendering_mode: FluidsRenderingMode) {
         self.update(&fluid.positions, &fluid.velocities, rendering_mode)
-    }
-
-    pub fn scene_node(&self) -> &GraphicsNode {
-        &self.gfx
     }
 
     pub fn scene_node_mut(&mut self) -> &mut GraphicsNode {

@@ -1,16 +1,14 @@
 extern crate nalgebra as na;
 
 use na::{Isometry3, Point3, Vector3};
-use ncollide3d::shape::{Cuboid, ShapeHandle};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
-use rapier3d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
+use rapier3d::geometry::{ColliderBuilder, ColliderSet};
 use rapier_testbed3d::Testbed;
 use salva3d::integrations::rapier::{
-    ColliderCouplingSet, ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
+    ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
 };
 use salva3d::object::Boundary;
-use salva3d::solver::{Akinci2013SurfaceTension, ArtificialViscosity, DFSPHSolver};
-use salva3d::LiquidWorld;
+use salva3d::solver::{Akinci2013SurfaceTension, ArtificialViscosity};
 use std::f32;
 
 #[path = "./helper.rs"]
@@ -50,12 +48,6 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let ground_thickness = 0.02;
     let ground_half_width = 0.15;
-
-    let ground_shape = ShapeHandle::new(Cuboid::new(Vector3::new(
-        ground_half_width,
-        ground_thickness,
-        ground_half_width,
-    )));
 
     let co =
         ColliderBuilder::cuboid(ground_half_width, ground_thickness, ground_half_width).build();

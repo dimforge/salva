@@ -7,7 +7,6 @@ use crate::TimestepManager;
 use approx::AbsDiffEq;
 use na::Unit;
 use ncollide::bounding_volume::BoundingVolume;
-use ncollide::query::PointQuery;
 use ncollide::shape::FeatureId;
 use rapier::dynamics::RigidBodySet;
 use rapier::geometry::{ColliderHandle, ColliderSet};
