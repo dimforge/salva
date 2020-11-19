@@ -1,7 +1,6 @@
 extern crate nalgebra as na;
 
 use na::{Isometry3, Point3, Vector3};
-use ncollide3d::shape::{Cuboid, ShapeHandle};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
 use rapier_testbed3d::Testbed;
@@ -23,8 +22,7 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * World
      */
-    testbed.physics_state_mut().gravity = Vector3::y() * -9.81;
-
+    let gravity = Vector3::y() * -9.81;
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
     let joints = JointSet::new();
@@ -117,7 +115,7 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world(bodies, colliders, joints);
+    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
     testbed.integration_parameters_mut().set_dt(1.0 / 200.0);
     testbed.look_at(Point3::new(3.0, 3.0, 3.0), Point3::origin());
 }

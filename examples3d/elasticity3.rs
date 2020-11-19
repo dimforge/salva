@@ -23,8 +23,7 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * World
      */
-    testbed.physics_state_mut().gravity = Vector3::y() * -9.81;
-
+    let gravity = Vector3::y() * -9.81;
     let mut plugin = FluidsTestbedPlugin::new();
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
@@ -105,7 +104,7 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world(bodies, colliders, joints);
+    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
     testbed.integration_parameters_mut().set_dt(1.0 / 200.0);
     testbed.look_at(Point3::new(1.5, 1.5, 1.5), Point3::origin());
 }
