@@ -24,8 +24,7 @@ pub fn init_world(testbed: &mut Testbed) {
      * World
      */
     let mut plugin = FluidsTestbedPlugin::new();
-    testbed.physics_state_mut().gravity = Vector3::y() * -9.81;
-
+    let gravity = Vector3::y() * -9.81;
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
     let joints = JointSet::new();
@@ -104,7 +103,7 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_pipeline(fluids_pipeline);
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world(bodies, colliders, joints);
+    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
     testbed.integration_parameters_mut().set_dt(1.0 / 200.0);
     //    testbed.enable_boundary_particles_rendering(true);
     testbed.look_at(Point3::new(1.5, 0.0, 1.5), Point3::new(0.0, 0.0, 0.0));

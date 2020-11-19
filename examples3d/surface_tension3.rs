@@ -25,8 +25,7 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     // We want to simulate a 1cm³ droplet. We use the spacial unit 1 = 1dm.
     // Therefore each particles must have a diameter of 0.005, and the gravity is -0.981 instead of -9.81.
-    testbed.physics_state_mut().gravity = Vector3::y() * -0.981;
-
+    let gravity = Vector3::y() * -0.981;
     let mut plugin = FluidsTestbedPlugin::new();
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
@@ -78,7 +77,7 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world(bodies, colliders, joints);
+    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
     testbed.integration_parameters_mut().set_dt(1.0 / 200.0);
     testbed.look_at(Point3::new(0.25, 0.25, 0.25), Point3::origin());
 }

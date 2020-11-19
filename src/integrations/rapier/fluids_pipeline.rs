@@ -73,7 +73,7 @@ pub enum ColliderSampling {
 }
 
 struct ColliderCouplingEntry {
-    coupling_method: ColliderSampling,
+    sampling_method: ColliderSampling,
     boundary: BoundaryHandle,
     features: Vec<FeatureId>,
 }
@@ -99,12 +99,12 @@ impl ColliderCouplingSet {
         &mut self,
         boundary: BoundaryHandle,
         collider: ColliderHandle,
-        coupling_method: ColliderSampling,
+        sampling_method: ColliderSampling,
     ) -> Option<BoundaryHandle> {
         let old = self.entries.insert(
             collider,
             ColliderCouplingEntry {
-                coupling_method,
+                sampling_method,
                 boundary,
                 features: Vec::new(),
             },
@@ -175,7 +175,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
                 boundary.volumes.clear();
                 coupling.features.clear();
 
-                match &coupling.coupling_method {
+                match &coupling.sampling_method {
                     ColliderSampling::StaticSampling(points) => {
                         for pt in points {
                             boundary.positions.push(collider.position() * pt);
@@ -273,7 +273,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
                     let forces = forces.read().unwrap();
                     if let Some(mut body) = self.bodies.get_mut(collider.parent()) {
                         for (pos, force) in boundary.positions.iter().zip(forces.iter().cloned()) {
-                            body.apply_force_at_point(force, *pos)
+                            body.apply_force_at_point(force, *pos, true)
                         }
                     }
                 }
