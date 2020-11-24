@@ -6,7 +6,8 @@ use crate::object::{Boundary, BoundaryHandle, BoundarySet};
 use crate::object::{Fluid, FluidHandle, FluidSet};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
-use kiss3d::ncollide3d::bounding_volume::AABB;
+
+use ncollide::bounding_volume::AABB;
 
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld {
@@ -172,7 +173,7 @@ impl LiquidWorld {
         self.boundaries.remove(handle)
     }
 
-    #[cfg(feature = "dim3")]
+    // #[cfg(feature = "dim3")]
     pub fn particles_intersecting_aabb(&self, aabb: &AABB<Real>) -> Vec<Point<Real>> {
         self.fluids
             .iter()
