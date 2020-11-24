@@ -12,6 +12,8 @@ rapier2d = { git = "https://github.com/dimforge/rapier" }
 rapier3d = { git = "https://github.com/dimforge/rapier" }
 rapier_testbed2d = { git = "https://github.com/dimforge/rapier" }
 rapier_testbed3d = { git = "https://github.com/dimforge/rapier" }
+ncollide2d = { git = "https://github.com/dimforge/ncollide" }
+ncollide3d = { git = "https://github.com/dimforge/ncollide" }
 
 #rapier2d = { path = "../rapier/build/rapier2d" }
 #rapier3d = { path = "../rapier/build/rapier3d" }
