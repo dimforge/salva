@@ -189,8 +189,7 @@ impl Fluid {
         }
     }
 
-    /// return all particles within the given AABB
-    // #[cfg(feature = "dim3")]
+    /// get all particles within the given AABB
     pub fn particles_intersecting_aabb(&self, aabb: &AABB<Real>) -> Vec<Point<Real>> {
         self.positions
             .iter()

@@ -173,7 +173,7 @@ impl LiquidWorld {
         self.boundaries.remove(handle)
     }
 
-    // #[cfg(feature = "dim3")]
+    /// get all particles within the given AABB
     pub fn particles_intersecting_aabb(&self, aabb: &AABB<Real>) -> Vec<Point<Real>> {
         self.fluids
             .iter()
