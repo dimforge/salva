@@ -2,8 +2,8 @@ use crate::math::{Isometry, Point, Real, Vector};
 use crate::object::{ContiguousArena, ContiguousArenaIndex};
 use crate::solver::NonPressureForce;
 
-use num::Zero;
 use kiss3d::ncollide3d::bounding_volume::AABB;
+use num::Zero;
 
 /// A fluid object.
 ///
@@ -192,11 +192,10 @@ impl Fluid {
     /// return all particles within the given AABB
     #[cfg(feature = "dim3")]
     pub fn particles_intersecting_aabb(&self, aabb: &AABB<Real>) -> Vec<Point<Real>> {
-        self
-            .positions
+        self.positions
             .iter()
             .filter(|particle| aabb.contains_local_point(*particle))
-            .map(|particle|*particle)
+            .map(|particle| *particle)
             .collect()
     }
 }

@@ -173,9 +173,8 @@ impl LiquidWorld {
     }
 
     #[cfg(feature = "dim3")]
-    pub fn particles_intersecting_aabb(&self, aabb: &AABB<Real>) ->Vec<Point<Real>> {
-        self
-            .fluids
+    pub fn particles_intersecting_aabb(&self, aabb: &AABB<Real>) -> Vec<Point<Real>> {
+        self.fluids
             .iter()
             .flat_map(|(_, fluid)| fluid.particles_intersecting_aabb(aabb))
             .collect()
