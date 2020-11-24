@@ -1,11 +1,12 @@
 use crate::counters::Counters;
 use crate::coupling::CouplingManager;
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
-use crate::math::{Real, Vector};
+use crate::math::{Point, Real, Vector};
 use crate::object::{Boundary, BoundaryHandle, BoundarySet};
 use crate::object::{Fluid, FluidHandle, FluidSet};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
+use kiss3d::ncollide3d::bounding_volume::AABB;
 
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld {
@@ -169,6 +170,15 @@ impl LiquidWorld {
     /// Add a boundary to the liquid world.
     pub fn remove_boundary(&mut self, handle: BoundaryHandle) -> Option<Boundary> {
         self.boundaries.remove(handle)
+    }
+
+    #[cfg(feature = "dim3")]
+    pub fn particles_intersecting_aabb(&self, aabb: &AABB<Real>) ->Vec<Point<Real>> {
+        self
+            .fluids
+            .iter()
+            .flat_map(|(_, fluid)| fluid.particles_intersecting_aabb(aabb))
+            .collect()
     }
 
     /// The set of fluids on this liquid world.
