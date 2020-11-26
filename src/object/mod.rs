@@ -10,6 +10,8 @@ mod fluid;
 
 /// The identifier of a single particle.
 pub enum ParticleId {
+    /// A fluid particle.
     FluidParticle(FluidHandle, usize),
+    /// A boundary particle.
     BoundaryParticle(BoundaryHandle, usize),
 }

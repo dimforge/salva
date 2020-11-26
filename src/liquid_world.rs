@@ -6,9 +6,12 @@ use crate::object::{Boundary, BoundaryHandle, BoundarySet};
 use crate::object::{Fluid, FluidHandle, FluidSet, ParticleId};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
-use ncollide::bounding_volume::{HasBoundingVolume, AABB};
-use ncollide::query::PointQuery;
-use ncollide::shape::Cuboid;
+#[cfg(feature = "ncollide")]
+use ncollide::{
+    bounding_volume::{HasBoundingVolume, AABB},
+    query::PointQuery,
+    shape::Cuboid,
+};
 
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld {
@@ -205,6 +208,7 @@ impl LiquidWorld {
     }
 
     /// The set of particles potentially intersecting the given AABB.
+    #[cfg(feature = "ncollide")]
     pub fn particles_intersecting_aabb<'a>(
         &'a self,
         aabb: &'a AABB<f32>,
@@ -239,6 +243,7 @@ impl LiquidWorld {
     }
 
     /// The set of particles potentially intersecting the given AABB.
+    #[cfg(feature = "ncollide")]
     pub fn particles_intersecting_shape<'a, S: ?Sized>(
         &'a self,
         pos: &'a Isometry<f32>,
