@@ -1,11 +1,14 @@
 use crate::counters::Counters;
 use crate::coupling::CouplingManager;
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
-use crate::math::{Real, Vector};
+use crate::math::{Isometry, Real, Vector};
 use crate::object::{Boundary, BoundaryHandle, BoundarySet};
-use crate::object::{Fluid, FluidHandle, FluidSet};
+use crate::object::{Fluid, FluidHandle, FluidSet, ParticleId};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
+use ncollide::bounding_volume::{HasBoundingVolume, AABB};
+use ncollide::query::PointQuery;
+use ncollide::shape::Cuboid;
 
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld {
@@ -199,5 +202,76 @@ impl LiquidWorld {
     /// The radius of every particle on this liquid world.
     pub fn particle_radius(&self) -> Real {
         self.particle_radius
+    }
+
+    /// The set of particles potentially intersecting the given AABB.
+    pub fn particles_intersecting_aabb<'a>(
+        &'a self,
+        aabb: &'a AABB<f32>,
+    ) -> impl Iterator<Item = ParticleId> + 'a {
+        self.hgrid
+            .cells_intersecting_aabb(&aabb.mins, &aabb.maxs)
+            .flat_map(|e| e.1)
+            .filter_map(move |entry| match entry {
+                HGridEntry::FluidParticle(fid, pid) => {
+                    let (fluid, handle) = self.fluids.get_from_contiguous_index(*fid)?;
+                    let pt = fluid.positions[*pid];
+
+                    // FIXME: use `distance_to_local_point` once it's supported.
+                    let id = &Isometry::identity();
+                    if aabb.distance_to_point(id, &pt, true) < self.particle_radius {
+                        Some(ParticleId::FluidParticle(handle, *pid))
+                    } else {
+                        None
+                    }
+                }
+                HGridEntry::BoundaryParticle(bid, pid) => {
+                    let (boundary, handle) = self.boundaries.get_from_contiguous_index(*bid)?;
+                    let pt = boundary.positions[*pid]; // FIXME: use `distance_to_local_point` once it's supported.
+                    let id = &Isometry::identity();
+                    if aabb.distance_to_point(id, &pt, true) < self.particle_radius {
+                        Some(ParticleId::BoundaryParticle(handle, *pid))
+                    } else {
+                        None
+                    }
+                }
+            })
+    }
+
+    /// The set of particles potentially intersecting the given AABB.
+    pub fn particles_intersecting_shape<'a, S: ?Sized>(
+        &'a self,
+        pos: &'a Isometry<f32>,
+        shape: &'a S,
+    ) -> impl Iterator<Item = ParticleId> + 'a
+    where
+        S: PointQuery<f32> + HasBoundingVolume<f32, AABB<f32>>,
+    {
+        let aabb = shape.bounding_volume(pos);
+
+        self.hgrid
+            .cells_intersecting_aabb(&aabb.mins, &aabb.maxs)
+            .flat_map(|e| e.1)
+            .filter_map(move |entry| match entry {
+                HGridEntry::FluidParticle(fid, pid) => {
+                    let (fluid, handle) = self.fluids.get_from_contiguous_index(*fid)?;
+                    let pt = fluid.positions[*pid];
+
+                    if shape.distance_to_point(pos, &pt, true) <= self.particle_radius {
+                        Some(ParticleId::FluidParticle(handle, *pid))
+                    } else {
+                        None
+                    }
+                }
+                HGridEntry::BoundaryParticle(bid, pid) => {
+                    let (boundary, handle) = self.boundaries.get_from_contiguous_index(*bid)?;
+                    let pt = boundary.positions[*pid]; // FIXME: use `distance_to_local_point` once it's supported.
+                    if shape.distance_to_point(pos, &pt, true) <= self.particle_radius {
+                        Some(ParticleId::BoundaryParticle(handle, *pid))
+                    } else {
+                        None
+                    }
+                }
+            })
     }
 }

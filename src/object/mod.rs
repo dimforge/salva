@@ -7,3 +7,9 @@ pub use self::fluid::{Fluid, FluidHandle, FluidSet};
 mod boundary;
 mod contiguous_arena;
 mod fluid;
+
+/// The identifier of a single particle.
+pub enum ParticleId {
+    FluidParticle(FluidHandle, usize),
+    BoundaryParticle(BoundaryHandle, usize),
+}

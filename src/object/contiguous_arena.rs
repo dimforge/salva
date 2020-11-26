@@ -28,6 +28,19 @@ impl<Idx, T> ContiguousArena<Idx, T> {
     }
 
     #[inline]
+    /// Get an element from its position on the contiguous array.
+    pub fn get_from_contiguous_index(&self, index: usize) -> Option<(&T, Idx)>
+    where
+        Idx: From<ContiguousArenaIndex>,
+    {
+        if let (Some(elt), Some(handle)) = (self.objects.get(index), self.rev_indices.get(index)) {
+            Some((elt, Idx::from(*handle)))
+        } else {
+            None
+        }
+    }
+
+    #[inline]
     /// The number of objects on this arena.
     pub fn len(&self) -> usize {
         self.objects.len()

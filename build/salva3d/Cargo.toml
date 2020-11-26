@@ -36,4 +36,4 @@ rayon = { version = "1.5", optional = true }
 ncollide3d = { version = "0.26", optional = true }
 rapier3d = { version = "0.3", optional = true }
 rapier_testbed3d = { version = "0.3", optional = true }
-kiss3d = { version = "0.27", optional = true }
+kiss3d = { version = "0.28", optional = true }

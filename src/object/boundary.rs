@@ -77,7 +77,7 @@ impl Boundary {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 /// The unique identifier of a boundary object.
 pub struct BoundaryHandle(ContiguousArenaIndex);
-/// A set of all boundary objects.
+/// A set of all boundary objects.
 pub type BoundarySet = ContiguousArena<BoundaryHandle, Boundary>;
 
 impl From<ContiguousArenaIndex> for BoundaryHandle {
