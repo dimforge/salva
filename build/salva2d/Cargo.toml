@@ -15,9 +15,10 @@ edition = "2018"
 default = [ "dim2" ]
 dim2    = [ ]
 parallel = [ "rayon" ]
-sampling = [ "ncollide2d" ]
-rapier = [ "ncollide2d", "rapier2d" ]
+sampling = [ "ncollide" ]
+rapier = [ "ncollide", "rapier2d" ]
 rapier-testbed = [ "rapier", "rapier_testbed2d", "kiss3d" ]
+ncollide = [ "ncollide2d" ]
 
 [lib]
 name = "salva2d"

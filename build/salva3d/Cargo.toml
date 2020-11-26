@@ -15,9 +15,10 @@ edition = "2018"
 default = [ "dim3" ]
 dim3    = [ ]
 parallel = [ "rayon" ]
-rapier = [ "ncollide3d", "rapier3d" ]
-sampling = [ "ncollide3d" ]
+rapier = [ "ncollide", "rapier3d" ]
+sampling = [ "ncollide" ]
 rapier-testbed = [ "rapier", "rapier_testbed3d", "kiss3d" ]
+ncollide = [ "ncollide3d" ]
 
 [lib]
 name = "salva3d"
