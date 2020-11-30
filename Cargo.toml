@@ -8,10 +8,10 @@ members = [ "build/salva2d", "build/salva3d", "examples2d", "examples3d" ]
 [patch.crates-io]
 salva2d = { path = "./build/salva2d" }
 salva3d = { path = "./build/salva3d" }
-rapier2d = { git = "https://github.com/dimforge/rapier" }
-rapier3d = { git = "https://github.com/dimforge/rapier" }
-rapier_testbed2d = { git = "https://github.com/dimforge/rapier" }
-rapier_testbed3d = { git = "https://github.com/dimforge/rapier" }
+#rapier2d = { git = "https://github.com/dimforge/rapier" }
+#rapier3d = { git = "https://github.com/dimforge/rapier" }
+#rapier_testbed2d = { git = "https://github.com/dimforge/rapier" }
+#rapier_testbed3d = { git = "https://github.com/dimforge/rapier" }
 
 #rapier2d = { path = "../rapier/build/rapier2d" }
 #rapier3d = { path = "../rapier/build/rapier3d" }
