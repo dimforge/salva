@@ -1,6 +1,6 @@
 [package]
 name    = "salva3d"
-version = "0.4.0"
+version = "0.5.0"
 authors = [ "Sébastien Crozet <developer@crozet.re>" ]
 description = "3-dimensional particle-based fluid dynamics in Rust."
 documentation = "https://salva.rs/rustdoc/salva3d/index.html"
@@ -35,6 +35,6 @@ instant = { version = "0.1", features = [ "now" ] }
 nalgebra   = { version = "0.23" }
 rayon = { version = "1.5", optional = true }
 ncollide3d = { version = "0.26", optional = true }
-rapier3d = { version = "0.3", optional = true }
-rapier_testbed3d = { version = "0.3", optional = true }
+rapier3d = { version = "0.4", optional = true }
+rapier_testbed3d = { version = "0.4", optional = true }
 kiss3d = { version = "0.28", optional = true }
