@@ -5,7 +5,7 @@ authors = [ "Sébastien Crozet <developer@crozet.re>" ]
 edition = "2018"
 
 [features]
-parallel = [ "rapier_testbed3d/parallel"]
+parallel = [ "rapier_testbed3d/parallel", "salva3d/parallel"]
 
 [dependencies]
 num-traits = "0.2"
