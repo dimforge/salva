@@ -1,6 +1,6 @@
 extern crate nalgebra as na;
 
-use na::{Isometry3, Point3, Vector3};
+use na::{Isometry3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
 // use rapier_testbed3d::Testbed;
@@ -45,7 +45,7 @@ pub fn init_world(harness: &mut Harness) {
     ));
     let viscosity = ArtificialViscosity::new(1.0, 0.0);
     fluid.nonpressure_forces.push(Box::new(viscosity));
-    let fluid_handle = fluids_pipeline.liquid_world.add_fluid(fluid);
+    let _fluid_handle = fluids_pipeline.liquid_world.add_fluid(fluid);
 
     /*
      * Ground.
