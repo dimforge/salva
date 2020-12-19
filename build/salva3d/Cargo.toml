@@ -18,6 +18,7 @@ parallel = [ "rayon" ]
 rapier = [ "ncollide", "rapier3d" ]
 sampling = [ "ncollide" ]
 rapier-testbed = [ "rapier", "rapier_testbed3d", "kiss3d" ]
+rapier-harness = [ "rapier-testbed" ]
 ncollide = [ "ncollide3d" ]
 
 [lib]

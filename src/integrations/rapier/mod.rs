@@ -6,6 +6,10 @@ pub use fluids_pipeline::{
 #[cfg(feature = "rapier-testbed")]
 pub use testbed_plugin::{FluidsRenderingMode, FluidsTestbedPlugin};
 
+#[cfg(feature = "rapier-harness")]
+pub use harness_plugin::{FluidsHarnessPlugin};
+
+
 mod fluids_pipeline;
 #[cfg(feature = "rapier-testbed")]
 mod testbed_plugin;
