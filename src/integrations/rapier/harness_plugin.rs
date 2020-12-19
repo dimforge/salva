@@ -1,5 +1,5 @@
 use super::FluidsPipeline;
-use rapier_testbed::{PhysicsState, HarnessPlugin};
+use rapier_testbed::{HarnessPlugin, PhysicsState};
 
 /// A user-defined callback executed at each frame.
 pub type FluidCallback = Box<dyn FnMut(&mut PhysicsState, &mut FluidsPipeline, f32)>;
@@ -44,7 +44,6 @@ impl FluidsHarnessPlugin {
         self.fluids_pipeline = fluids_pipeline;
         self.fluids_pipeline.liquid_world.counters.enable();
     }
-
 }
 
 impl HarnessPlugin for FluidsHarnessPlugin {

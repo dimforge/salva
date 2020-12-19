@@ -4,11 +4,11 @@ use na::{Isometry3, Point3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
 // use rapier_testbed3d::Testbed;
-use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsHarnessPlugin};
+use rapier_testbed3d::harness::Harness;
+use salva3d::integrations::rapier::{ColliderSampling, FluidsHarnessPlugin, FluidsPipeline};
 use salva3d::object::Boundary;
 use salva3d::solver::ArtificialViscosity;
 use std::f32;
-use rapier_testbed3d::harness::Harness;
 
 #[path = "./helper.rs"]
 mod helper;
@@ -23,7 +23,7 @@ pub fn init_world(harness: &mut Harness) {
 
     // #[cfg(feature = "parallel")]
     // println!("Parallel build");
-    
+
     let gravity = Vector3::y() * -9.81;
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
