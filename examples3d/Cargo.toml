@@ -18,7 +18,7 @@ rapier_testbed3d = "0.4"
 
 [dependencies.salva3d]
 path = "../build/salva3d"
-features = [ "rapier", "rapier-testbed", "sampling" ]
+features = [ "rapier", "rapier-testbed", "sampling", "rapier-harness" ]
 
 [target.wasm32-unknown-unknown.dependencies]
 stdweb = "0.4"
@@ -32,3 +32,8 @@ stdweb = "0.4"
 [[bin]]
 name = "all_examples3"
 path = "./all_examples3.rs"
+
+
+[[bin]]
+name = "harness_basic3"
+path = "./harness_basic3.rs"
