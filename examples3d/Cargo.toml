@@ -33,7 +33,6 @@ stdweb = "0.4"
 name = "all_examples3"
 path = "./all_examples3.rs"
 
-
 [[bin]]
 name = "harness_basic3"
 path = "./harness_basic3.rs"
