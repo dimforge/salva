@@ -20,8 +20,10 @@ pub fn init_world(harness: &mut Harness) {
     /*
      * World
      */
-    #[cfg(feature = "parallel")]
+
+    // #[cfg(feature = "parallel")]
     // println!("Parallel build");
+    
     let gravity = Vector3::y() * -9.81;
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
