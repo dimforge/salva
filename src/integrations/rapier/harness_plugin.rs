@@ -1,9 +1,5 @@
 use super::FluidsPipeline;
-use crate::object::{Boundary, BoundaryHandle, Fluid, FluidHandle};
-use na::{Point3, Vector3};
-use rapier::math::{Point, Vector};
 use rapier_testbed::{PhysicsState, HarnessPlugin};
-use std::collections::HashMap;
 
 /// A user-defined callback executed at each frame.
 pub type FluidCallback = Box<dyn FnMut(&mut PhysicsState, &mut FluidsPipeline, f32)>;
