@@ -1,8 +1,10 @@
 use super::FluidsPipeline;
 use rapier_testbed::{HarnessPlugin, PhysicsState};
+use rapier_testbed::physics::PhysicsEvents;
+use rapier_testbed::harness::HarnessState;
 
 /// A user-defined callback executed at each frame.
-pub type FluidCallback = Box<dyn FnMut(&mut PhysicsState, &mut FluidsPipeline, f32)>;
+pub type FluidCallback = Box<dyn FnMut(&mut PhysicsState, &PhysicsEvents, &FluidsPipeline, &HarnessState, f32)>;
 
 /// A plugin for rendering fluids with the Rapier testbed.
 pub struct FluidsHarnessPlugin {
@@ -34,7 +36,7 @@ impl FluidsHarnessPlugin {
     /// Adds a callback to be executed at each frame.
     pub fn add_callback(
         &mut self,
-        f: impl FnMut(&mut PhysicsState, &mut FluidsPipeline, f32) + 'static,
+        f: impl FnMut(&mut PhysicsState, &PhysicsEvents, &FluidsPipeline, &HarnessState, f32) + 'static,
     ) {
         self.callbacks.push(Box::new(f))
     }
@@ -47,9 +49,9 @@ impl FluidsHarnessPlugin {
 }
 
 impl HarnessPlugin for FluidsHarnessPlugin {
-    fn run_callbacks(&mut self, physics: &mut PhysicsState, t: f32) {
+    fn run_callbacks(&mut self, physics: &mut PhysicsState, physics_events: &PhysicsEvents,  harness_state: &HarnessState, t: f32) {
         for f in &mut self.callbacks {
-            f(physics, &mut self.fluids_pipeline, t)
+            f(physics, physics_events, &self.fluids_pipeline, harness_state, t)
         }
     }
 
