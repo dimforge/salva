@@ -3,7 +3,6 @@ extern crate nalgebra as na;
 use na::{Isometry3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
-// use rapier_testbed3d::Testbed;
 use rapier_testbed3d::harness::Harness;
 use salva3d::integrations::rapier::{ColliderSampling, FluidsHarnessPlugin, FluidsPipeline};
 use salva3d::object::Boundary;
@@ -20,9 +19,6 @@ pub fn init_world(harness: &mut Harness) {
     /*
      * World
      */
-
-    // #[cfg(feature = "parallel")]
-    // println!("Parallel build");
 
     let gravity = Vector3::y() * -9.81;
     let mut bodies = RigidBodySet::new();
@@ -110,7 +106,7 @@ pub fn init_world(harness: &mut Harness) {
     );
 
     /*
-     * Set up the testbed.
+     * Set up the harness.
      */
     let mut plugin = FluidsHarnessPlugin::new();
     plugin.set_pipeline(fluids_pipeline);
@@ -120,7 +116,7 @@ pub fn init_world(harness: &mut Harness) {
 }
 
 fn main() {
-    let harness = &mut rapier_testbed3d::harness::Harness::new_empty();
+    let harness = &mut Harness::new_empty();
     init_world(harness);
     harness.run()
 }
