@@ -24,16 +24,6 @@ impl FluidsHarnessPlugin {
         }
     }
 
-    /// Initialize the plugin with external FluidsPipeline
-    /// This allows us to set the particle_radius, and smoothing factor
-    pub fn new_with_pipeline(fluids_pipeline: FluidsPipeline) -> Self {
-        Self {
-            callbacks: Vec::new(),
-            step_time: 0.0,
-            fluids_pipeline,
-        }
-    }
-
     /// Adds a callback to be executed at each frame.
     pub fn add_callback(
         &mut self,
