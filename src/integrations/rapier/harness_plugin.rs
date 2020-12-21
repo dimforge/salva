@@ -1,12 +1,13 @@
 use super::FluidsPipeline;
-use rapier_testbed::{HarnessPlugin, PhysicsState};
-use rapier_testbed::physics::PhysicsEvents;
 use rapier_testbed::harness::HarnessState;
+use rapier_testbed::physics::PhysicsEvents;
+use rapier_testbed::{HarnessPlugin, PhysicsState};
 
 /// A user-defined callback executed at each frame.
-pub type FluidCallback = Box<dyn FnMut(&mut PhysicsState, &PhysicsEvents, &FluidsPipeline, &HarnessState, f32)>;
+pub type FluidCallback =
+    Box<dyn FnMut(&mut PhysicsState, &PhysicsEvents, &FluidsPipeline, &HarnessState, f32)>;
 
-/// A plugin for rendering fluids with the Rapier testbed.
+/// A plugin for rendering fluids with the Rapier harness.
 pub struct FluidsHarnessPlugin {
     callbacks: Vec<FluidCallback>,
     step_time: f64,
@@ -25,13 +26,13 @@ impl FluidsHarnessPlugin {
 
     /// Initialize the plugin with external FluidsPipeline
     /// This allows us to set the particle_radius, and smoothing factor
-    // pub fn new_with_pipeline(fluids_pipeline: FluidsPipeline) -> Self {
-    //     Self {
-    //         callbacks: Vec::new(),
-    //         step_time: 0.0,
-    //         fluids_pipeline
-    //     }
-    // }
+    pub fn new_with_pipeline(fluids_pipeline: FluidsPipeline) -> Self {
+        Self {
+            callbacks: Vec::new(),
+            step_time: 0.0,
+            fluids_pipeline,
+        }
+    }
 
     /// Adds a callback to be executed at each frame.
     pub fn add_callback(
@@ -41,7 +42,7 @@ impl FluidsHarnessPlugin {
         self.callbacks.push(Box::new(f))
     }
 
-    /// Sets the fluids pipeline used by the testbed.
+    /// Sets the fluids pipeline used by the harness.
     pub fn set_pipeline(&mut self, fluids_pipeline: FluidsPipeline) {
         self.fluids_pipeline = fluids_pipeline;
         self.fluids_pipeline.liquid_world.counters.enable();
@@ -49,9 +50,21 @@ impl FluidsHarnessPlugin {
 }
 
 impl HarnessPlugin for FluidsHarnessPlugin {
-    fn run_callbacks(&mut self, physics: &mut PhysicsState, physics_events: &PhysicsEvents,  harness_state: &HarnessState, t: f32) {
+    fn run_callbacks(
+        &mut self,
+        physics: &mut PhysicsState,
+        physics_events: &PhysicsEvents,
+        harness_state: &HarnessState,
+        t: f32,
+    ) {
         for f in &mut self.callbacks {
-            f(physics, physics_events, &self.fluids_pipeline, harness_state, t)
+            f(
+                physics,
+                physics_events,
+                &self.fluids_pipeline,
+                harness_state,
+                t,
+            )
         }
     }
 
