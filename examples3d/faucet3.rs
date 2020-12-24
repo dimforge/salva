@@ -4,6 +4,7 @@ use na::{Point3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet};
 use rapier_testbed3d::Testbed;
+use rapier_testbed3d::harness::RunState;
 use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva3d::object::{Boundary, Fluid};
 use salva3d::solver::{Akinci2013SurfaceTension, XSPHViscosity};
@@ -56,7 +57,7 @@ pub fn init_world(testbed: &mut Testbed) {
     // Callback that will be executed on the main loop to generate new particles every second.
     let mut last_t = 0.0;
 
-    plugin.add_callback(move |_, _, fluids_pipeline, t| {
+    plugin.add_callback(move |_, _, fluids_pipeline, run_state | {
         let fluid = fluids_pipeline
             .liquid_world
             .fluids_mut()
@@ -69,6 +70,7 @@ pub fn init_world(testbed: &mut Testbed) {
             }
         }
 
+        let t = run_state.time;
         if t - last_t < 0.06 {
             return;
         }
