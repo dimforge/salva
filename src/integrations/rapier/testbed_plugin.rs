@@ -5,6 +5,7 @@ use na::{Point3, Vector3};
 use rapier::math::{Point, Vector};
 use rapier_testbed::objects::node::GraphicsNode;
 use rapier_testbed::{PhysicsState, TestbedPlugin};
+use rapier_testbed::harness::RunState;
 use std::collections::HashMap;
 
 /// How the fluids should be rendered by the testbed.
@@ -22,7 +23,7 @@ pub enum FluidsRenderingMode {
 }
 
 /// A user-defined callback executed at each frame.
-pub type FluidCallback = Box<dyn FnMut(&mut Window, &mut PhysicsState, &mut FluidsPipeline, f32)>;
+pub type FluidCallback = Box<dyn FnMut(&mut Window, &mut PhysicsState, &mut FluidsPipeline, &RunState)>;
 
 /// A plugin for rendering fluids with the Rapier testbed.
 pub struct FluidsTestbedPlugin {
@@ -56,7 +57,7 @@ impl FluidsTestbedPlugin {
     /// Adds a callback to be executed at each frame.
     pub fn add_callback(
         &mut self,
-        f: impl FnMut(&mut Window, &mut PhysicsState, &mut FluidsPipeline, f32) + 'static,
+        f: impl FnMut(&mut Window, &mut PhysicsState, &mut FluidsPipeline, &RunState) + 'static,
     ) {
         self.callbacks.push(Box::new(f))
     }
@@ -121,9 +122,9 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         self.boundary2sn.clear();
     }
 
-    fn run_callbacks(&mut self, window: &mut Window, physics: &mut PhysicsState, t: f32) {
+    fn run_callbacks(&mut self, window: &mut Window, physics: &mut PhysicsState, run_state: &RunState) {
         for f in &mut self.callbacks {
-            f(window, physics, &mut self.fluids_pipeline, t)
+            f(window, physics, &mut self.fluids_pipeline, run_state)
         }
     }
 
