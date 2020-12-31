@@ -56,7 +56,7 @@ impl HarnessPlugin for FluidsHarnessPlugin {
         }
     }
 
-    fn step(&mut self, physics: &mut PhysicsState, run_state: &RunState) {
+    fn step(&mut self, physics: &mut PhysicsState, _run_state: &RunState) {
         let step_time = instant::now();
         let dt = physics.integration_parameters.dt();
         self.fluids_pipeline.step(
