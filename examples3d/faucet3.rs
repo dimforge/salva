@@ -3,7 +3,6 @@ extern crate nalgebra as na;
 use na::{Point3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet};
-use rapier_testbed3d::harness::RunState;
 use rapier_testbed3d::Testbed;
 use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva3d::object::{Boundary, Fluid};
