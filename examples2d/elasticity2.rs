@@ -81,6 +81,6 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.add_plugin(plugin);
     testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
-    testbed.integration_parameters_mut().set_dt(1.0 / 200.0);
+    testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point2::new(0.0, 1.0), 100.0);
 }

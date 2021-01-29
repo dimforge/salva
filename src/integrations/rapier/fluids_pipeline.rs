@@ -6,11 +6,11 @@ use crate::LiquidWorld;
 use crate::TimestepManager;
 use approx::AbsDiffEq;
 use na::Unit;
-use ncollide::bounding_volume::BoundingVolume;
-use ncollide::shape::FeatureId;
 use rapier::dynamics::RigidBodySet;
 use rapier::geometry::{ColliderHandle, ColliderSet};
 use rapier::math::{Point, Vector};
+use rapier::parry::bounding_volume::BoundingVolume;
+use rapier::parry::shape::FeatureId;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -208,7 +208,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
 
                                     if aabb.contains_local_point(&particle_pos) {
                                         let (proj, feature) =
-                                            collider.shape().project_point_with_feature(
+                                            collider.shape().project_point_and_get_feature(
                                                 &collider_pos,
                                                 &particle_pos,
                                             );
@@ -270,7 +270,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
 
                 if let Some(forces) = &boundary.forces {
                     let forces = forces.read().unwrap();
-                    if let Some(mut body) = self.bodies.get_mut(collider.parent()) {
+                    if let Some(body) = self.bodies.get_mut(collider.parent()) {
                         for (pos, force) in boundary.positions.iter().zip(forces.iter().cloned()) {
                             body.apply_force_at_point(force, *pos, true)
                         }

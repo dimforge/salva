@@ -1,9 +1,9 @@
 use crate::counters::Counters;
 use crate::coupling::CouplingManager;
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
-use crate::math::{Isometry, Real, Vector};
+use crate::math::{Real, Vector};
 use crate::object::{Boundary, BoundaryHandle, BoundarySet};
-use crate::object::{Fluid, FluidHandle, FluidSet, ParticleId};
+use crate::object::{Fluid, FluidHandle, FluidSet};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
 #[cfg(feature = "ncollide")]

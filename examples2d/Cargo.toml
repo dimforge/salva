@@ -9,10 +9,10 @@ parallel = [ "rapier_testbed2d/parallel"]
 
 [dependencies]
 Inflector  = "0.11"
-nalgebra   = "0.23"
-ncollide2d = "0.26"
-rapier2d = "0.4"
-rapier_testbed2d = "0.4"
+nalgebra   = "0.24"
+parry2d = "0.1"
+rapier2d = "0.5"
+rapier_testbed2d = "0.5"
 
 [dependencies.salva2d]
 path = "../build/salva2d"
