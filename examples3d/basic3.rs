@@ -2,7 +2,7 @@ extern crate nalgebra as na;
 
 use na::{Isometry3, Point3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
-use rapier3d::geometry::{ColliderBuilder, ColliderSet, ColliderShape};
+use rapier3d::geometry::{ColliderBuilder, ColliderSet, SharedShape};
 use rapier_testbed3d::Testbed;
 use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva3d::object::Boundary;
@@ -45,16 +45,8 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * Ground.
      */
-    let ground_shape = ColliderShape::cuboid(Vector3::new(
-        ground_half_width,
-        ground_thickness,
-        ground_half_width,
-    ));
-    let wall_shape = ColliderShape::cuboid(Vector3::new(
-        ground_thickness,
-        ground_half_height,
-        ground_half_width,
-    ));
+    let ground_shape = SharedShape::cuboid(ground_half_width, ground_thickness, ground_half_width);
+    let wall_shape = SharedShape::cuboid(ground_thickness, ground_half_height, ground_half_width);
 
     let ground_body = RigidBodyBuilder::new_static().build();
     let ground_handle = bodies.insert(ground_body);
@@ -113,7 +105,7 @@ pub fn init_world(testbed: &mut Testbed) {
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(ground_handle, true);
     testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
-    testbed.integration_parameters_mut().set_dt(1.0 / 200.0);
+    testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point3::new(3.0, 3.0, 3.0), Point3::origin());
 }
 

@@ -41,10 +41,14 @@ extern crate ncollide2d as ncollide;
 #[cfg(all(feature = "dim3", feature = "ncollide"))]
 extern crate ncollide3d as ncollide;
 extern crate num_traits as num;
+#[cfg(all(feature = "dim2", feature = "parry"))]
+pub extern crate parry2d as parry;
+#[cfg(all(feature = "dim3", feature = "parry"))]
+pub extern crate parry3d as parry;
 #[cfg(all(feature = "dim2", feature = "rapier"))]
-extern crate rapier2d as rapier;
+pub extern crate rapier2d as rapier;
 #[cfg(all(feature = "dim3", feature = "rapier"))]
-extern crate rapier3d as rapier;
+pub extern crate rapier3d as rapier;
 #[cfg(all(feature = "dim2", feature = "rapier-testbed"))]
 extern crate rapier_testbed2d as rapier_testbed;
 #[cfg(all(feature = "dim3", feature = "rapier-testbed"))]

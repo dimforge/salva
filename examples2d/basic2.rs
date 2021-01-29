@@ -1,7 +1,6 @@
 extern crate nalgebra as na;
 
 use na::{DVector, Point2, Point3, Vector2};
-use ncollide2d::shape::Cuboid;
 use rapier2d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier2d::geometry::{Collider, ColliderBuilder, ColliderSet};
 use rapier_testbed2d::Testbed;
@@ -133,6 +132,6 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_pipeline(fluids_pipeline);
     testbed.add_plugin(plugin);
     testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
-    testbed.integration_parameters_mut().set_dt(1.0 / 200.0);
+    testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     //    testbed.enable_boundary_particles_rendering(true);
 }

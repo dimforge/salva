@@ -136,7 +136,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
 
     fn step(&mut self, physics: &mut PhysicsState) {
         let step_time = instant::now();
-        let dt = physics.integration_parameters.dt();
+        let dt = physics.integration_parameters.dt;
         self.fluids_pipeline.step(
             &physics.gravity,
             dt,

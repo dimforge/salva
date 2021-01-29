@@ -1,7 +1,7 @@
 use crate::math::{Isometry, Point, Real, Vector, DIM};
 
-use ncollide::bounding_volume::{BoundingVolume, AABB};
-use ncollide::query::{Ray, RayCast};
+use parry::bounding_volume::{BoundingVolume, AABB};
+use parry::query::{Ray, RayCast};
 use rapier::geometry::Shape;
 use std::collections::HashSet;
 
@@ -24,9 +24,9 @@ pub fn shape_volume_ray_sample<S: ?Sized + Shape>(
 }
 
 /// Samples the surface of `shape` with a method based on ray-casting.
-pub fn surface_ray_sample<S: ?Sized + RayCast<Real>>(
+pub fn surface_ray_sample<S: ?Sized + RayCast>(
     shape: &S,
-    volume: &AABB<Real>,
+    volume: &AABB,
     particle_rad: Real,
 ) -> Vec<Point<Real>> {
     let mut quantized_points = HashSet::new();
@@ -43,7 +43,7 @@ pub fn surface_ray_sample<S: ?Sized + RayCast<Real>>(
         let mut ray = Ray::new(curr, dir);
         let mut entry_point = true;
 
-        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, Real::MAX, false) {
+        while let Some(toi) = shape.cast_local_ray(&ray, Real::MAX, false) {
             let impact = ray.point_at(toi);
             let quantized_pt = quantize_point(&origin, &impact, subdivision_size, entry_point, i);
             let _ = quantized_points.insert(quantized_pt);
@@ -88,9 +88,9 @@ pub fn surface_ray_sample<S: ?Sized + RayCast<Real>>(
 }
 
 /// Samples the volume of `shape` with a method based on ray-casting.
-pub fn volume_ray_sample<S: ?Sized + RayCast<Real>>(
+pub fn volume_ray_sample<S: ?Sized + RayCast>(
     shape: &S,
-    volume: &AABB<Real>,
+    volume: &AABB,
     particle_rad: Real,
 ) -> Vec<Point<Real>> {
     let mut quantized_points = HashSet::new();
@@ -106,7 +106,7 @@ pub fn volume_ray_sample<S: ?Sized + RayCast<Real>>(
         let mut ray = Ray::new(curr, dir);
         let mut prev_impact = None;
 
-        while let Some(toi) = shape.toi_with_ray(&Isometry::identity(), &ray, Real::MAX, false) {
+        while let Some(toi) = shape.cast_local_ray(&ray, Real::MAX, false) {
             if let Some(prev) = prev_impact {
                 sample_segment(
                     &origin,
