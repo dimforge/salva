@@ -1,6 +1,6 @@
 [package]
 name    = "salva3d"
-version = "0.5.0"
+version = "0.6.0"
 authors = [ "Sébastien Crozet <developer@crozet.re>" ]
 description = "3-dimensional particle-based fluid dynamics in Rust."
 documentation = "https://salva.rs/rustdoc/salva3d/index.html"
