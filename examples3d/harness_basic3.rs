@@ -46,8 +46,8 @@ pub fn init_world(harness: &mut Harness) {
     /*
      * Ground.
      */
-     let ground_shape = SharedShape::cuboid(ground_half_width, ground_thickness, ground_half_width);
-     let wall_shape = SharedShape::cuboid(ground_thickness, ground_half_height, ground_half_width);
+    let ground_shape = SharedShape::cuboid(ground_half_width, ground_thickness, ground_half_width);
+    let wall_shape = SharedShape::cuboid(ground_thickness, ground_half_height, ground_half_width);
 
     let ground_body = RigidBodyBuilder::new_static().build();
     let ground_handle = bodies.insert(ground_body);
