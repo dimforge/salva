@@ -17,7 +17,7 @@
 </p>
 <p align = "center">
     <strong>
-        <a href="https://salva.rs">Users guide</a> | <a href="https://salva.rs/rustdoc/salva2d/index.html">2D Documentation</a> | <a href="https://salva.rs/rustdoc/salva3d/index.html">3D Documentation</a> | <a href="https://discourse.nphysics.org">Forum</a>
+        <a href="https://salva.rs">Users guide</a> | <a href="https://docs.rs/salva2d/latest/salva2d">2D Documentation</a> | <a href="https://docs.rs/salva3d/latest/salva3d">3D Documentation</a> | <a href="https://discourse.nphysics.org">Forum</a>
     </strong>
 </p>
 
