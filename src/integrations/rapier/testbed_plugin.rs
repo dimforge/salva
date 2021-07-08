@@ -1,5 +1,5 @@
 use super::FluidsPipeline;
-use crate::math::{Isometry, Point, Rotation, Translation, Vector};
+use crate::math::{Isometry, Point, Real, Rotation, Translation, Vector};
 use crate::object::{BoundaryHandle, FluidHandle};
 #[cfg(feature = "dim3")]
 use bevy::math::Quat;
@@ -8,13 +8,14 @@ use bevy_egui::egui::ComboBox;
 use bevy_egui::{egui::Window, EguiContext};
 #[cfg(feature = "dim3")]
 use na::Quaternion;
-use na::{Point3, Vector3};
+use na::{Point3, Rotation3, Vector3};
 use parry::shape::SharedShape;
 use rapier_testbed::{
     harness::Harness, objects::node::EntityWithGraphics, GraphicsManager, PhysicsState,
     TestbedPlugin,
 };
 use std::collections::HashMap;
+use std::f32::consts::PI;
 
 //FIXME: handle this with macros, or use bevy-inspectable-egui
 pub const FLUIDS_RENDERING_MAP: [(&str, FluidsRenderingMode); 3] = [
@@ -152,6 +153,7 @@ impl FluidsTestbedPlugin {
         let shape = match self.rendering_mode {
             #[cfg(feature = "dim3")]
             FluidsRenderingMode::VelocityArrows { .. } => {
+                println!("cone!!!");
                 SharedShape::cone(particle_radius, particle_radius / 4.)
             }
             #[cfg(feature = "dim2")]
@@ -194,8 +196,6 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         harness: &mut Harness,
         gen_color: &mut dyn FnMut() -> Point3<f32>,
     ) {
-        //hack to get _some_ particle radius
-        let mut particle_radius = None;
         for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
             let _ = self
                 .f2sn
@@ -203,11 +203,10 @@ impl TestbedPlugin for FluidsTestbedPlugin {
 
             let color = *self.f2color.entry(handle).or_insert_with(|| gen_color());
 
-            particle_radius = Some(fluid.particle_radius());
             for particle in &fluid.positions {
                 let ent = self.add_particle_graphics(
                     particle,
-                    particle_radius.unwrap(),
+                    fluid.particle_radius(),
                     graphics,
                     commands,
                     meshes,
@@ -222,18 +221,18 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             }
         }
 
-        if self.render_boundary_particles {
-            // hack, ugly hack
-            if let Some(particle_radius) = particle_radius {
-                for (handle, _) in self.fluids_pipeline.liquid_world.boundaries().iter() {
-                    let color = self.ground_color;
+        let particle_radius = self.fluids_pipeline.liquid_world.particle_radius();
 
-                    for (_, cce) in &self.fluids_pipeline.coupling.entries {
-                        if cce.boundary == handle {
-                            match &cce.sampling_method {
-                                crate::integrations::rapier::ColliderSampling::StaticSampling(particles) => {
-                                        for particle in particles {
-                                            let ent = self.add_particle_graphics(
+        if self.render_boundary_particles {
+            for (handle, _) in self.fluids_pipeline.liquid_world.boundaries().iter() {
+                let color = self.ground_color;
+
+                for (_, cce) in &self.fluids_pipeline.coupling.entries {
+                    if cce.boundary == handle {
+                        match &cce.sampling_method {
+                            crate::integrations::rapier::ColliderSampling::StaticSampling(particles) => {
+                                    for particle in particles {
+                                        let ent = self.add_particle_graphics(
                                             particle,
                                             particle_radius,
                                             graphics,
@@ -244,15 +243,14 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                             harness,
                                             &color,
                                         );
-                                        if let Some(entities) = self.boundary2sn.get_mut(&handle) {
-                                            entities.extend(ent);
-                                        }
+                                    if let Some(entities) = self.boundary2sn.get_mut(&handle) {
+                                        entities.extend(ent);
                                     }
-                                },
-                                crate::integrations::rapier::ColliderSampling::DynamicContactSampling => {
-                                    // TODO
-                                },
-                            }
+                                }
+                            },
+                            crate::integrations::rapier::ColliderSampling::DynamicContactSampling => {
+                                // TODO: ???
+                            },
                         }
                     }
                 }
@@ -312,6 +310,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             let t = (vel.norm() - min) / (max - min);
             start.lerp(&end, na::clamp(t, 0.0, 1.0))
         }
+
         let (mut min, mut max) = (f32::MAX, f32::MIN);
         for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
             if let Some(entities) = self.f2sn.get_mut(&handle) {
@@ -329,14 +328,25 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                 pos.translation.y = particle.y;
                                 #[cfg(feature = "dim3")]
                                 {
-                                    // FIXME: this is not working, converting from Vector3 -> Quaternion -> bevy::Quat, perhaps it's the handedness?
-                                    let rotation = Quaternion::from_vector(
-                                        (velocity * -1.).normalize().to_homogeneous(),
-                                    );
-                                    pos.translation.z = particle.z;
-                                    pos.rotation = Quat::from_xyzw(
-                                        rotation.i, rotation.j, rotation.k, rotation.w,
-                                    );
+                                    if let FluidsRenderingMode::VelocityArrows { .. } =
+                                        self.rendering_mode
+                                    {
+                                        pos.translation.z = particle.z;
+                                        let cone_paxis: Quaternion<Real> =
+                                            Quaternion::from_vector(-Vector3::y().to_homogeneous());
+                                        let vr = Quaternion::from_vector(
+                                            velocity.normalize().to_homogeneous(),
+                                        );
+                                        let rotation = (vr - cone_paxis).normalize();
+                                        println!(
+                                            "velocity arrows, {:?}, {:?}, {:?}",
+                                            rotation, cone_paxis, vr,
+                                        );
+
+                                        pos.rotation = Quat::from_xyzw(
+                                            rotation.i, rotation.j, rotation.k, rotation.w,
+                                        );
+                                    }
                                 }
                                 #[cfg(feature = "dim2")]
                                 {
@@ -433,7 +443,6 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                 || changed;
                         }
                     });
-                println!("changedL {}, {:?}", changed, self.rendering_mode);
 
                 if changed {
                     println!("{:?}", self.rendering_mode);
