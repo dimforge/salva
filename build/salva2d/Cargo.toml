@@ -19,11 +19,13 @@ maintenance = { status = "actively-developed" }
 default = [ "dim2" ]
 dim2    = [ ]
 parallel = [ "rayon" ]
-sampling = [ "parry" ]
+sampling = [ "rapier" ]
 rapier = [ "parry", "rapier2d" ]
-rapier-testbed = [ "rapier", "rapier_testbed2d" ]
+rapier-testbed = [ "rapier", "rapier_testbed2d", "graphics" ]
+rapier-harness = [ "rapier-testbed" ]
 parry = [ "parry2d" ]
 wasm-bindgen = [ "rapier2d/wasm-bindgen" ]
+graphics = [ "bevy", "bevy_egui" ]
 
 [lib]
 name = "salva2d"
@@ -43,12 +45,13 @@ nalgebra  = "0.27"
 parry2d = { version = "0.5", optional = true }
 rapier2d = { version = "0.9", optional = true }
 rapier_testbed2d = { version = "0.9", optional = true }
-bevy_egui = "0.5"
+
+bevy_egui = { version = "0.5", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-bevy = {version = "0.5", default-features = false, features = ["bevy_wgpu", "bevy_winit", "render", "x11"]}
+bevy = { version = "0.5", default-features = false, features = ["bevy_wgpu", "bevy_winit", "render", "x11"], optional = true }
 
 # Dependencies for WASM only.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy = {version = "0.5", default-features = false, features = ["bevy_winit", "render"]}
-bevy_webgl2 = "0.5"
+bevy = { version = "0.5", default-features = false, features = ["bevy_winit", "render"], optional = true }
+bevy_webgl2 = { version = "0.5", optional = true }
