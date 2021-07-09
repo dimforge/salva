@@ -71,7 +71,7 @@ pub fn init_world(harness: &mut Harness) {
         let co = ColliderBuilder::new(wall_shape.clone())
             .position(*pose)
             .build();
-        let co_handle = colliders.insert(co, ground_handle, &mut bodies);
+        let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
         let bo_handle = fluids_pipeline
             .liquid_world
             .add_boundary(Boundary::new(Vec::new()));
@@ -86,7 +86,7 @@ pub fn init_world(harness: &mut Harness) {
     let samples =
         salva3d::sampling::shape_surface_ray_sample(&*ground_shape, PARTICLE_RADIUS).unwrap();
     let co = ColliderBuilder::new(ground_shape).build();
-    let co_handle = colliders.insert(co, ground_handle, &mut bodies);
+    let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));
@@ -103,7 +103,7 @@ pub fn init_world(harness: &mut Harness) {
     let mut plugin = FluidsHarnessPlugin::new();
     plugin.set_pipeline(fluids_pipeline);
     harness.add_plugin(plugin);
-    harness.set_world_with_gravity(bodies, colliders, joints, gravity);
+    harness.set_world_with_params(bodies, colliders, joints, gravity, ());
     harness.integration_parameters_mut().dt = 1.0 / 200.0;
 }
 

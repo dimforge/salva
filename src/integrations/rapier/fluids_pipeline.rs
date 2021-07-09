@@ -71,15 +71,16 @@ pub enum ColliderSampling {
     DynamicContactSampling,
 }
 
-struct ColliderCouplingEntry {
-    sampling_method: ColliderSampling,
-    boundary: BoundaryHandle,
+pub struct ColliderCouplingEntry {
+    pub sampling_method: ColliderSampling,
+    pub boundary: BoundaryHandle,
     features: Vec<FeatureId>,
 }
 
 /// Structure managing all the coupling between colliders from rapier with boundaries and fluids from salva.
 pub struct ColliderCouplingSet {
-    entries: HashMap<ColliderHandle, ColliderCouplingEntry>,
+    /// The hashmap containing mappings from ColliderHandle to ColliderCouplingEntry
+    pub entries: HashMap<ColliderHandle, ColliderCouplingEntry>,
 }
 
 impl ColliderCouplingSet {
@@ -152,13 +153,14 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
         fluids: &mut [Fluid],
         boundaries: &mut BoundarySet,
     ) {
+        let bodies = &self.bodies;
         for (collider, coupling) in &mut self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
                 self.colliders.get(*collider),
                 boundaries.get_mut(coupling.boundary),
             ) {
                 // Update the boundary's ability to receive forces.
-                let body = self.bodies.get(collider.parent());
+                let body = collider.parent().and_then(|p| bodies.get(p));
                 if let Some(body) = body {
                     if !body.is_dynamic() {
                         boundary.forces = None;
@@ -270,7 +272,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
 
                 if let Some(forces) = &boundary.forces {
                     let forces = forces.read().unwrap();
-                    if let Some(body) = self.bodies.get_mut(collider.parent()) {
+                    if let Some(body) = self.bodies.get_mut(collider.parent().unwrap()) {
                         for (pos, force) in boundary.positions.iter().zip(forces.iter().cloned()) {
                             body.apply_force_at_point(force, *pos, true)
                         }

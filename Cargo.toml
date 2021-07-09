@@ -8,22 +8,31 @@ members = [ "build/salva2d", "build/salva3d", "examples2d", "examples3d" ]
 [patch.crates-io]
 salva2d = { path = "./build/salva2d" }
 salva3d = { path = "./build/salva3d" }
+
 #parry2d = { git = "https://github.com/sebcrozet/parry" }
 #parry3d = { git = "https://github.com/sebcrozet/parry" }
+
 #rapier2d = { git = "https://github.com/dimforge/rapier", branch = "split_geom" }
 #rapier3d = { git = "https://github.com/dimforge/rapier", branch = "split_geom"  }
 #rapier_testbed2d = { git = "https://github.com/dimforge/rapier", branch = "split_geom"  }
 #rapier_testbed3d = { git = "https://github.com/dimforge/rapier", branch = "split_geom"  }
-#rapier2d = { git = "https://github.com/dimforge/rapier" }
-#rapier3d = { git = "https://github.com/dimforge/rapier" }
-#rapier_testbed2d = { git = "https://github.com/dimforge/rapier" }
-#rapier_testbed3d = { git = "https://github.com/dimforge/rapier" }
 
-#rapier2d = { path = "../rapier/build/rapier2d" }
-#rapier3d = { path = "../rapier/build/rapier3d" }
+# rapier2d = { git = "https://github.com/dimforge/rapier"}
+# rapier3d = { git = "https://github.com/dimforge/rapier"}
+# rapier_testbed2d = { git = "https://github.com/dimforge/rapier" }
+# rapier_testbed3d = { git = "https://github.com/dimforge/rapier" }
+
+rapier2d = { git = "https://github.com/dimforge/rapier", rev = "3b0d256" }
+rapier3d = { git = "https://github.com/dimforge/rapier", rev = "3b0d256" }
+rapier_testbed2d = { git = "https://github.com/dimforge/rapier", rev = "3b0d256" }
+rapier_testbed3d = { git = "https://github.com/dimforge/rapier", rev = "3b0d256" }
+
+# rapier2d = { path = "../rapier/build/rapier2d" }
+# rapier3d = { path = "../rapier/build/rapier3d" }
+# rapier_testbed2d = { path = "../rapier/build/rapier_testbed2d" }
+# rapier_testbed3d = { path = "../rapier/build/rapier_testbed3d" }
+
 #nphysics2d = { path = "../nphysics/build/nphysics2d" }
 #nphysics3d = { path = "../nphysics/build/nphysics3d" }
 #ncollide2d = { path = "../ncollide/build/ncollide2d" }
 #ncollide3d = { path = "../ncollide/build/ncollide3d" }
-#rapier_testbed2d = { path = "../rapier/build/rapier_testbed2d" }
-#rapier_testbed3d = { path = "../rapier/build/rapier_testbed3d" }

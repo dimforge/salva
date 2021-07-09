@@ -3,7 +3,7 @@ extern crate nalgebra as na;
 use na::{Point3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet};
-use rapier_testbed3d::Testbed;
+use rapier_testbed3d::{Testbed, TestbedApp};
 use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva3d::object::{Boundary, Fluid};
 use salva3d::solver::{Akinci2013SurfaceTension, XSPHViscosity};
@@ -42,7 +42,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let co = ColliderBuilder::ball(ground_rad).build();
     let ball_samples =
         salva3d::sampling::shape_surface_ray_sample(co.shape(), PARTICLE_RADIUS).unwrap();
-    let co_handle = colliders.insert(co, ground_handle, &mut bodies);
+    let co_handle = colliders.insert(co);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));
@@ -56,8 +56,7 @@ pub fn init_world(testbed: &mut Testbed) {
     // Callback that will be executed on the main loop to generate new particles every second.
     let mut last_t = 0.0;
 
-    plugin.add_callback(move |_, _, fluids_pipeline, run_state| {
-        println!("faucet: running callback");
+    plugin.add_callback(move |harness, fluids_pipeline| {
         let fluid = fluids_pipeline
             .liquid_world
             .fluids_mut()
@@ -70,7 +69,7 @@ pub fn init_world(testbed: &mut Testbed) {
             }
         }
 
-        let t = run_state.time;
+        let t = harness.state.time;
         if t - last_t < 0.06 {
             return;
         }
@@ -101,13 +100,13 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_pipeline(fluids_pipeline);
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
+    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     //    testbed.enable_boundary_particles_rendering(true);
     testbed.look_at(Point3::new(1.5, 0.0, 1.5), Point3::new(0.0, 0.0, 0.0));
 }
 
 fn main() {
-    let testbed = Testbed::from_builders(0, vec![("Boxes", init_world)]);
+    let testbed = TestbedApp::from_builders(0, vec![("Boxes", init_world)]);
     testbed.run()
 }
