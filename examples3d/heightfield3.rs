@@ -13,7 +13,7 @@ use salva3d::solver::ArtificialViscosity;
 #[path = "./helper.rs"]
 mod helper;
 
-const PARTICLE_RADIUS: f32 = 0.8;
+const PARTICLE_RADIUS: f32 = 1.8;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
 pub fn init_world(testbed: &mut Testbed) {
