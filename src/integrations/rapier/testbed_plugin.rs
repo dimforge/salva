@@ -8,14 +8,13 @@ use bevy_egui::egui::ComboBox;
 use bevy_egui::{egui::Window, EguiContext};
 #[cfg(feature = "dim3")]
 use na::Quaternion;
-use na::{Point3, Rotation3, Vector3};
+use na::{Point3, Vector3};
 use parry::shape::SharedShape;
 use rapier_testbed::{
     harness::Harness, objects::node::EntityWithGraphics, GraphicsManager, PhysicsState,
     TestbedPlugin,
 };
 use std::collections::HashMap;
-use std::f32::consts::PI;
 
 //FIXME: handle this with macros, or use bevy-inspectable-egui
 pub const FLUIDS_RENDERING_MAP: [(&str, FluidsRenderingMode); 3] = [
@@ -139,7 +138,7 @@ impl FluidsTestbedPlugin {
     // TODO: pass velocity & acceleration vectors in
     fn add_particle_graphics(
         &self,
-        particle: &Point<f32>,
+        particle: &Point<Real>,
         particle_radius: f32,
         graphics: &mut GraphicsManager,
         commands: &mut Commands,
@@ -303,8 +302,8 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             max: f32,
         ) -> Vector3<f32> {
             let end = Vector3::new(1.0, 0.0, 0.0);
-            let vel: Vector<f32> = na::convert_unchecked(velocity);
-            let vel: Vector<f32> = na::convert(vel);
+            let vel: Vector<Real> = na::convert_unchecked(velocity);
+            let vel: Vector<Real> = na::convert(vel);
             let t = (vel.norm() - min) / (max - min);
             start.lerp(&end, na::clamp(t, 0.0, 1.0))
         }
