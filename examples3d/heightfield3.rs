@@ -64,7 +64,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let ground_collider = ColliderBuilder::heightfield(heights.clone(), ground_size).build();
     let ground_handle = colliders.insert_with_parent(ground_collider.clone(), handle, &mut bodies);
 
-    let mut samples =
+    let samples =
         salva3d::sampling::shape_surface_ray_sample(ground_collider.shape(), PARTICLE_RADIUS / 1.5)
             .unwrap();
 
