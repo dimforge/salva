@@ -227,6 +227,6 @@ mod test {
 
         let iter = CellRangeIterator::with_center(Point::new(1, 2), 2);
 
-        assert!(iter.zip(expected.into_iter()).all(|(a, b)| a == *b))
+        assert!(iter.zip(expected.iter()).all(|(a, b)| a == *b))
     }
 }
