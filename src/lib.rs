@@ -107,7 +107,7 @@ pub use crate::timestep_manager::TimestepManager;
 #[cfg(feature = "dim3")]
 pub mod math {
     use na::{
-        Dynamic, Isometry3, Matrix3, Matrix6, MatrixMN, MatrixSlice6xX, MatrixSliceMut6xX, Point3,
+        Isometry3, Matrix3, Matrix6, Matrix6xX, MatrixSlice6xX, MatrixSliceMut6xX, Point3,
         Rotation3, Translation3, UnitQuaternion, Vector3, Vector6, U3, U6,
     };
 
@@ -170,7 +170,7 @@ pub mod math {
     pub type SpatialMatrix<Real> = Matrix6<Real>;
 
     /// The type of a constraint jacobian in twist coordinates.
-    pub type Jacobian<Real> = MatrixMN<Real, U6, Dynamic>;
+    pub type Jacobian<Real> = Matrix6xX<Real>;
 
     /// The type of a slice of the constraint jacobian in twist coordinates.
     pub type JacobianSlice<'a, Real> = MatrixSlice6xX<'a, Real>;
@@ -188,9 +188,8 @@ pub mod math {
 #[cfg(feature = "dim2")]
 pub mod math {
     use na::{
-        Dynamic, Isometry2, Matrix1, Matrix2, Matrix3, MatrixMN, MatrixSlice3xX, MatrixSliceMut3xX,
-        Point2, Rotation2, RowVector2, Translation2, UnitComplex, Vector1, Vector2, Vector3, U1,
-        U2, U3,
+        Isometry2, Matrix1, Matrix2, Matrix3, Matrix6xX, MatrixSlice3xX, MatrixSliceMut3xX, Point2,
+        Rotation2, RowVector2, Translation2, UnitComplex, Vector1, Vector2, Vector3, U1, U2, U3,
     };
 
     /// The maximum number of possible rotations and translations of a rigid body.
@@ -252,7 +251,7 @@ pub mod math {
     pub type SpatialMatrix<Real> = Matrix3<Real>;
 
     /// The type of a constraint jacobian in twist coordinates.
-    pub type Jacobian<Real> = MatrixMN<Real, U3, Dynamic>;
+    pub type Jacobian<Real> = Matrix6xX<Real>;
 
     /// The type of a slice of the constraint jacobian in twist coordinates.
     pub type JacobianSlice<'a, Real> = MatrixSlice3xX<'a, Real>;
