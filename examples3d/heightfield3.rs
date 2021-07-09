@@ -13,7 +13,7 @@ use salva3d::solver::ArtificialViscosity;
 #[path = "./helper.rs"]
 mod helper;
 
-const PARTICLE_RADIUS: f32 = 1.8;
+const PARTICLE_RADIUS: f32 = 0.15;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
 pub fn init_world(testbed: &mut Testbed) {
@@ -27,7 +27,7 @@ pub fn init_world(testbed: &mut Testbed) {
     /* Fluid */
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
-    let nparticles = 15;
+    let nparticles = 25;
     let mut fluid = helper::cube_fluid(nparticles, nparticles, nparticles, PARTICLE_RADIUS, 1000.0);
     fluid.transform_by(&Isometry3::translation(
         0.0,
@@ -36,17 +36,18 @@ pub fn init_world(testbed: &mut Testbed) {
     ));
     let viscosity = ArtificialViscosity::new(1.0, 0.0);
     fluid.nonpressure_forces.push(Box::new(viscosity));
+    fluid.velocities = vec![-Vector::y() * 10.; fluid.velocities.len()];
     let fluid_handle = fluids_pipeline.liquid_world.add_fluid(fluid);
 
     /*
      * Ground
      */
-    let ground_size = Vector::new(100.0, 1.0, 100.0);
-    let nsubdivs = 20;
+    let ground_size = Vector::new(12.0, 1.0, 12.0);
+    let nsubdivs = 40;
 
     let heights = DMatrix::from_fn(nsubdivs + 1, nsubdivs + 1, |i, j| {
         if i == 0 || i == nsubdivs || j == 0 || j == nsubdivs {
-            50.0
+            3.0
         } else {
             let x = i as f32 * ground_size.x / (nsubdivs as f32);
             let z = j as f32 * ground_size.z / (nsubdivs as f32);
@@ -63,9 +64,21 @@ pub fn init_world(testbed: &mut Testbed) {
     let ground_collider = ColliderBuilder::heightfield(heights.clone(), ground_size).build();
     let ground_handle = colliders.insert_with_parent(ground_collider.clone(), handle, &mut bodies);
 
-    let samples =
-        salva3d::sampling::shape_surface_ray_sample(ground_collider.shape(), PARTICLE_RADIUS)
+    let mut samples =
+        salva3d::sampling::shape_surface_ray_sample(ground_collider.shape(), PARTICLE_RADIUS / 1.5)
             .unwrap();
+
+    //Uncomment this to get multiple layers of samples
+    // let samples_layers = 0..3;
+    // let samples = samples_layers
+    //     .map(|layer| {
+    //         samples
+    //             .iter()
+    //             .map(move |point| point - Vector::y() * PARTICLE_RADIUS * 2. * layer.clone() as f32)
+    //     })
+    //     .flatten()
+    //     .collect();
+
     // let co = ColliderBuilder::heightfield(heights, ground_size).build();
     // let co_handle = colliders.insert(co);
     let bo_handle = fluids_pipeline
