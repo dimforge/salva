@@ -1,16 +1,53 @@
 use super::FluidsPipeline;
-use crate::object::{Boundary, BoundaryHandle, Fluid, FluidHandle};
-use kiss3d::window::Window;
+use crate::math::{Isometry, Point, Rotation, Translation, Vector};
+use crate::object::{BoundaryHandle, FluidHandle};
+#[cfg(feature = "dim3")]
+use bevy::math::Quat;
+use bevy::prelude::{Assets, Commands, Mesh, Query, StandardMaterial, Transform};
+use bevy_egui::egui::ComboBox;
+use bevy_egui::{egui::Window, EguiContext};
+#[cfg(feature = "dim3")]
+use na::Quaternion;
 use na::{Point3, Vector3};
-use rapier::math::{Point, Vector};
-use rapier_testbed::harness::RunState;
-use rapier_testbed::objects::node::GraphicsNode;
-use rapier_testbed::{PhysicsState, TestbedPlugin};
+use parry::shape::SharedShape;
+use rapier_testbed::{
+    harness::Harness, objects::node::EntityWithGraphics, GraphicsManager, PhysicsState,
+    TestbedPlugin,
+};
 use std::collections::HashMap;
 
+//FIXME: handle this with macros, or use bevy-inspectable-egui
+pub const FLUIDS_RENDERING_MAP: [(&str, FluidsRenderingMode); 3] = [
+    ("Static", FluidsRenderingMode::StaticColor),
+    (
+        "Velocity Color",
+        FluidsRenderingMode::VelocityColor {
+            min: 0.0,
+            max: 50.0,
+        },
+    ),
+    // (
+    //     "Velocity Color & Opacity",
+    //     FluidsRenderingMode::VelocityColorOpacity {
+    //         min: 0.0,
+    //         max: 50.0,
+    //     },
+    // ),
+    (
+        "Velocity Arrows",
+        FluidsRenderingMode::VelocityArrows {
+            min: 0.0,
+            max: 50.0,
+        },
+    ),
+    // ("Acceleration Arrows", FluidsRenderingMode::AccelerationArrows),
+];
+
 /// How the fluids should be rendered by the testbed.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum FluidsRenderingMode {
+    /// Use a plain color.
+    StaticColor,
     /// Use a red taint the closer to `max` the velocity is.
     VelocityColor {
         /// Fluids with a velocity smaller than this will not have any red taint.
@@ -18,24 +55,37 @@ pub enum FluidsRenderingMode {
         /// Fluids with a velocity greater than this will be completely red.
         max: f32,
     },
-    /// Use a plain color.
-    StaticColor,
+    // /// Use a red taint the closer to `max` the velocity is, with opacity, low velocity is more transparent
+    // VelocityColorOpacity {
+    //     /// Fluids with a velocity smaller than this will not have any red taint.
+    //     min: f32,
+    //     /// Fluids with a velocity greater than this will be completely red.
+    //     max: f32,
+    // },
+    /// Show particles as arrows indicating the velocity
+    VelocityArrows {
+        /// Fluids with a velocity smaller than this will not have any red taint.
+        min: f32,
+        /// Fluids with a velocity greater than this will be completely red.
+        max: f32,
+    },
 }
 
 /// A user-defined callback executed at each frame.
-pub type FluidCallback =
-    Box<dyn FnMut(&mut Window, &mut PhysicsState, &mut FluidsPipeline, &RunState)>;
+pub type FluidCallback = Box<dyn FnMut(&mut Harness, &mut FluidsPipeline)>;
 
 /// A plugin for rendering fluids with the Rapier testbed.
 pub struct FluidsTestbedPlugin {
+    /// Whether to render the boundary particles
+    pub render_boundary_particles: bool,
+    /// Rendering mode of fluid particles
+    pub rendering_mode: FluidsRenderingMode,
     callbacks: Vec<FluidCallback>,
     step_time: f64,
     fluids_pipeline: FluidsPipeline,
-    f2sn: HashMap<FluidHandle, FluidNode>,
-    boundary2sn: HashMap<BoundaryHandle, FluidNode>,
+    f2sn: HashMap<FluidHandle, Vec<EntityWithGraphics>>,
+    boundary2sn: HashMap<BoundaryHandle, Vec<EntityWithGraphics>>,
     f2color: HashMap<FluidHandle, Point3<f32>>,
-    fluid_rendering_mode: FluidsRenderingMode,
-    render_boundary_particles: bool,
     ground_color: Point3<f32>,
 }
 
@@ -43,23 +93,20 @@ impl FluidsTestbedPlugin {
     /// Initializes the plugin.
     pub fn new() -> Self {
         Self {
+            render_boundary_particles: false,
+            rendering_mode: FluidsRenderingMode::StaticColor,
             step_time: 0.0,
             callbacks: Vec::new(),
             fluids_pipeline: FluidsPipeline::new(0.025, 2.0),
             f2sn: HashMap::new(),
             boundary2sn: HashMap::new(),
             f2color: HashMap::new(),
-            fluid_rendering_mode: FluidsRenderingMode::StaticColor,
-            render_boundary_particles: false,
             ground_color: Point3::new(0.5, 0.5, 0.5),
         }
     }
 
     /// Adds a callback to be executed at each frame.
-    pub fn add_callback(
-        &mut self,
-        f: impl FnMut(&mut Window, &mut PhysicsState, &mut FluidsPipeline, &RunState) + 'static,
-    ) {
+    pub fn add_callback(&mut self, f: impl FnMut(&mut Harness, &mut FluidsPipeline) + 'static) {
         self.callbacks.push(Box::new(f))
     }
 
@@ -73,64 +120,161 @@ impl FluidsTestbedPlugin {
     pub fn set_fluid_color(&mut self, fluid: FluidHandle, color: Point3<f32>) {
         let _ = self.f2color.insert(fluid, color);
 
-        if let Some(n) = self.f2sn.get_mut(&fluid) {
-            n.set_color(color)
-        }
+        // if let Some(n) = self.f2sn.get_mut(&fluid) {
+        //     // n.set_color(color)
+        // }
     }
 
     /// Sets the way fluids are rendered.
     pub fn set_fluid_rendering_mode(&mut self, mode: FluidsRenderingMode) {
-        self.fluid_rendering_mode = mode;
+        self.rendering_mode = mode;
     }
 
     /// Enables the rendering of boundary particles.
     pub fn enable_boundary_particles_rendering(&mut self, enabled: bool) {
         self.render_boundary_particles = enabled;
+    }
 
-        for sn in self.boundary2sn.values_mut() {
-            sn.scene_node_mut().set_visible(enabled);
-        }
+    // TODO: pass velocity & acceleration vectors in
+    fn add_particle_graphics(
+        &self,
+        particle: &Point<f32>,
+        particle_radius: f32,
+        graphics: &mut GraphicsManager,
+        commands: &mut Commands,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<StandardMaterial>,
+        _components: &mut Query<(&mut Transform,)>,
+        _harness: &mut Harness,
+        color: &Point3<f32>,
+    ) -> Vec<EntityWithGraphics> {
+        // println!("rm: {:?}", self.fluid_rendering_mode);
+        let shape = match self.rendering_mode {
+            #[cfg(feature = "dim3")]
+            FluidsRenderingMode::VelocityArrows { .. } => {
+                SharedShape::cone(particle_radius, particle_radius / 4.)
+            }
+            #[cfg(feature = "dim2")]
+            //FIXME: use actual trig
+            FluidsRenderingMode::VelocityArrows { .. } => SharedShape::triangle(
+                Point::new(0., particle_radius),
+                Point::new(particle_radius * 0.4, -particle_radius * 0.8),
+                Point::new(-particle_radius * 0.4, -particle_radius * 0.8),
+            ),
+
+            _ => SharedShape::ball(particle_radius),
+        };
+        let mut shapes = Vec::new();
+        let isometry =
+            Isometry::from_parts(Translation::from(particle.coords), Rotation::identity());
+        graphics.add_shape(
+            commands,
+            meshes,
+            materials,
+            None,
+            &*shape,
+            false,
+            &isometry,
+            &Isometry::identity(),
+            *color,
+            &mut shapes,
+        );
+        shapes
     }
 }
 
 impl TestbedPlugin for FluidsTestbedPlugin {
-    fn init_graphics(&mut self, window: &mut Window, gen_color: &mut dyn FnMut() -> Point3<f32>) {
-        let particle_radius = self.fluids_pipeline.liquid_world.particle_radius();
-
+    fn init_graphics(
+        &mut self,
+        graphics: &mut GraphicsManager,
+        commands: &mut Commands,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<StandardMaterial>,
+        components: &mut Query<(&mut Transform,)>,
+        harness: &mut Harness,
+        gen_color: &mut dyn FnMut() -> Point3<f32>,
+    ) {
+        //hack to get _some_ particle radius
+        let mut particle_radius = None;
         for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
+            let _ = self
+                .f2sn
+                .insert(handle, Vec::with_capacity(fluid.positions.len()));
+
             let color = *self.f2color.entry(handle).or_insert_with(|| gen_color());
-            let node = FluidNode::new(particle_radius, &fluid.positions, color, window);
-            let _ = self.f2sn.insert(handle, node);
+
+            particle_radius = Some(fluid.particle_radius());
+            for particle in &fluid.positions {
+                let ent = self.add_particle_graphics(
+                    particle,
+                    particle_radius.unwrap(),
+                    graphics,
+                    commands,
+                    meshes,
+                    materials,
+                    components,
+                    harness,
+                    &color,
+                );
+                if let Some(entities) = self.f2sn.get_mut(&handle) {
+                    entities.extend(ent);
+                }
+            }
         }
 
-        for (handle, boundary) in self.fluids_pipeline.liquid_world.boundaries().iter() {
-            let color = self.ground_color;
-            let node = FluidNode::new(particle_radius, &boundary.positions, color, window);
-            let _ = self.boundary2sn.insert(handle, node);
+        if self.render_boundary_particles {
+            // hack, ugly hack
+            if let Some(particle_radius) = particle_radius {
+                for (handle, _) in self.fluids_pipeline.liquid_world.boundaries().iter() {
+                    let color = self.ground_color;
+
+                    for (_, cce) in &self.fluids_pipeline.coupling.entries {
+                        if cce.boundary == handle {
+                            match &cce.sampling_method {
+                                crate::integrations::rapier::ColliderSampling::StaticSampling(particles) => {
+                                        for particle in particles {
+                                            let ent = self.add_particle_graphics(
+                                            particle,
+                                            particle_radius,
+                                            graphics,
+                                            commands,
+                                            meshes,
+                                            materials,
+                                            components,
+                                            harness,
+                                            &color,
+                                        );
+                                        if let Some(entities) = self.boundary2sn.get_mut(&handle) {
+                                            entities.extend(ent);
+                                        }
+                                    }
+                                },
+                                crate::integrations::rapier::ColliderSampling::DynamicContactSampling => {
+                                    // TODO
+                                },
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    fn clear_graphics(&mut self, window: &mut Window) {
-        for sn in self.f2sn.values_mut().chain(self.boundary2sn.values_mut()) {
-            let node = sn.scene_node_mut();
-            #[cfg(feature = "dim2")]
-            window.remove_planar_node(node);
-            #[cfg(feature = "dim3")]
-            window.remove_node(node);
+    fn clear_graphics(&mut self, _graphics: &mut GraphicsManager, commands: &mut Commands) {
+        for (handle, _) in self.fluids_pipeline.liquid_world.fluids().iter() {
+            if let Some(entities) = self.f2sn.get_mut(&handle) {
+                for entity in entities {
+                    entity.despawn(commands);
+                }
+            }
         }
-
         self.f2sn.clear();
         self.boundary2sn.clear();
     }
 
-    fn run_callbacks(
-        &mut self,
-        window: &mut Window,
-        physics: &mut PhysicsState,
-        run_state: &RunState,
-    ) {
+    fn run_callbacks(&mut self, harness: &mut Harness) {
         for f in &mut self.callbacks {
-            f(window, physics, &mut self.fluids_pipeline, run_state)
+            f(harness, &mut self.fluids_pipeline)
         }
     }
 
@@ -147,129 +291,177 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         self.step_time = instant::now() - step_time;
     }
 
-    fn draw(&mut self) {
-        for (i, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
-            if let Some(node) = self.f2sn.get_mut(&i) {
-                node.update_with_fluid(fluid, self.fluid_rendering_mode)
-            }
+    fn draw(
+        &mut self,
+        _graphics: &mut GraphicsManager,
+        _commands: &mut Commands,
+        _meshes: &mut Assets<Mesh>,
+        _materials: &mut Assets<StandardMaterial>,
+        components: &mut Query<(&mut Transform,)>,
+        harness: &mut Harness,
+    ) {
+        fn lerp_velocity(
+            velocity: Vector<f32>,
+            start: Vector3<f32>,
+            min: f32,
+            max: f32,
+        ) -> Vector3<f32> {
+            let end = Vector3::new(1.0, 0.0, 0.0);
+            let vel: Vector<f32> = na::convert_unchecked(velocity);
+            let vel: Vector<f32> = na::convert(vel);
+            let t = (vel.norm() - min) / (max - min);
+            start.lerp(&end, na::clamp(t, 0.0, 1.0))
         }
+        let (mut min, mut max) = (f32::MAX, f32::MIN);
+        for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
+            if let Some(entities) = self.f2sn.get_mut(&handle) {
+                for (idx, particle) in fluid.positions.iter().enumerate() {
+                    let velocity = Vector::from(fluid.velocities[idx]);
+                    let magnitude = velocity.magnitude();
+                    min = min.min(magnitude);
+                    max = max.max(magnitude);
+                    if let Some(entity) = entities.get_mut(idx) {
+                        if let Ok(mut pos) =
+                            components.get_component_mut::<Transform>(entity.entity)
+                        {
+                            {
+                                pos.translation.x = particle.x;
+                                pos.translation.y = particle.y;
+                                #[cfg(feature = "dim3")]
+                                {
+                                    // FIXME: this is not working, converting from Vector3 -> Quaternion -> bevy::Quat, perhaps it's the handedness?
+                                    let rotation = Quaternion::from_vector(
+                                        (velocity * -1.).normalize().to_homogeneous(),
+                                    );
+                                    pos.translation.z = particle.z;
+                                    pos.rotation = Quat::from_xyzw(
+                                        rotation.i, rotation.j, rotation.k, rotation.w,
+                                    );
+                                }
+                                #[cfg(feature = "dim2")]
+                                {
+                                    // FIXME: ???
+                                    // pos.rotation = Quat::from_rotation_z(co_pos.rotation.angle());
+                                }
+                            }
+                        }
 
-        if self.render_boundary_particles {
-            for (i, boundary) in self.fluids_pipeline.liquid_world.boundaries().iter() {
-                if let Some(node) = self.boundary2sn.get_mut(&i) {
-                    node.update_with_boundary(boundary)
+                        if let Some(color) = self.f2color.get(&handle) {
+                            match self.rendering_mode {
+                                FluidsRenderingMode::VelocityColor { min, max } => {
+                                    let lerp = lerp_velocity(
+                                        fluid.velocities[idx],
+                                        color.coords,
+                                        min,
+                                        max,
+                                    );
+                                    entity
+                                        .set_color(_materials, Point3::new(lerp.x, lerp.y, lerp.z));
+                                }
+                                FluidsRenderingMode::VelocityArrows { min, max } => {
+                                    let lerp = lerp_velocity(
+                                        fluid.velocities[idx],
+                                        color.coords,
+                                        min,
+                                        max,
+                                    );
+                                    entity
+                                        .set_color(_materials, Point3::new(lerp.x, lerp.y, lerp.z));
+                                }
+                                // FIXME: rapier needs to be updated to respect opacity
+                                // FluidsRenderingMode::VelocityColorOpacity { min, max } => {
+                                //     let lerp = lerp_velocity(
+                                //         fluid.velocities[idx],
+                                //         color.coords,
+                                //         min,
+                                //         max,
+                                //     );
+                                //     entity.opacity = lerp.magnitude();
+                                //     entity.set_color(
+                                //         _materials,
+                                //         Point3::new(lerp.x, lerp.y, lerp.z),
+                                //     );
+                                // }
+                                // FluidsRenderingMode::VelocityArrows => {}
+                                _ => {
+                                    entity.opacity = 1.0;
+                                    entity.set_color(_materials, *color);
+                                }
+                            }
+                        }
+                        entity.update(&harness.physics.colliders, components)
+                    }
                 }
             }
         }
+    }
+
+    fn update_ui(
+        &mut self,
+        ui_context: &EguiContext,
+        harness: &mut Harness,
+        graphics: &mut GraphicsManager,
+        commands: &mut Commands,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<StandardMaterial>,
+        components: &mut Query<(&mut Transform,)>,
+    ) {
+        fn get_rendering_mode_index(rendering_mode: FluidsRenderingMode) -> usize {
+            FLUIDS_RENDERING_MAP
+                .iter()
+                .enumerate()
+                .find(|(_, mode)| rendering_mode == mode.1)
+                .map(|(idx, _)| idx)
+                .unwrap_or(0)
+        }
+
+        let _ = Window::new("Fluid Parameters")
+            .min_height(200.0)
+            .show(ui_context.ctx(), |ui| {
+                let mut changed = false;
+
+                let _ = ComboBox::from_label("Rendering Mode")
+                    .width(150.0)
+                    .selected_text(
+                        FLUIDS_RENDERING_MAP[get_rendering_mode_index(self.rendering_mode)].0,
+                    )
+                    .show_ui(ui, |ui| {
+                        for (_, (name, mode)) in FLUIDS_RENDERING_MAP.iter().enumerate() {
+                            changed = ui
+                                .selectable_value(&mut self.rendering_mode, *mode, name)
+                                .changed()
+                                || changed;
+                        }
+                    });
+                println!("changedL {}, {:?}", changed, self.rendering_mode);
+
+                if changed {
+                    println!("{:?}", self.rendering_mode);
+                    // FIXME: not too sure what to do here for color
+                    let fluid_handle = self
+                        .fluids_pipeline
+                        .liquid_world
+                        .fluids()
+                        .iter()
+                        .next()
+                        .unwrap()
+                        .0;
+                    self.clear_graphics(graphics, commands);
+                    let color = self.f2color[&fluid_handle].clone();
+                    self.init_graphics(
+                        graphics,
+                        commands,
+                        meshes,
+                        materials,
+                        components,
+                        harness,
+                        &mut || color,
+                    )
+                }
+            });
     }
 
     fn profiling_string(&self) -> String {
         format!("Fluids: {:.2}ms", self.step_time)
-    }
-}
-
-struct FluidNode {
-    radius: f32,
-    color: Point3<f32>,
-    base_color: Point3<f32>,
-    gfx: GraphicsNode,
-    balls_gfx: Vec<GraphicsNode>,
-}
-
-impl FluidNode {
-    pub fn new(
-        radius: f32,
-        centers: &[Point<f32>],
-        color: Point3<f32>,
-        window: &mut Window,
-    ) -> FluidNode {
-        #[cfg(feature = "dim2")]
-        let mut gfx = window.add_planar_group();
-        #[cfg(feature = "dim3")]
-        let mut gfx = window.add_group();
-
-        let mut balls_gfx = Vec::new();
-
-        for c in centers {
-            #[cfg(feature = "dim2")]
-            let mut ball_gfx = gfx.add_circle(radius);
-            #[cfg(feature = "dim3")]
-            let mut ball_gfx = gfx.add_sphere(radius);
-            let c: Vector<f64> = na::convert_unchecked(c.coords);
-            let c: Vector<f32> = na::convert(c);
-            ball_gfx.set_local_translation(c.into());
-            balls_gfx.push(ball_gfx);
-        }
-
-        let mut res = FluidNode {
-            radius,
-            color,
-            base_color: color,
-            gfx,
-            balls_gfx,
-        };
-
-        res.gfx.set_color(color.x, color.y, color.z);
-        res
-    }
-
-    pub fn set_color(&mut self, color: Point3<f32>) {
-        self.gfx.set_color(color.x, color.y, color.z);
-        self.color = color;
-        self.base_color = color;
-    }
-
-    fn update(
-        &mut self,
-        centers: &[Point<f32>],
-        velocities: &[Vector<f32>],
-        mode: FluidsRenderingMode,
-    ) {
-        if centers.len() > self.balls_gfx.len() {
-            for _ in 0..centers.len() - self.balls_gfx.len() {
-                #[cfg(feature = "dim2")]
-                let ball_gfx = self.gfx.add_circle(self.radius);
-                #[cfg(feature = "dim3")]
-                let ball_gfx = self.gfx.add_sphere(self.radius);
-                self.balls_gfx.push(ball_gfx);
-            }
-        }
-
-        for ball_gfx in &mut self.balls_gfx[centers.len()..] {
-            ball_gfx.set_visible(false);
-        }
-
-        for (i, (pt, ball)) in centers.iter().zip(self.balls_gfx.iter_mut()).enumerate() {
-            ball.set_visible(true);
-            let c: Vector<f64> = na::convert_unchecked(pt.coords);
-            let c: Vector<f32> = na::convert(c);
-            ball.set_local_translation(c.into());
-
-            let color = match mode {
-                FluidsRenderingMode::StaticColor => self.base_color,
-                FluidsRenderingMode::VelocityColor { min, max } => {
-                    let start = self.base_color.coords;
-                    let end = Vector3::new(1.0, 0.0, 0.0);
-                    let vel: Vector<f64> = na::convert_unchecked(velocities[i]);
-                    let vel: Vector<f32> = na::convert(vel);
-                    let t = (vel.norm() - min) / (max - min);
-                    start.lerp(&end, na::clamp(t, 0.0, 1.0)).into()
-                }
-            };
-
-            ball.set_color(color.x, color.y, color.z);
-        }
-    }
-
-    pub fn update_with_boundary(&mut self, boundary: &Boundary) {
-        self.update(&boundary.positions, &[], FluidsRenderingMode::StaticColor)
-    }
-
-    pub fn update_with_fluid(&mut self, fluid: &Fluid, rendering_mode: FluidsRenderingMode) {
-        self.update(&fluid.positions, &fluid.velocities, rendering_mode)
-    }
-
-    pub fn scene_node_mut(&mut self) -> &mut GraphicsNode {
-        &mut self.gfx
     }
 }

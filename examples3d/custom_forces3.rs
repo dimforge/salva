@@ -3,7 +3,7 @@ extern crate nalgebra as na;
 use na::{Point3, Unit, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodySet};
 use rapier3d::geometry::ColliderSet;
-use rapier_testbed3d::Testbed;
+use rapier_testbed3d::{Testbed, TestbedApp};
 use salva3d::integrations::rapier::{FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin};
 use salva3d::object::{Boundary, Fluid};
 use salva3d::solver::NonPressureForce;
@@ -46,13 +46,13 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_pipeline(fluids_pipeline);
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.add_plugin(plugin);
-    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
+    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point3::new(3.0, 3.0, 3.0), Point3::origin());
 }
 
 fn main() {
-    let testbed = Testbed::from_builders(0, vec![("Boxes", init_world)]);
+    let testbed = TestbedApp::from_builders(0, vec![("Boxes", init_world)]);
     testbed.run()
 }
 

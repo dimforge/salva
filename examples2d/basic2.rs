@@ -88,7 +88,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let rigid_body = RigidBodyBuilder::new_static().build();
     let handle = bodies.insert(rigid_body);
     let collider = ColliderBuilder::heightfield(heights, ground_size).build();
-    let co_handle = colliders.insert(collider, handle, &mut bodies);
+    let co_handle = colliders.insert_with_parent(collider, handle, &mut bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));
@@ -105,9 +105,11 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut build_rigid_body_with_coupling = |x, y, collider: Collider| {
         let samples =
             salva2d::sampling::shape_surface_ray_sample(collider.shape(), PARTICLE_RADIUS).unwrap();
-        let rb = RigidBodyBuilder::new_dynamic().translation(x, y).build();
-        let rb_handle = bodies.insert(rb);
-        let co_handle = colliders.insert(collider, rb_handle, &mut bodies);
+        let rb = RigidBodyBuilder::new_dynamic()
+            .translation(Vector2::new(x, y))
+            .build();
+        let _rb_handle = bodies.insert(rb);
+        let co_handle = colliders.insert(collider);
         let bo_handle = fluids_pipeline
             .liquid_world
             .add_boundary(Boundary::new(Vec::new()));
@@ -116,7 +118,6 @@ pub fn init_world(testbed: &mut Testbed) {
             co_handle,
             ColliderSampling::StaticSampling(samples.clone()),
         );
-        testbed.set_body_color(rb_handle, Point3::new(0.3, 0.3, 0.7));
     };
 
     let co1 = ColliderBuilder::cuboid(rad, rad).density(0.8).build();
@@ -131,7 +132,7 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     plugin.set_pipeline(fluids_pipeline);
     testbed.add_plugin(plugin);
-    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
+    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     //    testbed.enable_boundary_particles_rendering(true);
 }
