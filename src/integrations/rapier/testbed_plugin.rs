@@ -149,11 +149,9 @@ impl FluidsTestbedPlugin {
         _harness: &mut Harness,
         color: &Point3<f32>,
     ) -> Vec<EntityWithGraphics> {
-        // println!("rm: {:?}", self.fluid_rendering_mode);
         let shape = match self.rendering_mode {
             #[cfg(feature = "dim3")]
             FluidsRenderingMode::VelocityArrows { .. } => {
-                println!("cone!!!");
                 SharedShape::cone(particle_radius, particle_radius / 4.)
             }
             #[cfg(feature = "dim2")]
@@ -338,10 +336,6 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                             velocity.normalize().to_homogeneous(),
                                         );
                                         let rotation = (vr - cone_paxis).normalize();
-                                        println!(
-                                            "velocity arrows, {:?}, {:?}, {:?}",
-                                            rotation, cone_paxis, vr,
-                                        );
 
                                         pos.rotation = Quat::from_xyzw(
                                             rotation.i, rotation.j, rotation.k, rotation.w,
@@ -445,7 +439,6 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                     });
 
                 if changed {
-                    println!("{:?}", self.rendering_mode);
                     // FIXME: not too sure what to do here for color
                     let fluid_handle = self
                         .fluids_pipeline

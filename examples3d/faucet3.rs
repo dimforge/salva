@@ -102,7 +102,7 @@ pub fn init_world(testbed: &mut Testbed) {
     testbed.set_body_wireframe(ground_handle, true);
     testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
-    //    testbed.enable_boundary_particles_rendering(true);
+    // testbed.enable_boundary_particles_rendering(true);
     testbed.look_at(Point3::new(1.5, 0.0, 1.5), Point3::new(0.0, 0.0, 0.0));
 }
 
