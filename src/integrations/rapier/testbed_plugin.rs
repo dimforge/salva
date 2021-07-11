@@ -302,8 +302,6 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             f(harness, &mut self.fluids_pipeline)
         }
 
-        self.run_callbacks(harness);
-
         for (h, fl) in fluid_lengths {
             if let Some(len) = self
                 .fluids_pipeline
