@@ -124,10 +124,6 @@ impl FluidsTestbedPlugin {
     /// Sets the color used to render the specified fluid.
     pub fn set_fluid_color(&mut self, fluid: FluidHandle, color: Point3<f32>) {
         let _ = self.f2color.insert(fluid, color);
-
-        // if let Some(n) = self.f2sn.get_mut(&fluid) {
-        //     // n.set_color(color)
-        // }
     }
 
     /// Sets the way fluids are rendered.
@@ -239,7 +235,10 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         let particle_radius = self.fluids_pipeline.liquid_world.particle_radius();
 
         if self.render_boundary_particles {
-            for (handle, _) in self.fluids_pipeline.liquid_world.boundaries().iter() {
+            for (handle, boundary) in self.fluids_pipeline.liquid_world.boundaries().iter() {
+                let _ = self
+                    .boundary2sn
+                    .insert(handle, Vec::with_capacity(boundary.num_particles()));
                 let color = self.ground_color;
 
                 for (_, cce) in &self.fluids_pipeline.coupling.entries {
@@ -282,7 +281,16 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             }
         }
 
-        //TODO: remove boundary particles
+        if self.render_boundary_particles {
+            for (handle, _) in self.fluids_pipeline.liquid_world.boundaries().iter() {
+                if let Some(entities) = self.boundary2sn.get_mut(&handle) {
+                    for entity in entities {
+                        entity.despawn(commands);
+                    }
+                }
+            }
+        }
+
         self.f2sn.clear();
         self.boundary2sn.clear();
     }
