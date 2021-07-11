@@ -1,4 +1,3 @@
-use super::FluidsPipeline;
 use crate::math::{Isometry, Point, Real, Rotation, Translation, Vector};
 use crate::object::{BoundaryHandle, FluidHandle};
 #[cfg(feature = "dim3")]
@@ -14,6 +13,8 @@ use rapier_testbed::{
     harness::Harness, objects::node::EntityWithGraphics, GraphicsManager, PhysicsState,
     TestbedPlugin,
 };
+
+use crate::integrations::rapier::FluidsPipeline;
 use std::collections::HashMap;
 
 //FIXME: handle this with macros, or use bevy-inspectable-egui
@@ -87,6 +88,8 @@ pub struct FluidsTestbedPlugin {
     boundary2sn: HashMap<BoundaryHandle, Vec<EntityWithGraphics>>,
     f2color: HashMap<FluidHandle, Point3<f32>>,
     ground_color: Point3<f32>,
+    default_fluid_color: Point3<f32>,
+    queue_graphics_reset: bool,
 }
 
 impl FluidsTestbedPlugin {
@@ -102,6 +105,8 @@ impl FluidsTestbedPlugin {
             boundary2sn: HashMap::new(),
             f2color: HashMap::new(),
             ground_color: Point3::new(0.5, 0.5, 0.5),
+            default_fluid_color: Point3::new(0.0, 0.0, 0.5),
+            queue_graphics_reset: false,
         }
     }
 
@@ -179,6 +184,19 @@ impl FluidsTestbedPlugin {
             &mut shapes,
         );
         shapes
+    }
+
+    fn lerp_velocity(
+        velocity: Vector<f32>,
+        start: Vector3<f32>,
+        min: f32,
+        max: f32,
+    ) -> Vector3<f32> {
+        let end = Vector3::new(1.0, 0.0, 0.0);
+        let vel: Vector<Real> = na::convert_unchecked(velocity);
+        let vel: Vector<Real> = na::convert(vel);
+        let t = (vel.norm() - min) / (max - min);
+        start.lerp(&end, na::clamp(t, 0.0, 1.0))
     }
 }
 
@@ -263,13 +281,41 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                 }
             }
         }
+
+        //TODO: remove boundary particles
         self.f2sn.clear();
         self.boundary2sn.clear();
     }
 
     fn run_callbacks(&mut self, harness: &mut Harness) {
+        // FIXME: salva should be able to keep a list of indices that were added & removed in this step
+        // at the moment we just clear & initialize the grahics when fluids_lengths changes
+        let fluid_lengths: Vec<(FluidHandle, usize)> = self
+            .fluids_pipeline
+            .liquid_world
+            .fluids()
+            .iter()
+            .map(|(h, f)| (h, f.positions.len()))
+            .collect();
+
         for f in &mut self.callbacks {
             f(harness, &mut self.fluids_pipeline)
+        }
+
+        self.run_callbacks(harness);
+
+        for (h, fl) in fluid_lengths {
+            if let Some(len) = self
+                .fluids_pipeline
+                .liquid_world
+                .fluids()
+                .get(h)
+                .and_then(|f| Some(f.positions.len()))
+            {
+                if len != fl {
+                    self.queue_graphics_reset = true;
+                }
+            }
         }
     }
 
@@ -288,24 +334,26 @@ impl TestbedPlugin for FluidsTestbedPlugin {
 
     fn draw(
         &mut self,
-        _graphics: &mut GraphicsManager,
-        _commands: &mut Commands,
-        _meshes: &mut Assets<Mesh>,
-        _materials: &mut Assets<StandardMaterial>,
+        graphics: &mut GraphicsManager,
+        commands: &mut Commands,
+        meshes: &mut Assets<Mesh>,
+        materials: &mut Assets<StandardMaterial>,
         components: &mut Query<(&mut Transform,)>,
         harness: &mut Harness,
     ) {
-        fn lerp_velocity(
-            velocity: Vector<f32>,
-            start: Vector3<f32>,
-            min: f32,
-            max: f32,
-        ) -> Vector3<f32> {
-            let end = Vector3::new(1.0, 0.0, 0.0);
-            let vel: Vector<Real> = na::convert_unchecked(velocity);
-            let vel: Vector<Real> = na::convert(vel);
-            let t = (vel.norm() - min) / (max - min);
-            start.lerp(&end, na::clamp(t, 0.0, 1.0))
+        let default_color = self.default_fluid_color;
+        if self.queue_graphics_reset {
+            self.clear_graphics(graphics, commands);
+            self.init_graphics(
+                graphics,
+                commands,
+                meshes,
+                materials,
+                components,
+                harness,
+                &mut || default_color,
+            );
+            self.queue_graphics_reset = false;
         }
 
         let (mut min, mut max) = (f32::MAX, f32::MIN);
@@ -352,24 +400,24 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                         if let Some(color) = self.f2color.get(&handle) {
                             match self.rendering_mode {
                                 FluidsRenderingMode::VelocityColor { min, max } => {
-                                    let lerp = lerp_velocity(
+                                    let lerp = Self::lerp_velocity(
                                         fluid.velocities[idx],
                                         color.coords,
                                         min,
                                         max,
                                     );
                                     entity
-                                        .set_color(_materials, Point3::new(lerp.x, lerp.y, lerp.z));
+                                        .set_color(materials, Point3::new(lerp.x, lerp.y, lerp.z));
                                 }
                                 FluidsRenderingMode::VelocityArrows { min, max } => {
-                                    let lerp = lerp_velocity(
+                                    let lerp = Self::lerp_velocity(
                                         fluid.velocities[idx],
                                         color.coords,
                                         min,
                                         max,
                                     );
                                     entity
-                                        .set_color(_materials, Point3::new(lerp.x, lerp.y, lerp.z));
+                                        .set_color(materials, Point3::new(lerp.x, lerp.y, lerp.z));
                                 }
                                 // FIXME: rapier needs to be updated to respect opacity
                                 // FluidsRenderingMode::VelocityColorOpacity { min, max } => {
@@ -388,7 +436,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                 // FluidsRenderingMode::VelocityArrows => {}
                                 _ => {
                                     entity.opacity = 1.0;
-                                    entity.set_color(_materials, *color);
+                                    entity.set_color(materials, *color);
                                 }
                             }
                         }
