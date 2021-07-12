@@ -309,14 +309,8 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         }
 
         for (h, fl) in fluid_lengths {
-            if let Some(len) = self
-                .fluids_pipeline
-                .liquid_world
-                .fluids()
-                .get(h)
-                .and_then(|f| Some(f.positions.len()))
-            {
-                if len != fl {
+            if let Some(fluid) = self.fluids_pipeline.liquid_world.fluids().get(h) {
+                if fluid.positions.len() != fl || fluid.num_deleted_particles() > 0 {
                     self.queue_graphics_reset = true;
                 }
             }
