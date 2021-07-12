@@ -52,12 +52,12 @@ pub fn main() {
         .to_camel_case();
 
     let mut builders: Vec<(_, fn(&mut Testbed))> = vec![
-        // ("Basic", basic3::init_world), // not working currently
+        ("Basic", basic3::init_world),
         ("Height field", heightfield3::init_world),
         ("Custom Forces", custom_forces3::init_world),
         ("Elasticity", elasticity3::init_world),
-        // ("Faucet", faucet3::init_world), // not working currently
-        // ("Surface tension", surface_tension3::init_world), // not working currently
+        ("Faucet", faucet3::init_world), //FIXME: bug with adding & removing particles
+        ("Surface tension", surface_tension3::init_world),
     ];
 
     // Lexicographic sort, with stress tests moved at the end of the list.
