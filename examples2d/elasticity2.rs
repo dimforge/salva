@@ -62,9 +62,9 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
     // Setup the ground.
-    let ground_handle = bodies.insert(RigidBodyBuilder::new_static().build());
+    bodies.insert(RigidBodyBuilder::new_static().build());
     let co = ColliderBuilder::cuboid(ground_half_width, ground_thickness).build();
-    let co_handle = colliders.insert(co, ground_handle, &mut bodies);
+    let co_handle = colliders.insert(co);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));
@@ -80,7 +80,7 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_pipeline(fluids_pipeline);
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.add_plugin(plugin);
-    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
+    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point2::new(0.0, 1.0), 100.0);
 }

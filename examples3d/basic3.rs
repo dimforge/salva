@@ -3,7 +3,7 @@ extern crate nalgebra as na;
 use na::{Isometry3, Point3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet, SharedShape};
-use rapier_testbed3d::Testbed;
+use rapier_testbed3d::{Testbed, TestbedApp};
 use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva3d::object::Boundary;
 use salva3d::solver::ArtificialViscosity;
@@ -12,7 +12,7 @@ use std::f32;
 #[path = "./helper.rs"]
 mod helper;
 
-const PARTICLE_RADIUS: f32 = 0.025;
+const PARTICLE_RADIUS: f32 = 0.8;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
 pub fn init_world(testbed: &mut Testbed) {
@@ -70,7 +70,7 @@ pub fn init_world(testbed: &mut Testbed) {
         let co = ColliderBuilder::new(wall_shape.clone())
             .position(*pose)
             .build();
-        let co_handle = colliders.insert(co, ground_handle, &mut bodies);
+        let co_handle = colliders.insert(co);
         let bo_handle = fluids_pipeline
             .liquid_world
             .add_boundary(Boundary::new(Vec::new()));
@@ -85,7 +85,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let samples =
         salva3d::sampling::shape_surface_ray_sample(&*ground_shape, PARTICLE_RADIUS).unwrap();
     let co = ColliderBuilder::new(ground_shape).build();
-    let co_handle = colliders.insert(co, ground_handle, &mut bodies);
+    let co_handle = colliders.insert(co);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));
@@ -104,12 +104,12 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
+    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point3::new(3.0, 3.0, 3.0), Point3::origin());
 }
 
 fn main() {
-    let testbed = Testbed::from_builders(0, vec![("Basic", init_world)]);
+    let testbed = TestbedApp::from_builders(0, vec![("Basic", init_world)]);
     testbed.run()
 }

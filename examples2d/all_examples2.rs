@@ -4,7 +4,7 @@ extern crate nalgebra as na;
 
 use inflector::Inflector;
 
-use rapier_testbed2d::Testbed;
+use rapier_testbed2d::{Testbed, TestbedApp};
 
 mod basic2;
 mod custom_forces2;
@@ -57,7 +57,7 @@ fn main() {
         .iter()
         .position(|builder| builder.0.to_camel_case().as_str() == demo.as_str())
         .unwrap_or(0);
-    let testbed = Testbed::from_builders(i, builders);
+    let testbed = TestbedApp::from_builders(i, builders);
 
     testbed.run()
 }

@@ -53,10 +53,10 @@ jobs:
           command: cargo install -f cargo-web;
       - run:
           name: build salva2d
-          command: cd build/salva2d && cargo web build --verbose --target wasm32-unknown-unknown;
+          command: cd build/salva2d && cargo build --verbose --features wasm-bindgen --target wasm32-unknown-unknown;
       - run:
           name: build salva3d
-          command: cd build/salva3d && cargo web build --verbose --target wasm32-unknown-unknown;
+          command: cd build/salva3d && cargo build --verbose --features wasm-bindgen --target wasm32-unknown-unknown;
 #      - run:
 #          name: build examples-2d
 #          command: cd examples2d && cargo web build --verbose --target wasm32-unknown-unknown;

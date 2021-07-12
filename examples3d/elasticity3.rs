@@ -3,7 +3,7 @@ extern crate nalgebra as na;
 use na::{Isometry3, Point3, Vector3};
 use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet};
-use rapier_testbed3d::Testbed;
+use rapier_testbed3d::{Testbed, TestbedApp};
 use salva3d::integrations::rapier::{
     ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
 };
@@ -79,7 +79,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let ground_handle = bodies.insert(RigidBodyBuilder::new_static().build());
     let co =
         ColliderBuilder::cuboid(ground_half_width, ground_thickness, ground_half_width).build();
-    let co_handle = colliders.insert(co, ground_handle, &mut bodies);
+    let co_handle = colliders.insert(co);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));
@@ -96,12 +96,12 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world_with_gravity(bodies, colliders, joints, gravity);
+    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point3::new(1.5, 1.5, 1.5), Point3::origin());
 }
 
 fn main() {
-    let testbed = Testbed::from_builders(0, vec![("Elasticity", init_world)]);
+    let testbed = TestbedApp::from_builders(0, vec![("Elasticity", init_world)]);
     testbed.run()
 }
