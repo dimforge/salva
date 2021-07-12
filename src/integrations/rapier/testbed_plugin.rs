@@ -1,6 +1,5 @@
 use crate::math::{Isometry, Point, Real, Rotation, Translation, Vector};
 use crate::object::{BoundaryHandle, FluidHandle};
-#[cfg(feature = "dim3")]
 use bevy::math::Quat;
 use bevy::prelude::{Assets, Commands, Mesh, Query, StandardMaterial, Transform};
 use bevy_egui::egui::ComboBox;
@@ -154,14 +153,13 @@ impl FluidsTestbedPlugin {
             FluidsRenderingMode::VelocityArrows { .. } => {
                 SharedShape::cone(particle_radius, particle_radius / 4.)
             }
-            #[cfg(feature = "dim2")]
-            //FIXME: use actual trig
-            FluidsRenderingMode::VelocityArrows { .. } => SharedShape::triangle(
-                Point::new(0., particle_radius),
-                Point::new(particle_radius * 0.4, -particle_radius * 0.8),
-                Point::new(-particle_radius * 0.4, -particle_radius * 0.8),
-            ),
-
+            // #[cfg(feature = "dim2")]
+            //FIXME: This doesn't work, it is caused by either not being in prefab_meshes, or the shape_type not being supported.. somewhere
+            // FluidsRenderingMode::VelocityArrows { .. } => SharedShape::triangle(
+            //     Point::new(0., particle_radius),
+            //     Point::new(particle_radius * 0.4, -particle_radius * 0.8),
+            //     Point::new(-particle_radius * 0.4, -particle_radius * 0.8),
+            // ),
             _ => SharedShape::ball(particle_radius),
         };
         let mut shapes = Vec::new();
@@ -397,8 +395,10 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                 }
                                 #[cfg(feature = "dim2")]
                                 {
-                                    // FIXME: ???
-                                    // pos.rotation = Quat::from_rotation_z(co_pos.rotation.angle());
+                                    let norm = velocity.normalize();
+                                    let hyp = (norm.x * norm.x + norm.y * norm.y).sqrt();
+                                    let angle = 2. * (norm.y / (norm.x + hyp)).atan();
+                                    pos.rotation = Quat::from_rotation_z(angle);
                                 }
                             }
                         }
