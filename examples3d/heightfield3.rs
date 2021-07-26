@@ -27,11 +27,11 @@ pub fn init_world(testbed: &mut Testbed) {
     /* Fluid */
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
-    let nparticles = 25;
+    let nparticles = 15;
     let mut fluid = helper::cube_fluid(nparticles, nparticles, nparticles, PARTICLE_RADIUS, 1000.0);
     fluid.transform_by(&Isometry3::translation(
         0.0,
-        4.0 + nparticles as f32 * PARTICLE_RADIUS * 2.,
+        2.0 + nparticles as f32 * PARTICLE_RADIUS * 2.,
         0.0,
     ));
     let viscosity = ArtificialViscosity::new(1.0, 0.0);
@@ -68,19 +68,6 @@ pub fn init_world(testbed: &mut Testbed) {
         salva3d::sampling::shape_surface_ray_sample(ground_collider.shape(), PARTICLE_RADIUS / 1.5)
             .unwrap();
 
-    //Uncomment this to get multiple layers of samples
-    // let samples_layers = 0..3;
-    // let samples = samples_layers
-    //     .map(|layer| {
-    //         samples
-    //             .iter()
-    //             .map(move |point| point - Vector::y() * PARTICLE_RADIUS * 2. * layer.clone() as f32)
-    //     })
-    //     .flatten()
-    //     .collect();
-
-    // let co = ColliderBuilder::heightfield(heights, ground_size).build();
-    // let co_handle = colliders.insert(co);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));
