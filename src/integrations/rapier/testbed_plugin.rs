@@ -147,21 +147,27 @@ impl FluidsTestbedPlugin {
         _components: &mut Query<(&mut Transform,)>,
         _harness: &mut Harness,
         color: &Point3<f32>,
+        force_shape: Option<SharedShape>,
     ) -> Vec<EntityWithGraphics> {
-        let shape = match self.fluids_rendering_mode {
-            #[cfg(feature = "dim3")]
-            FluidsRenderingMode::VelocityArrows { .. } => {
-                SharedShape::cone(particle_radius, particle_radius / 4.)
+        let shape = if let Some(shape) = force_shape {
+            shape
+        } else {
+            match self.fluids_rendering_mode {
+                #[cfg(feature = "dim3")]
+                FluidsRenderingMode::VelocityArrows { .. } => {
+                    SharedShape::cone(particle_radius, particle_radius / 4.)
+                }
+                // #[cfg(feature = "dim2")]
+                //FIXME: This doesn't work, it is caused by either not being in prefab_meshes, or the shape_type not being supported.. somewhere
+                // FluidsRenderingMode::VelocityArrows { .. } => SharedShape::triangle(
+                //     Point::new(0., particle_radius),
+                //     Point::new(particle_radius * 0.4, -particle_radius * 0.8),
+                //     Point::new(-particle_radius * 0.4, -particle_radius * 0.8),
+                // ),
+                _ => SharedShape::ball(particle_radius),
             }
-            // #[cfg(feature = "dim2")]
-            //FIXME: This doesn't work, it is caused by either not being in prefab_meshes, or the shape_type not being supported.. somewhere
-            // FluidsRenderingMode::VelocityArrows { .. } => SharedShape::triangle(
-            //     Point::new(0., particle_radius),
-            //     Point::new(particle_radius * 0.4, -particle_radius * 0.8),
-            //     Point::new(-particle_radius * 0.4, -particle_radius * 0.8),
-            // ),
-            _ => SharedShape::ball(particle_radius),
         };
+
         let mut shapes = Vec::new();
         let isometry =
             Isometry::from_parts(Translation::from(particle.coords), Rotation::identity());
@@ -223,6 +229,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                     components,
                     harness,
                     &color,
+                    None,
                 );
                 if let Some(entities) = self.f2sn.get_mut(&handle) {
                     entities.extend(ent);
@@ -254,6 +261,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                             components,
                                             harness,
                                             &color,
+                                            Some(SharedShape::ball(particle_radius))
                                         );
                                     if let Some(entities) = self.boundary2sn.get_mut(&handle) {
                                         entities.extend(ent);
