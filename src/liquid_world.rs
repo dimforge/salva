@@ -1,17 +1,14 @@
 use crate::counters::Counters;
 use crate::coupling::CouplingManager;
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
-use crate::math::{Real, Vector};
+use crate::math::{Isometry, Real, Vector};
+use crate::object::ParticleId;
 use crate::object::{Boundary, BoundaryHandle, BoundarySet};
 use crate::object::{Fluid, FluidHandle, FluidSet};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
-#[cfg(feature = "ncollide")]
-use ncollide::{
-    bounding_volume::{HasBoundingVolume, AABB},
-    query::PointQuery,
-    shape::Cuboid,
-};
+#[cfg(feature = "parry")]
+use parry::{bounding_volume::AABB, query::PointQuery, shape::Shape};
 
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld {
@@ -208,10 +205,10 @@ impl LiquidWorld {
     }
 
     /// The set of particles potentially intersecting the given AABB.
-    #[cfg(feature = "ncollide")]
+    #[cfg(feature = "parry")]
     pub fn particles_intersecting_aabb<'a>(
         &'a self,
-        aabb: &'a AABB<f32>,
+        aabb: AABB,
     ) -> impl Iterator<Item = ParticleId> + 'a {
         self.hgrid
             .cells_intersecting_aabb(&aabb.mins, &aabb.maxs)
@@ -242,18 +239,17 @@ impl LiquidWorld {
             })
     }
 
-    /// The set of particles potentially intersecting the given AABB.
-    #[cfg(feature = "ncollide")]
+    /// The set of particles potentially intersecting the given shape.
+    #[cfg(feature = "parry")]
     pub fn particles_intersecting_shape<'a, S: ?Sized>(
         &'a self,
-        pos: &'a Isometry<f32>,
+        pos: &'a Isometry<Real>,
         shape: &'a S,
     ) -> impl Iterator<Item = ParticleId> + 'a
     where
-        S: PointQuery<f32> + HasBoundingVolume<f32, AABB<f32>>,
+        S: Shape,
     {
-        let aabb = shape.bounding_volume(pos);
-
+        let aabb = shape.compute_aabb(pos);
         self.hgrid
             .cells_intersecting_aabb(&aabb.mins, &aabb.maxs)
             .flat_map(|e| e.1)
