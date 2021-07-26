@@ -239,6 +239,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
 
         let particle_radius = self.fluids_pipeline.liquid_world.particle_radius();
 
+        // FIXME: There is currently no way to get the collider pose from this function
         if self.render_boundary_particles {
             for (handle, boundary) in self.fluids_pipeline.liquid_world.boundaries().iter() {
                 let _ = self
@@ -377,10 +378,11 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                 pos.translation.y = particle.y;
                                 #[cfg(feature = "dim3")]
                                 {
+                                    pos.translation.z = particle.z;
+
                                     if let FluidsRenderingMode::VelocityArrows { .. } =
                                         self.fluids_rendering_mode
                                     {
-                                        pos.translation.z = particle.z;
                                         let cone_paxis: Quaternion<Real> =
                                             Quaternion::from_vector(-Vector3::y().to_homogeneous());
                                         let vr = Quaternion::from_vector(
