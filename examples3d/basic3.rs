@@ -12,7 +12,7 @@ use std::f32;
 #[path = "./helper.rs"]
 mod helper;
 
-const PARTICLE_RADIUS: f32 = 0.8;
+const PARTICLE_RADIUS: f32 = 0.05;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
 pub fn init_world(testbed: &mut Testbed) {
@@ -70,7 +70,7 @@ pub fn init_world(testbed: &mut Testbed) {
         let co = ColliderBuilder::new(wall_shape.clone())
             .position(*pose)
             .build();
-        let co_handle = colliders.insert(co);
+        let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
         let bo_handle = fluids_pipeline
             .liquid_world
             .add_boundary(Boundary::new(Vec::new()));
@@ -85,7 +85,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let samples =
         salva3d::sampling::shape_surface_ray_sample(&*ground_shape, PARTICLE_RADIUS).unwrap();
     let co = ColliderBuilder::new(ground_shape).build();
-    let co_handle = colliders.insert(co);
+    let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));
