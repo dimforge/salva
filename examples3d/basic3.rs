@@ -27,7 +27,7 @@ pub fn init_world(testbed: &mut Testbed) {
 
     // Parameters of the ground.
     let ground_thickness = 0.2;
-    let ground_half_width = 1.5;
+    let ground_half_width = 2.5;
     let ground_half_height = 0.7;
 
     // fluids.
@@ -102,8 +102,9 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut plugin = FluidsTestbedPlugin::new();
     plugin.set_pipeline(fluids_pipeline);
     plugin.set_fluid_color(fluid_handle, Point3::new(0.8, 0.7, 1.0));
+    plugin.render_boundary_particles = true;
     testbed.add_plugin(plugin);
-    testbed.set_body_wireframe(ground_handle, true);
+    // testbed.set_body_wireframe(ground_handle, true);
     testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point3::new(3.0, 3.0, 3.0), Point3::origin());

@@ -31,7 +31,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut fluid = helper::cube_fluid(nparticles, nparticles, nparticles, PARTICLE_RADIUS, 1000.0);
     fluid.transform_by(&Isometry3::translation(
         0.0,
-        2.0 + nparticles as f32 * PARTICLE_RADIUS * 2.,
+        1.0 + nparticles as f32 * PARTICLE_RADIUS * 2.,
         0.0,
     ));
     let viscosity = ArtificialViscosity::new(1.0, 0.0);
@@ -81,7 +81,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut plugin = FluidsTestbedPlugin::new();
     plugin.set_pipeline(fluids_pipeline);
     plugin.set_fluid_color(fluid_handle, Point::new(0.8, 0.7, 1.0));
-    plugin.render_boundary_particles = true;
+    // plugin.render_boundary_particles = true;
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(handle, true);
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
