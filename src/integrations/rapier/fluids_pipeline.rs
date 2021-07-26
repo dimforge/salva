@@ -272,9 +272,13 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
 
                 if let Some(forces) = &boundary.forces {
                     let forces = forces.read().unwrap();
-                    if let Some(body) = self.bodies.get_mut(collider.parent().unwrap()) {
-                        for (pos, force) in boundary.positions.iter().zip(forces.iter().cloned()) {
-                            body.apply_force_at_point(force, *pos, true)
+                    if let Some(parent) = collider.parent() {
+                        if let Some(body) = self.bodies.get_mut(parent) {
+                            for (pos, force) in
+                                boundary.positions.iter().zip(forces.iter().cloned())
+                            {
+                                body.apply_force_at_point(force, *pos, true)
+                            }
                         }
                     }
                 }
