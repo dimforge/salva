@@ -79,7 +79,7 @@ pub struct FluidsTestbedPlugin {
     /// Whether to render the boundary particles
     pub render_boundary_particles: bool,
     /// Rendering mode of fluid particles
-    pub rendering_mode: FluidsRenderingMode,
+    pub fluids_rendering_mode: FluidsRenderingMode,
     callbacks: Vec<FluidCallback>,
     step_time: f64,
     fluids_pipeline: FluidsPipeline,
@@ -96,7 +96,7 @@ impl FluidsTestbedPlugin {
     pub fn new() -> Self {
         Self {
             render_boundary_particles: false,
-            rendering_mode: FluidsRenderingMode::StaticColor,
+            fluids_rendering_mode: FluidsRenderingMode::StaticColor,
             step_time: 0.0,
             callbacks: Vec::new(),
             fluids_pipeline: FluidsPipeline::new(0.025, 2.0),
@@ -127,7 +127,7 @@ impl FluidsTestbedPlugin {
 
     /// Sets the way fluids are rendered.
     pub fn set_fluid_rendering_mode(&mut self, mode: FluidsRenderingMode) {
-        self.rendering_mode = mode;
+        self.fluids_rendering_mode = mode;
     }
 
     /// Enables the rendering of boundary particles.
@@ -148,7 +148,7 @@ impl FluidsTestbedPlugin {
         _harness: &mut Harness,
         color: &Point3<f32>,
     ) -> Vec<EntityWithGraphics> {
-        let shape = match self.rendering_mode {
+        let shape = match self.fluids_rendering_mode {
             #[cfg(feature = "dim3")]
             FluidsRenderingMode::VelocityArrows { .. } => {
                 SharedShape::cone(particle_radius, particle_radius / 4.)
@@ -279,12 +279,10 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             }
         }
 
-        if self.render_boundary_particles {
-            for (handle, _) in self.fluids_pipeline.liquid_world.boundaries().iter() {
-                if let Some(entities) = self.boundary2sn.get_mut(&handle) {
-                    for entity in entities {
-                        entity.despawn(commands);
-                    }
+        for (handle, _) in self.fluids_pipeline.liquid_world.boundaries().iter() {
+            if let Some(entities) = self.boundary2sn.get_mut(&handle) {
+                for entity in entities {
+                    entity.despawn(commands);
                 }
             }
         }
@@ -372,7 +370,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                 #[cfg(feature = "dim3")]
                                 {
                                     if let FluidsRenderingMode::VelocityArrows { .. } =
-                                        self.rendering_mode
+                                        self.fluids_rendering_mode
                                     {
                                         pos.translation.z = particle.z;
                                         let cone_paxis: Quaternion<Real> =
@@ -398,7 +396,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                         }
 
                         if let Some(color) = self.f2color.get(&handle) {
-                            match self.rendering_mode {
+                            match self.fluids_rendering_mode {
                                 FluidsRenderingMode::VelocityColor { min, max } => {
                                     let lerp = Self::lerp_velocity(
                                         fluid.velocities[idx],
@@ -474,12 +472,13 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                 let _ = ComboBox::from_label("Rendering Mode")
                     .width(150.0)
                     .selected_text(
-                        FLUIDS_RENDERING_MAP[get_rendering_mode_index(self.rendering_mode)].0,
+                        FLUIDS_RENDERING_MAP[get_rendering_mode_index(self.fluids_rendering_mode)]
+                            .0,
                     )
                     .show_ui(ui, |ui| {
                         for (_, (name, mode)) in FLUIDS_RENDERING_MAP.iter().enumerate() {
                             changed = ui
-                                .selectable_value(&mut self.rendering_mode, *mode, name)
+                                .selectable_value(&mut self.fluids_rendering_mode, *mode, name)
                                 .changed()
                                 || changed;
                         }
