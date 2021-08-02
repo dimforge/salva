@@ -1,3 +1,4 @@
+use crate::integrations::rapier::{FluidsHarnessPlugin, FluidsPipeline};
 use crate::math::{Isometry, Point, Real, Rotation, Translation, Vector};
 use crate::object::{BoundaryHandle, FluidHandle};
 use bevy::math::Quat;
@@ -8,12 +9,10 @@ use bevy_egui::{egui::Window, EguiContext};
 use na::Quaternion;
 use na::{Point3, Vector3};
 use parry::shape::SharedShape;
+use rapier::harness::{plugin::HarnessPlugin, Harness, RunState};
 use rapier_testbed::{
-    harness::Harness, objects::node::EntityWithGraphics, GraphicsManager, PhysicsState,
-    TestbedPlugin,
+    objects::node::EntityWithGraphics, GraphicsManager, PhysicsState, TestbedPlugin,
 };
-
-use crate::integrations::rapier::FluidsPipeline;
 use std::collections::HashMap;
 
 //FIXME: handle this with macros, or use bevy-inspectable-egui
@@ -80,9 +79,9 @@ pub struct FluidsTestbedPlugin {
     pub render_boundary_particles: bool,
     /// Rendering mode of fluid particles
     pub fluids_rendering_mode: FluidsRenderingMode,
+    harness_plugin: FluidsHarnessPlugin,
     callbacks: Vec<FluidCallback>,
     step_time: f64,
-    fluids_pipeline: FluidsPipeline,
     f2sn: HashMap<FluidHandle, Vec<EntityWithGraphics>>,
     boundary2sn: HashMap<BoundaryHandle, Vec<EntityWithGraphics>>,
     f2color: HashMap<FluidHandle, Point3<f32>>,
@@ -97,9 +96,9 @@ impl FluidsTestbedPlugin {
         Self {
             render_boundary_particles: false,
             fluids_rendering_mode: FluidsRenderingMode::StaticColor,
+            harness_plugin: FluidsHarnessPlugin::new(),
             step_time: 0.0,
             callbacks: Vec::new(),
-            fluids_pipeline: FluidsPipeline::new(0.025, 2.0),
             f2sn: HashMap::new(),
             boundary2sn: HashMap::new(),
             f2color: HashMap::new(),
@@ -116,8 +115,7 @@ impl FluidsTestbedPlugin {
 
     /// Sets the fluids pipeline used by the testbed.
     pub fn set_pipeline(&mut self, fluids_pipeline: FluidsPipeline) {
-        self.fluids_pipeline = fluids_pipeline;
-        self.fluids_pipeline.liquid_world.counters.enable();
+        self.harness_plugin.set_pipeline(fluids_pipeline);
     }
 
     /// Sets the color used to render the specified fluid.
@@ -133,6 +131,16 @@ impl FluidsTestbedPlugin {
     /// Enables the rendering of boundary particles.
     pub fn enable_boundary_particles_rendering(&mut self, enabled: bool) {
         self.render_boundary_particles = enabled;
+    }
+
+    /// Get a reference to the [HarnessPlugin]
+    pub fn harness_plugin(&self) -> &FluidsHarnessPlugin {
+        &self.harness_plugin
+    }
+
+    /// Get a mutable reference to the [HarnessPlugin]
+    pub fn harness_plugin_mut(&mut self) -> &mut FluidsHarnessPlugin {
+        &mut self.harness_plugin
     }
 
     // TODO: pass velocity & acceleration vectors in
@@ -211,7 +219,8 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         harness: &mut Harness,
         gen_color: &mut dyn FnMut() -> Point3<f32>,
     ) {
-        for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
+        let fluids_pipeline = self.harness_plugin.pipeline();
+        for (handle, fluid) in fluids_pipeline.liquid_world.fluids().iter() {
             let _ = self
                 .f2sn
                 .insert(handle, Vec::with_capacity(fluid.positions.len()));
@@ -237,17 +246,23 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             }
         }
 
-        let particle_radius = self.fluids_pipeline.liquid_world.particle_radius();
+        let particle_radius = fluids_pipeline.liquid_world.particle_radius();
 
         // FIXME: There is currently no way to get the collider pose from this function
         if self.render_boundary_particles {
-            for (handle, boundary) in self.fluids_pipeline.liquid_world.boundaries().iter() {
+            for (handle, boundary) in self
+                .harness_plugin
+                .pipeline()
+                .liquid_world
+                .boundaries()
+                .iter()
+            {
                 let _ = self
                     .boundary2sn
                     .insert(handle, Vec::with_capacity(boundary.num_particles()));
                 let color = self.ground_color;
 
-                for (_, cce) in &self.fluids_pipeline.coupling.entries {
+                for (_, cce) in &fluids_pipeline.coupling.entries {
                     if cce.boundary == handle {
                         match &cce.sampling_method {
                             crate::integrations::rapier::ColliderSampling::StaticSampling(particles) => {
@@ -280,7 +295,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
     }
 
     fn clear_graphics(&mut self, _graphics: &mut GraphicsManager, commands: &mut Commands) {
-        for (handle, _) in self.fluids_pipeline.liquid_world.fluids().iter() {
+        for (handle, _) in self.harness_plugin.pipeline().liquid_world.fluids().iter() {
             if let Some(entities) = self.f2sn.get_mut(&handle) {
                 for entity in entities {
                     entity.despawn(commands);
@@ -288,7 +303,13 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             }
         }
 
-        for (handle, _) in self.fluids_pipeline.liquid_world.boundaries().iter() {
+        for (handle, _) in self
+            .harness_plugin
+            .pipeline()
+            .liquid_world
+            .boundaries()
+            .iter()
+        {
             if let Some(entities) = self.boundary2sn.get_mut(&handle) {
                 for entity in entities {
                     entity.despawn(commands);
@@ -304,7 +325,8 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         // FIXME: salva should be able to keep a list of indices that were added & removed in this step
         // at the moment we just clear & initialize the grahics when fluids_lengths changes
         let fluid_lengths: Vec<(FluidHandle, usize)> = self
-            .fluids_pipeline
+            .harness_plugin
+            .pipeline()
             .liquid_world
             .fluids()
             .iter()
@@ -312,11 +334,11 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             .collect();
 
         for f in &mut self.callbacks {
-            f(harness, &mut self.fluids_pipeline)
+            f(harness, &mut self.harness_plugin.pipeline_mut())
         }
 
         for (h, fl) in fluid_lengths {
-            if let Some(fluid) = self.fluids_pipeline.liquid_world.fluids().get(h) {
+            if let Some(fluid) = self.harness_plugin.pipeline().liquid_world.fluids().get(h) {
                 if fluid.positions.len() != fl || fluid.num_deleted_particles() > 0 {
                     self.queue_graphics_reset = true;
                 }
@@ -324,17 +346,8 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         }
     }
 
-    fn step(&mut self, physics: &mut PhysicsState) {
-        let step_time = instant::now();
-        let dt = physics.integration_parameters.dt;
-        self.fluids_pipeline.step(
-            &physics.gravity,
-            dt,
-            &physics.colliders,
-            &mut physics.bodies,
-        );
-
-        self.step_time = instant::now() - step_time;
+    fn step(&mut self, physics: &mut PhysicsState, run_state: &RunState) {
+        self.harness_plugin.step(physics, run_state);
     }
 
     fn draw(
@@ -362,7 +375,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         }
 
         let (mut min, mut max) = (f32::MAX, f32::MIN);
-        for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
+        for (handle, fluid) in self.harness_plugin.pipeline().liquid_world.fluids().iter() {
             if let Some(entities) = self.f2sn.get_mut(&handle) {
                 for (idx, particle) in fluid.positions.iter().enumerate() {
                     let velocity = Vector::from(fluid.velocities[idx]);
@@ -497,7 +510,8 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                 if changed {
                     // FIXME: not too sure what to do here for color
                     let fluid_handle = self
-                        .fluids_pipeline
+                        .harness_plugin
+                        .pipeline()
                         .liquid_world
                         .fluids()
                         .iter()

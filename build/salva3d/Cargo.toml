@@ -16,12 +16,13 @@ default = [ "dim3" ]
 dim3    = [ ]
 parallel = [ "rayon" ]
 rapier = [ "parry", "rapier3d" ]
-sampling = [ "rapier" ]
+sampling = [ "parry" ]
 rapier-testbed = [ "rapier", "rapier_testbed3d", "graphics" ]
-rapier-harness = [ "rapier-testbed" ]
+rapier-harness = [ ]
 parry = [ "parry3d" ]
 wasm-bindgen = [ "rapier3d/wasm-bindgen" ]
 graphics = [ "bevy", "bevy_egui" ]
+wasm = [ "bevy_webgl2" ]
 
 [lib]
 name = "salva3d"
@@ -51,4 +52,3 @@ bevy = { version = "0.5", default-features = false, features = ["bevy_wgpu", "be
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 bevy = { version = "0.5", default-features = false, features = ["bevy_winit", "render"], optional = true }
 bevy_webgl2 = { version = "0.5", optional = true }
-

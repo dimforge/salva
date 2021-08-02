@@ -1,7 +1,6 @@
 use super::FluidsPipeline;
-use rapier_testbed::harness::RunState;
-use rapier_testbed::physics::PhysicsEvents;
-use rapier_testbed::{HarnessPlugin, PhysicsState};
+use rapier::harness::{plugin::HarnessPlugin, RunState};
+use rapier::physics::{PhysicsEvents, PhysicsState};
 
 /// A user-defined callback executed at each frame.
 pub type FluidCallback =
@@ -32,10 +31,20 @@ impl FluidsHarnessPlugin {
         self.callbacks.push(Box::new(f))
     }
 
-    /// Sets the fluids pipeline used by the harness.
+    /// Set the [FluidsPipeline] for the simulation
     pub fn set_pipeline(&mut self, fluids_pipeline: FluidsPipeline) {
         self.fluids_pipeline = fluids_pipeline;
         self.fluids_pipeline.liquid_world.counters.enable();
+    }
+
+    /// Get the fluid pipeline [FluidsPipeline] for the simulation
+    pub fn pipeline(&self) -> &FluidsPipeline {
+        &self.fluids_pipeline
+    }
+
+    /// Get the mutable fluid pipeline [FluidsPipeline] for the simulation
+    pub fn pipeline_mut(&mut self) -> &mut FluidsPipeline {
+        &mut self.fluids_pipeline
     }
 }
 

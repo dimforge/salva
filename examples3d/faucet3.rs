@@ -69,7 +69,7 @@ pub fn init_world(testbed: &mut Testbed) {
             }
         }
 
-        let t = harness.state.time;
+        let t = harness.run_state.time;
         if t - last_t < 0.06 {
             return;
         }
