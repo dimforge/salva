@@ -32,7 +32,7 @@ required-features = [ "dim3" ]
 approx = "0.4"
 num-traits = "0.2"
 fnv = "1.0"
-itertools = "0.9"
+itertools = "0.10"
 generational-arena = "0.2"
 instant = { version = "0.1", features = [ "now" ] }
 rayon = { version = "1.5", optional = true }
