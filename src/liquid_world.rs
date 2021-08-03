@@ -1,14 +1,17 @@
 use crate::counters::Counters;
 use crate::coupling::CouplingManager;
 use crate::geometry::{self, ContactManager, HGrid, HGridEntry};
-use crate::math::{Isometry, Real, Vector};
-use crate::object::ParticleId;
+use crate::math::{Real, Vector};
 use crate::object::{Boundary, BoundaryHandle, BoundarySet};
 use crate::object::{Fluid, FluidHandle, FluidSet};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
 #[cfg(feature = "parry")]
-use parry::{bounding_volume::AABB, query::PointQuery, shape::Shape};
+use {
+    crate::math::Isometry,
+    crate::object::ParticleId,
+    parry::{bounding_volume::AABB, query::PointQuery, shape::Shape},
+};
 
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld {
