@@ -26,6 +26,18 @@ jobs:
     - run: sudo apt-get install -y cmake libxcb-composite0-dev
     - name: build ${{ matrix.package }} --features ${{ matrix.feature }}
       run: cargo build --verbose -p ${{ matrix.package }} --features ${{ matrix.feature }}
+  all-features-native:
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -D warnings
+    strategy:
+      matrix:
+        package: [salva2d, salva3d]
+    steps:
+    - uses: actions/checkout@v2
+    - run: sudo apt-get install -y cmake
+    - name: test ${{ matrix.package }}
+      run: cargo test --verbose -p ${{ matrix.package }} --all-features
   test-native:
     runs-on: ubuntu-latest
     env:
