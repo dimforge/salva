@@ -36,8 +36,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: sudo apt-get install -y cmake
-    - name: test ${{ matrix.package }}
-      run: cargo test --verbose -p ${{ matrix.package }} --all-features
+    - name: build ${{ matrix.package }} --all-features
+      run: cargo build --verbose -p ${{ matrix.package }} --all-features
   test-native:
     runs-on: ubuntu-latest
     env:
@@ -73,7 +73,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: rustup target add wasm32-unknown-unknown
-      - name: Wasm Build ${{ matrix.package }}
+      - name: wasm build ${{ matrix.package }}
         run: cargo build -p ${{ matrix.package }}  --verbose --features wasm-bindgen --target wasm32-unknown-unknown;
   # build-wasm-emscripten:
   #   runs-on: ubuntu-latest
