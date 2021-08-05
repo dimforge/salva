@@ -7,7 +7,10 @@ use crate::object::{Fluid, FluidHandle, FluidSet};
 use crate::solver::PressureSolver;
 use crate::TimestepManager;
 #[cfg(feature = "parry")]
-use parry::{bounding_volume::AABB, query::PointQuery, shape::Shape};
+use {
+    crate::object::ParticleId,
+    parry::{bounding_volume::AABB, math::Isometry, query::PointQuery, shape::Shape},
+};
 
 /// The physics world for simulating fluids with boundaries.
 pub struct LiquidWorld {
