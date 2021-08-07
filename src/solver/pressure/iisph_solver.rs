@@ -502,6 +502,30 @@ where
             if fluids[i].num_deleted_particles() != 0 {
                 crate::helper::filter_from_mask(
                     fluids[i].deleted_particles_mask(),
+                    &mut self.densities[i],
+                );
+                crate::helper::filter_from_mask(
+                    fluids[i].deleted_particles_mask(),
+                    &mut self.predicted_densities[i],
+                );
+                crate::helper::filter_from_mask(
+                    fluids[i].deleted_particles_mask(),
+                    &mut self.velocity_changes[i],
+                );
+                crate::helper::filter_from_mask(
+                    fluids[i].deleted_particles_mask(),
+                    &mut self.aii[i],
+                );
+                crate::helper::filter_from_mask(
+                    fluids[i].deleted_particles_mask(),
+                    &mut self.dii[i],
+                );
+                crate::helper::filter_from_mask(
+                    fluids[i].deleted_particles_mask(),
+                    &mut self.dij_pjl[i],
+                );
+                crate::helper::filter_from_mask(
+                    fluids[i].deleted_particles_mask(),
                     &mut self.pressures[i],
                 );
                 crate::helper::filter_from_mask(
