@@ -162,9 +162,9 @@ impl DFSPHViscosity {
                 let mut inv_diag = denominator.diagonal();
                 inv_diag.apply(|n| {
                     if n.abs() < na::convert::<_, Real>(1.0e-6) {
-                        na::one::<Real>()
+                        *n = na::one::<Real>();
                     } else {
-                        na::one::<Real>() / n
+                        *n = na::one::<Real>() / *n
                     }
                 });
 
