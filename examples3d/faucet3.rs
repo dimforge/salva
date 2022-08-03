@@ -1,7 +1,7 @@
 extern crate nalgebra as na;
 
 use na::{Point3, Vector3};
-use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
+use rapier3d::dynamics::{ImpulseJointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet};
 use rapier_testbed3d::{Testbed, TestbedApp};
 use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
@@ -23,7 +23,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let gravity = Vector3::y() * -9.81;
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
-    let joints = JointSet::new();
+    let joints = ImpulseJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     let ground_rad = 0.15;
@@ -38,7 +38,7 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Point3::new(0.5, 1.0, 1.0));
 
     // Setup the ground.
-    let ground_handle = bodies.insert(RigidBodyBuilder::new_static().build());
+    let ground_handle = bodies.insert(RigidBodyBuilder::fixed().build());
     let co = ColliderBuilder::ball(ground_rad).build();
     let ball_samples =
         salva3d::sampling::shape_surface_ray_sample(co.shape(), PARTICLE_RADIUS).unwrap();
@@ -100,7 +100,7 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_pipeline(fluids_pipeline);
     testbed.add_plugin(plugin);
     testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
+    testbed.set_world_with_params(bodies, colliders, joints, Default::default(), gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     // testbed.enable_boundary_particles_rendering(true);
     testbed.look_at(Point3::new(1.5, 0.0, 1.5), Point3::new(0.0, 0.0, 0.0));

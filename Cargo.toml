@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [ "build/salva2d", "build/salva3d", "examples2d", "examples3d" ]
 
 [profile.release]
@@ -27,10 +28,10 @@ salva3d = { path = "./build/salva3d" }
 # rapier_testbed2d = { git = "https://github.com/dimforge/rapier", rev = "3b0d256" }
 # rapier_testbed3d = { git = "https://github.com/dimforge/rapier", rev = "3b0d256" }
 
-# rapier2d = { path = "../rapier/build/rapier2d" }
-# rapier3d = { path = "../rapier/build/rapier3d" }
-# rapier_testbed2d = { path = "../rapier/build/rapier_testbed2d" }
-# rapier_testbed3d = { path = "../rapier/build/rapier_testbed3d" }
+# rapier2d = { path = "../rapier/crates/rapier2d" }
+# rapier3d = { path = "../rapier/crates/rapier3d" }
+# rapier_testbed2d = { path = "../rapier/crates/rapier_testbed2d" }
+# rapier_testbed3d = { path = "../rapier/crates/rapier_testbed3d" }
 
 #nphysics2d = { path = "../nphysics/build/nphysics2d" }
 #nphysics3d = { path = "../nphysics/build/nphysics3d" }

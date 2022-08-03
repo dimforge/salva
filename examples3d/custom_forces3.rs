@@ -1,7 +1,7 @@
 extern crate nalgebra as na;
 
 use na::{Point3, Unit, Vector3};
-use rapier3d::dynamics::{JointSet, RigidBodySet};
+use rapier3d::dynamics::{ImpulseJointSet, RigidBodySet};
 use rapier3d::geometry::ColliderSet;
 use rapier_testbed3d::{Testbed, TestbedApp};
 use salva3d::integrations::rapier::{FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin};
@@ -23,7 +23,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut plugin = FluidsTestbedPlugin::new();
     let bodies = RigidBodySet::new();
     let colliders = ColliderSet::new();
-    let joints = JointSet::new();
+    let joints = ImpulseJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     // fluids.
@@ -46,7 +46,7 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_pipeline(fluids_pipeline);
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.add_plugin(plugin);
-    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
+    testbed.set_world_with_params(bodies, colliders, joints, Default::default(), gravity, ());
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point3::new(3.0, 3.0, 3.0), Point3::origin());
 }
