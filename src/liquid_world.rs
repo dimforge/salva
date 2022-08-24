@@ -22,7 +22,7 @@ pub struct LiquidWorld {
     h: Real,
     fluids: FluidSet,
     boundaries: BoundarySet,
-    solver: Box<dyn PressureSolver>,
+    solver: Box<dyn PressureSolver + Send + Sync>,
     contact_manager: ContactManager,
     timestep_manager: TimestepManager,
     hgrid: HGrid<HGridEntry>,
@@ -37,7 +37,7 @@ impl LiquidWorld {
     /// - `smoothing_factor`: the smoothing factor used to compute the SPH kernel radius.
     ///    The kernel radius will be computed as `particle_radius * smoothing_factor * 2.0.
     pub fn new(
-        solver: impl PressureSolver + 'static,
+        solver: impl PressureSolver + Send + Sync + 'static,
         particle_radius: Real,
         smoothing_factor: Real,
     ) -> Self {
@@ -278,4 +278,10 @@ impl LiquidWorld {
                 }
             })
     }
+}
+
+#[test]
+fn world_is_send_and_sync() {
+    fn check<T: Send + Sync>() {}
+    check::<LiquidWorld>();
 }
