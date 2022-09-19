@@ -125,7 +125,10 @@ impl<Idx, T> ContiguousArena<Idx, T> {
         let _ = self.rev_indices.swap_remove(i);
 
         if let Some(rev_id) = swapped_rev_id {
-            self.indices[rev_id] = i;
+            if i != self.objects.len() {
+                // fixup the swapped index
+                self.indices[rev_id] = i;
+            }
         }
 
         Some(deleted_object)
@@ -159,5 +162,24 @@ impl<Idx, T> AsMut<[T]> for ContiguousArena<Idx, T> {
     #[inline]
     fn as_mut(&mut self) -> &mut [T] {
         &mut self.objects
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn smoke() {
+        let mut arena: ContiguousArena<Index, _> = ContiguousArena::new();
+        let i0 = arena.insert(123);
+        let i1 = arena.insert(456);
+        let i2 = arena.insert(789);
+        assert_eq!(arena.remove(i0), Some(123));
+        assert_eq!(arena.remove(i0), None);
+        assert_eq!(arena.remove(i1), Some(456));
+        assert_eq!(arena.remove(i1), None);
+        assert_eq!(arena.remove(i2), Some(789));
+        assert_eq!(arena.remove(i2), None);
     }
 }
