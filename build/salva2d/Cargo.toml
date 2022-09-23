@@ -46,7 +46,7 @@ parry2d = { version = "0.9", optional = true }
 rapier2d = { version = "0.14", optional = true }
 rapier_testbed2d = { version = "0.14", optional = true }
 
-bevy_egui = { version = "0.15", features = ["immutable_ctx"], optional = true }
+bevy_egui = { version = "0.16.1", features = ["immutable_ctx"], optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 bevy = { version = "0.8", default-features = false, features = ["bevy_winit", "render", "x11"], optional = true }
