@@ -40,7 +40,7 @@ impl FluidsPipeline {
         }
     }
 
-    /// Advances the fluid simulation by `dt` milliseconds.
+    /// Advances the fluid simulation by `dt` seconds.
     ///
     /// All the fluid particles will be affected by an acceleration equal to `gravity`.
     /// This `step` function may apply forces to some rigid-bodies that interact with fluids.
