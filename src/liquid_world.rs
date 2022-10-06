@@ -56,14 +56,14 @@ impl LiquidWorld {
         }
     }
 
-    /// Advances the simulation by `dt` milliseconds.
+    /// Advances the simulation by `dt` seconds.
     ///
     /// All the fluid particles will be affected by an acceleration equal to `gravity`.
     pub fn step(&mut self, dt: Real, gravity: &Vector<Real>) {
         self.step_with_coupling(dt, gravity, &mut ())
     }
 
-    /// Advances the simulation by `dt` milliseconds, taking into account coupling with an external rigid-body engine.
+    /// Advances the simulation by `dt` seconds, taking into account coupling with an external rigid-body engine.
     pub fn step_with_coupling(
         &mut self,
         dt: Real,
