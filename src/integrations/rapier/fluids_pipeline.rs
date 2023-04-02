@@ -277,7 +277,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
                             for (pos, force) in
                                 boundary.positions.iter().zip(forces.iter().cloned())
                             {
-                                body.apply_force_at_point(force, *pos, true)
+                                body.apply_impulse_at_point(force, *pos, true)
                             }
                         }
                     }

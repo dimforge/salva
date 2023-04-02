@@ -1,8 +1,9 @@
 extern crate nalgebra as na;
 
 use na::{Isometry3, Vector3};
-use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
+use rapier3d::dynamics::{ImpulseJointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet, SharedShape};
+use rapier3d::prelude::{MultibodyJointSet, RigidBodyType};
 use rapier_testbed3d::harness::Harness;
 use salva3d::integrations::rapier::{ColliderSampling, FluidsHarnessPlugin, FluidsPipeline};
 use salva3d::object::Boundary;
@@ -23,7 +24,7 @@ pub fn init_world(harness: &mut Harness) {
     let gravity = Vector3::y() * -9.81;
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
-    let joints = JointSet::new();
+    let joints = ImpulseJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     // Parameters of the ground.
@@ -49,7 +50,7 @@ pub fn init_world(harness: &mut Harness) {
     let ground_shape = SharedShape::cuboid(ground_half_width, ground_thickness, ground_half_width);
     let wall_shape = SharedShape::cuboid(ground_thickness, ground_half_height, ground_half_width);
 
-    let ground_body = RigidBodyBuilder::new_static().build();
+    let ground_body = RigidBodyBuilder::new(RigidBodyType::Fixed).build();
     let ground_handle = bodies.insert(ground_body);
 
     let wall_poses = [
@@ -103,7 +104,14 @@ pub fn init_world(harness: &mut Harness) {
     let mut plugin = FluidsHarnessPlugin::new();
     plugin.set_pipeline(fluids_pipeline);
     harness.add_plugin(plugin);
-    harness.set_world_with_params(bodies, colliders, joints, gravity, ());
+    harness.set_world_with_params(
+        bodies,
+        colliders,
+        joints,
+        MultibodyJointSet::new(),
+        gravity,
+        (),
+    );
     harness.integration_parameters_mut().dt = 1.0 / 200.0;
 }
 

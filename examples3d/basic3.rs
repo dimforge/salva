@@ -1,8 +1,9 @@
 extern crate nalgebra as na;
 
 use na::{Isometry3, Point3, Vector3};
-use rapier3d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
+use rapier3d::dynamics::{ImpulseJointSet, RigidBodyBuilder, RigidBodySet};
 use rapier3d::geometry::{ColliderBuilder, ColliderSet, SharedShape};
+use rapier3d::prelude::{MultibodyJointSet, RigidBodyType};
 use rapier_testbed3d::{Testbed, TestbedApp};
 use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva3d::object::Boundary;
@@ -22,7 +23,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let gravity = Vector3::y() * -9.81;
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
-    let joints = JointSet::new();
+    let joints = ImpulseJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     // Parameters of the ground.
@@ -48,7 +49,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let ground_shape = SharedShape::cuboid(ground_half_width, ground_thickness, ground_half_width);
     let wall_shape = SharedShape::cuboid(ground_thickness, ground_half_height, ground_half_width);
 
-    let ground_body = RigidBodyBuilder::new_static().build();
+    let ground_body = RigidBodyBuilder::new(RigidBodyType::Fixed).build();
     let ground_handle = bodies.insert(ground_body);
 
     let wall_poses = [
@@ -105,7 +106,14 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.render_boundary_particles = true;
     testbed.add_plugin(plugin);
     // testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
+    testbed.set_world_with_params(
+        bodies,
+        colliders,
+        joints,
+        MultibodyJointSet::new(),
+        gravity,
+        (),
+    );
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point3::new(3.0, 3.0, 3.0), Point3::origin());
 }
