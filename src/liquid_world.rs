@@ -10,7 +10,7 @@ use crate::TimestepManager;
 use {
     crate::math::Isometry,
     crate::object::ParticleId,
-    parry::{bounding_volume::AABB, query::PointQuery, shape::Shape},
+    parry::{bounding_volume::Aabb, query::PointQuery, shape::Shape},
 };
 
 /// The physics world for simulating fluids with boundaries.
@@ -211,7 +211,7 @@ impl LiquidWorld {
     #[cfg(feature = "parry")]
     pub fn particles_intersecting_aabb<'a>(
         &'a self,
-        aabb: AABB,
+        aabb: Aabb,
     ) -> impl Iterator<Item = ParticleId> + 'a {
         self.hgrid
             .cells_intersecting_aabb(&aabb.mins, &aabb.maxs)
