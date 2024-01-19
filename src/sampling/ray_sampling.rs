@@ -1,6 +1,6 @@
 use crate::math::{Isometry, Point, Real, Vector, DIM};
 
-use parry::bounding_volume::{BoundingVolume, AABB};
+use parry::bounding_volume::{Aabb, BoundingVolume};
 use parry::query::{Ray, RayCast};
 use rapier::geometry::Shape;
 use std::collections::HashSet;
@@ -26,7 +26,7 @@ pub fn shape_volume_ray_sample<S: ?Sized + Shape>(
 /// Samples the surface of `shape` with a method based on ray-casting.
 pub fn surface_ray_sample<S: ?Sized + RayCast>(
     shape: &S,
-    volume: &AABB,
+    volume: &Aabb,
     particle_rad: Real,
 ) -> Vec<Point<Real>> {
     let mut quantized_points = HashSet::new();
@@ -90,7 +90,7 @@ pub fn surface_ray_sample<S: ?Sized + RayCast>(
 /// Samples the volume of `shape` with a method based on ray-casting.
 pub fn volume_ray_sample<S: ?Sized + RayCast>(
     shape: &S,
-    volume: &AABB,
+    volume: &Aabb,
     particle_rad: Real,
 ) -> Vec<Point<Real>> {
     let mut quantized_points = HashSet::new();

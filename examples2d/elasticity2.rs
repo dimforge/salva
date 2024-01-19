@@ -1,7 +1,7 @@
 extern crate nalgebra as na;
 
 use na::{Isometry2, Point2, Point3, Vector2};
-use rapier2d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
+use rapier2d::dynamics::{ImpulseJointSet, MultibodyJointSet, RigidBodyBuilder, RigidBodySet};
 use rapier2d::geometry::{ColliderBuilder, ColliderSet};
 use rapier_testbed2d::Testbed;
 use salva2d::integrations::rapier::{
@@ -25,7 +25,8 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut plugin = FluidsTestbedPlugin::new();
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
-    let joints = JointSet::new();
+    let impulse_joints = ImpulseJointSet::new();
+    let multibody_joints = MultibodyJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     let ground_thickness = 0.2;
@@ -62,7 +63,7 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
     // Setup the ground.
-    bodies.insert(RigidBodyBuilder::new_static().build());
+    bodies.insert(RigidBodyBuilder::fixed().build());
     let co = ColliderBuilder::cuboid(ground_half_width, ground_thickness).build();
     let co_handle = colliders.insert(co);
     let bo_handle = fluids_pipeline
@@ -80,7 +81,14 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_pipeline(fluids_pipeline);
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
     testbed.add_plugin(plugin);
-    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
+    testbed.set_world_with_params(
+        bodies,
+        colliders,
+        impulse_joints,
+        multibody_joints,
+        gravity,
+        (),
+    );
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     testbed.look_at(Point2::new(0.0, 1.0), 100.0);
 }

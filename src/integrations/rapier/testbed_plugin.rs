@@ -1,16 +1,15 @@
 use crate::math::{Isometry, Point, Real, Rotation, Translation, Vector};
 use crate::object::{BoundaryHandle, FluidHandle};
 use bevy::math::Quat;
-use bevy::prelude::{Assets, Commands, Mesh, Query, StandardMaterial, Transform};
-use bevy_egui::egui::ComboBox;
-use bevy_egui::{egui::Window, EguiContext};
+use bevy::prelude::{Assets, Commands, Mesh, Query, Transform};
+use bevy_egui::{egui::ComboBox, egui::Window, EguiContexts};
 #[cfg(feature = "dim3")]
 use na::Quaternion;
 use na::{Point3, Vector3};
 use parry::shape::SharedShape;
 use rapier_testbed::{
-    harness::Harness, objects::node::EntityWithGraphics, GraphicsManager, PhysicsState,
-    TestbedPlugin,
+    harness::Harness, objects::node::EntityWithGraphics, BevyMaterial, GraphicsManager,
+    PhysicsState, TestbedPlugin,
 };
 
 use crate::integrations::rapier::FluidsPipeline;
@@ -143,7 +142,7 @@ impl FluidsTestbedPlugin {
         graphics: &mut GraphicsManager,
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
-        materials: &mut Assets<StandardMaterial>,
+        materials: &mut Assets<BevyMaterial>,
         _components: &mut Query<(&mut Transform,)>,
         _harness: &mut Harness,
         color: &Point3<f32>,
@@ -201,22 +200,28 @@ impl FluidsTestbedPlugin {
 }
 
 impl TestbedPlugin for FluidsTestbedPlugin {
+    fn init_plugin(&mut self) {
+        // TODO: decide if anything needs to be changed
+    }
+
     fn init_graphics(
         &mut self,
         graphics: &mut GraphicsManager,
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
-        materials: &mut Assets<StandardMaterial>,
+        materials: &mut Assets<BevyMaterial>,
         components: &mut Query<(&mut Transform,)>,
         harness: &mut Harness,
-        gen_color: &mut dyn FnMut() -> Point3<f32>,
     ) {
         for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
             let _ = self
                 .f2sn
                 .insert(handle, Vec::with_capacity(fluid.positions.len()));
 
-            let color = *self.f2color.entry(handle).or_insert_with(|| gen_color());
+            let color = *self
+                .f2color
+                .entry(handle)
+                .or_insert_with(|| self.default_fluid_color);
 
             for particle in &fluid.positions {
                 let ent = self.add_particle_graphics(
@@ -342,22 +347,13 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         graphics: &mut GraphicsManager,
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
-        materials: &mut Assets<StandardMaterial>,
+        materials: &mut Assets<BevyMaterial>,
         components: &mut Query<(&mut Transform,)>,
         harness: &mut Harness,
     ) {
-        let default_color = self.default_fluid_color;
         if self.queue_graphics_reset {
             self.clear_graphics(graphics, commands);
-            self.init_graphics(
-                graphics,
-                commands,
-                meshes,
-                materials,
-                components,
-                harness,
-                &mut || default_color,
-            );
+            self.init_graphics(graphics, commands, meshes, materials, components, harness);
             self.queue_graphics_reset = false;
         }
 
@@ -448,7 +444,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                 }
                             }
                         }
-                        entity.update(&harness.physics.colliders, components)
+                        entity.update(&harness.physics.colliders, components, &graphics.gfx_shift)
                     }
                 }
             }
@@ -457,12 +453,12 @@ impl TestbedPlugin for FluidsTestbedPlugin {
 
     fn update_ui(
         &mut self,
-        ui_context: &EguiContext,
+        ui_context: &EguiContexts,
         harness: &mut Harness,
         graphics: &mut GraphicsManager,
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
-        materials: &mut Assets<StandardMaterial>,
+        materials: &mut Assets<BevyMaterial>,
         components: &mut Query<(&mut Transform,)>,
     ) {
         fn get_rendering_mode_index(rendering_mode: FluidsRenderingMode) -> usize {
@@ -488,7 +484,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                     .show_ui(ui, |ui| {
                         for (_, (name, mode)) in FLUIDS_RENDERING_MAP.iter().enumerate() {
                             changed = ui
-                                .selectable_value(&mut self.fluids_rendering_mode, *mode, name)
+                                .selectable_value(&mut self.fluids_rendering_mode, *mode, *name)
                                 .changed()
                                 || changed;
                         }
@@ -496,25 +492,17 @@ impl TestbedPlugin for FluidsTestbedPlugin {
 
                 if changed {
                     // FIXME: not too sure what to do here for color
-                    let fluid_handle = self
-                        .fluids_pipeline
-                        .liquid_world
-                        .fluids()
-                        .iter()
-                        .next()
-                        .unwrap()
-                        .0;
+                    // let fluid_handle = self
+                    //     .fluids_pipeline
+                    //     .liquid_world
+                    //     .fluids()
+                    //     .iter()
+                    //     .next()
+                    //     .unwrap()
+                    //     .0;
                     self.clear_graphics(graphics, commands);
-                    let color = self.f2color[&fluid_handle].clone();
-                    self.init_graphics(
-                        graphics,
-                        commands,
-                        meshes,
-                        materials,
-                        components,
-                        harness,
-                        &mut || color,
-                    )
+                    // let color = self.f2color[&fluid_handle].clone();
+                    self.init_graphics(graphics, commands, meshes, materials, components, harness)
                 }
             });
     }

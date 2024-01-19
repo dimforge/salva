@@ -107,8 +107,8 @@ pub use crate::timestep_manager::TimestepManager;
 #[cfg(feature = "dim3")]
 pub mod math {
     use na::{
-        Isometry3, Matrix3, Matrix6, Matrix6xX, MatrixSlice6xX, MatrixSliceMut6xX, Point3,
-        Rotation3, Translation3, UnitQuaternion, Vector3, Vector6, U3, U6,
+        Isometry3, Matrix3, Matrix6, Matrix6xX, MatrixView6xX, MatrixViewMut6xX, Point3, Rotation3,
+        Translation3, UnitQuaternion, Vector3, Vector6, U3, U6,
     };
 
     /// The maximum number of possible rotations and translations of a rigid body.
@@ -173,10 +173,10 @@ pub mod math {
     pub type Jacobian<Real> = Matrix6xX<Real>;
 
     /// The type of a slice of the constraint jacobian in twist coordinates.
-    pub type JacobianSlice<'a, Real> = MatrixSlice6xX<'a, Real>;
+    pub type JacobianSlice<'a, Real> = MatrixView6xX<'a, Real>;
 
     /// The type of a mutable slice of the constraint jacobian in twist coordinates.
-    pub type JacobianSliceMut<'a, Real> = MatrixSliceMut6xX<'a, Real>;
+    pub type JacobianSliceMut<'a, Real> = MatrixViewMut6xX<'a, Real>;
 
     /// The cross-product matrix for the given vector.
     pub fn gcross_matrix(v: &Vector<Real>) -> Matrix<Real> {
@@ -188,7 +188,7 @@ pub mod math {
 #[cfg(feature = "dim2")]
 pub mod math {
     use na::{
-        Isometry2, Matrix1, Matrix2, Matrix3, Matrix6xX, MatrixSlice3xX, MatrixSliceMut3xX, Point2,
+        Isometry2, Matrix1, Matrix2, Matrix3, Matrix6xX, MatrixView3xX, MatrixViewMut3xX, Point2,
         Rotation2, RowVector2, Translation2, UnitComplex, Vector1, Vector2, Vector3, U1, U2, U3,
     };
 
@@ -254,10 +254,10 @@ pub mod math {
     pub type Jacobian<Real> = Matrix6xX<Real>;
 
     /// The type of a slice of the constraint jacobian in twist coordinates.
-    pub type JacobianSlice<'a, Real> = MatrixSlice3xX<'a, Real>;
+    pub type JacobianSlice<'a, Real> = MatrixView3xX<'a, Real>;
 
     /// The type of a mutable slice of the constraint jacobian in twist coordinates.
-    pub type JacobianSliceMut<'a, Real> = MatrixSliceMut3xX<'a, Real>;
+    pub type JacobianSliceMut<'a, Real> = MatrixViewMut3xX<'a, Real>;
 
     /// The cross-product matrix for the given vector, generalized in 2D.
     pub fn gcross_matrix(v: &Vector<Real>) -> RowVector2<Real> {

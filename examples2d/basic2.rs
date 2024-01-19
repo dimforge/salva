@@ -1,7 +1,7 @@
 extern crate nalgebra as na;
 
 use na::{DVector, Point2, Point3, Vector2};
-use rapier2d::dynamics::{JointSet, RigidBodyBuilder, RigidBodySet};
+use rapier2d::dynamics::{ImpulseJointSet, MultibodyJointSet, RigidBodyBuilder, RigidBodySet};
 use rapier2d::geometry::{Collider, ColliderBuilder, ColliderSet};
 use rapier_testbed2d::Testbed;
 use salva2d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
@@ -20,7 +20,8 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut plugin = FluidsTestbedPlugin::new();
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
-    let joints = JointSet::new();
+    let impulse_joints = ImpulseJointSet::new();
+    let multibody_joints = MultibodyJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     // Liquid.
@@ -85,7 +86,7 @@ pub fn init_world(testbed: &mut Testbed) {
         }
     });
 
-    let rigid_body = RigidBodyBuilder::new_static().build();
+    let rigid_body = RigidBodyBuilder::fixed().build();
     let handle = bodies.insert(rigid_body);
     let collider = ColliderBuilder::heightfield(heights, ground_size).build();
     let co_handle = colliders.insert_with_parent(collider, handle, &mut bodies);
@@ -105,7 +106,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let mut build_rigid_body_with_coupling = |x, y, collider: Collider| {
         let samples =
             salva2d::sampling::shape_surface_ray_sample(collider.shape(), PARTICLE_RADIUS).unwrap();
-        let rb = RigidBodyBuilder::new_dynamic()
+        let rb = RigidBodyBuilder::dynamic()
             .translation(Vector2::new(x, y))
             .build();
         let _rb_handle = bodies.insert(rb);
@@ -132,7 +133,14 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     plugin.set_pipeline(fluids_pipeline);
     testbed.add_plugin(plugin);
-    testbed.set_world_with_params(bodies, colliders, joints, gravity, ());
+    testbed.set_world_with_params(
+        bodies,
+        colliders,
+        impulse_joints,
+        multibody_joints,
+        gravity,
+        (),
+    );
     testbed.integration_parameters_mut().dt = 1.0 / 200.0;
     //    testbed.enable_boundary_particles_rendering(true);
 }

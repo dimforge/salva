@@ -22,7 +22,8 @@ pub fn init_world(testbed: &mut Testbed) {
      */
     let mut bodies = RigidBodySet::new();
     let mut colliders = ColliderSet::new();
-    let joints = JointSet::new();
+    let impulse_joints = ImpulseJointSet::new();
+    let multibody_joints = MultibodyJointSet::new();
 
     /* Fluid */
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
@@ -59,7 +60,7 @@ pub fn init_world(testbed: &mut Testbed) {
         }
     });
 
-    let rigid_body = RigidBodyBuilder::new_static().build();
+    let rigid_body = RigidBodyBuilder::fixed().build();
     let handle = bodies.insert(rigid_body);
     let ground_collider = ColliderBuilder::heightfield(heights.clone(), ground_size).build();
     let ground_handle = colliders.insert_with_parent(ground_collider.clone(), handle, &mut bodies);
@@ -89,6 +90,6 @@ pub fn init_world(testbed: &mut Testbed) {
     /*
      * Set up the testbed.
      */
-    testbed.set_world(bodies, colliders, joints);
+    testbed.set_world(bodies, colliders, impulse_joints, multibody_joints);
     testbed.look_at(point![100.0, 100.0, 100.0], Point::origin());
 }
