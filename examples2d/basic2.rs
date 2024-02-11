@@ -100,7 +100,7 @@ pub fn init_world(testbed: &mut Testbed) {
     );
 
     /*
-     * Create a dynamic box.
+     * Create a dynamic rigid-bodies.
      */
     let rad = 0.4;
     let mut build_rigid_body_with_coupling = |x, y, collider: Collider| {
@@ -109,8 +109,8 @@ pub fn init_world(testbed: &mut Testbed) {
         let rb = RigidBodyBuilder::dynamic()
             .translation(Vector2::new(x, y))
             .build();
-        let _rb_handle = bodies.insert(rb);
-        let co_handle = colliders.insert(collider);
+        let rb_handle = bodies.insert(rb);
+        let co_handle = colliders.insert_with_parent(collider, rb_handle, &mut bodies);
         let bo_handle = fluids_pipeline
             .liquid_world
             .add_boundary(Boundary::new(Vec::new()));

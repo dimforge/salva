@@ -260,7 +260,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
         }
     }
 
-    fn transmit_forces(&mut self, boundaries: &BoundarySet) {
+    fn transmit_forces(&mut self, timestep: &TimestepManager, boundaries: &BoundarySet) {
         for (collider, coupling) in &self.coupling.entries {
             if let (Some(collider), Some(boundary)) = (
                 self.colliders.get(*collider),
@@ -277,7 +277,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
                             for (pos, force) in
                                 boundary.positions.iter().zip(forces.iter().cloned())
                             {
-                                body.add_force_at_point(force, *pos, true)
+                                body.apply_impulse_at_point(force * timestep.dt(), *pos, true)
                             }
                         }
                     }
