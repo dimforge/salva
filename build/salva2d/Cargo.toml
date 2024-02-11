@@ -43,8 +43,8 @@ rayon = { version = "1.8", optional = true }
 
 nalgebra  = "0.32"
 parry2d = { version = "0.13", optional = true }
-rapier2d = { version = "0.17", optional = true }
-rapier_testbed2d = { version = "0.17", optional = true }
+rapier2d = { version = "0.18", optional = true }
+rapier_testbed2d = { version = "0.18", optional = true }
 
 bevy_egui = { version = "0.23", features = ["immutable_ctx"], optional = true }
 

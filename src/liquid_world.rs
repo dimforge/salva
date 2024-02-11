@@ -143,7 +143,7 @@ impl LiquidWorld {
                 self.boundaries.as_slice(),
             );
 
-            coupling.transmit_forces(&self.boundaries);
+            coupling.transmit_forces(&self.timestep_manager, &self.boundaries);
             self.counters.stages.solver_time.pause();
         }
 

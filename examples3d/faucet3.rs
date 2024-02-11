@@ -46,7 +46,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let co = ColliderBuilder::ball(ground_rad).build();
     let ball_samples =
         salva3d::sampling::shape_surface_ray_sample(co.shape(), PARTICLE_RADIUS).unwrap();
-    let co_handle = colliders.insert(co);
+    let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));

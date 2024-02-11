@@ -24,7 +24,7 @@ pub trait CouplingManager {
     );
 
     /// Transmit forces from salva's boundary objects to the coupled bodies.
-    fn transmit_forces(&mut self, boundaries: &BoundarySet);
+    fn transmit_forces(&mut self, timestep: &TimestepManager, boundaries: &BoundarySet);
 }
 
 impl CouplingManager for () {
@@ -39,5 +39,5 @@ impl CouplingManager for () {
     ) {
     }
 
-    fn transmit_forces(&mut self, _: &BoundarySet) {}
+    fn transmit_forces(&mut self, _: &TimestepManager, _: &BoundarySet) {}
 }

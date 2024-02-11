@@ -52,7 +52,7 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let co =
         ColliderBuilder::cuboid(ground_half_width, ground_thickness, ground_half_width).build();
-    let co_handle = colliders.insert(co);
+    let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));

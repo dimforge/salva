@@ -63,9 +63,9 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
 
     // Setup the ground.
-    bodies.insert(RigidBodyBuilder::fixed().build());
+    let ground_handle = bodies.insert(RigidBodyBuilder::fixed().build());
     let co = ColliderBuilder::cuboid(ground_half_width, ground_thickness).build();
-    let co_handle = colliders.insert(co);
+    let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new()));
