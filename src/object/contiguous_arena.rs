@@ -161,3 +161,17 @@ impl<Idx, T> AsMut<[T]> for ContiguousArena<Idx, T> {
         &mut self.objects
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_add_remove() {
+        let mut ca: ContiguousArena<Index, usize> = ContiguousArena::new();
+        let val = 5434;
+        let h = ca.insert(val);
+
+        let out = ca.remove(h);
+        assert_eq!(out, Some(val));
+    }
+}
