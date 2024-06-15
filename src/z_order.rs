@@ -10,7 +10,7 @@ pub fn compute_points_z_order(points: &[Point<Real>]) -> Vec<usize> {
     let mut indices: Vec<_> = (0..points.len()).collect();
     indices.sort_unstable_by(|i, j| {
         z_order_floats(points[*i].coords.as_slice(), points[*j].coords.as_slice())
-            .unwrap_or(std::cmp::Ordering::Equal)
+            .unwrap_or(Ordering::Equal)
     });
     indices
 }
