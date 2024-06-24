@@ -366,9 +366,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                     min = min.min(magnitude);
                     max = max.max(magnitude);
                     if let Some(entity) = entities.get_mut(idx) {
-                        if let Ok(mut pos) =
-                            components.get_mut(entity.entity)
-                        {
+                        if let Ok(mut pos) = components.get_mut(entity.entity) {
                             {
                                 pos.translation.x = particle.x;
                                 pos.translation.y = particle.y;
