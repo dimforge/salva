@@ -143,7 +143,7 @@ impl FluidsTestbedPlugin {
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<BevyMaterial>,
-        _components: &mut Query<(&mut Transform,)>,
+        _components: &mut Query<&mut Transform>,
         _harness: &mut Harness,
         color: &Point3<f32>,
         force_shape: Option<SharedShape>,
@@ -210,7 +210,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<BevyMaterial>,
-        components: &mut Query<(&mut Transform,)>,
+        components: &mut Query<&mut Transform>,
         harness: &mut Harness,
     ) {
         for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
@@ -348,7 +348,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<BevyMaterial>,
-        components: &mut Query<(&mut Transform,)>,
+        components: &mut Query<&mut Transform>,
         harness: &mut Harness,
     ) {
         if self.queue_graphics_reset {
@@ -366,9 +366,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                     min = min.min(magnitude);
                     max = max.max(magnitude);
                     if let Some(entity) = entities.get_mut(idx) {
-                        if let Ok(mut pos) =
-                            components.get_component_mut::<Transform>(entity.entity)
-                        {
+                        if let Ok(mut pos) = components.get_mut(entity.entity) {
                             {
                                 pos.translation.x = particle.x;
                                 pos.translation.y = particle.y;
@@ -459,7 +457,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<BevyMaterial>,
-        components: &mut Query<(&mut Transform,)>,
+        components: &mut Query<&mut Transform>,
     ) {
         fn get_rendering_mode_index(rendering_mode: FluidsRenderingMode) -> usize {
             FLUIDS_RENDERING_MAP
