@@ -2,6 +2,7 @@ use super::FluidsPipeline;
 use rapier_testbed::harness::RunState;
 use rapier_testbed::physics::PhysicsEvents;
 use rapier_testbed::{HarnessPlugin, PhysicsState};
+use web_time::Instant;
 
 /// A user-defined callback executed at each frame.
 pub type FluidCallback =
@@ -57,7 +58,7 @@ impl HarnessPlugin for FluidsHarnessPlugin {
     }
 
     fn step(&mut self, physics: &mut PhysicsState, _run_state: &RunState) {
-        let step_time = instant::now();
+        let step_time = Instant::now().elapsed().as_secs_f64();
         let dt = physics.integration_parameters.dt;
         self.fluids_pipeline.step(
             &physics.gravity,
@@ -66,7 +67,7 @@ impl HarnessPlugin for FluidsHarnessPlugin {
             &mut physics.bodies,
         );
 
-        self.step_time = instant::now() - step_time;
+        self.step_time = Instant::now().elapsed().as_secs_f64() - step_time;
     }
 
     fn profiling_string(&self) -> String {
