@@ -1,4 +1,5 @@
 use std::fmt::{Display, Error, Formatter};
+use web_time::Instant;
 
 /// A timer.
 #[derive(Copy, Clone, Debug, Default)]
@@ -37,7 +38,7 @@ impl Timer {
     pub fn start(&mut self) {
         if self.enabled {
             self.time = 0.0;
-            self.start = Some(instant::now());
+            self.start = Some(Instant::now().elapsed().as_secs_f64());
         }
     }
 
@@ -45,7 +46,7 @@ impl Timer {
     pub fn pause(&mut self) {
         if self.enabled {
             if let Some(start) = self.start {
-                self.time += instant::now() - start;
+                self.time += Instant::now().elapsed().as_secs_f64() - start;
             }
             self.start = None;
         }
@@ -54,7 +55,7 @@ impl Timer {
     /// Resume the timer.
     pub fn resume(&mut self) {
         if self.enabled {
-            self.start = Some(instant::now());
+            self.start = Some(Instant::now().elapsed().as_secs_f64());
         }
     }
 
