@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Update dependencies
+- Update dependencies:
   - itertools 0.13
   - nalgebra 0.33
   - parry 0.16
