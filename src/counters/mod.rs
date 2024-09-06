@@ -12,7 +12,7 @@ mod solver_counters;
 mod stages_counters;
 mod timer;
 
-/// Aggregation of all the performances counters tracked by nphysics.
+/// Aggregation of all the performances counters tracked by salva.
 #[derive(Clone, Copy)]
 pub struct Counters {
     /// Total number of substeps performed.
@@ -30,7 +30,7 @@ pub struct Counters {
 }
 
 impl Counters {
-    /// Create a new set of counters initialized to wero.
+    /// Create a new set of counters initialized to zero.
     pub fn new() -> Self {
         Counters {
             nsubsteps: 0,

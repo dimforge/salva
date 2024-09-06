@@ -165,13 +165,6 @@ impl Fluid {
         self.positions.len()
     }
 
-    /// Computes the AABB of this fluid.
-    #[cfg(feature = "nphysics")]
-    pub fn compute_aabb(&self, particle_radius: Real) -> ncollide::bounding_volume::AABB<Real> {
-        use ncollide::bounding_volume::{self, BoundingVolume};
-        bounding_volume::local_point_cloud_aabb(&self.positions).loosened(particle_radius)
-    }
-
     /// The mass of the `i`-th particle of this fluid.
     pub fn particle_mass(&self, i: usize) -> Real {
         self.volumes[i] * self.density0
