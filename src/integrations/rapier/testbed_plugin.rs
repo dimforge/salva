@@ -14,6 +14,7 @@ use rapier_testbed::{
 
 use crate::integrations::rapier::FluidsPipeline;
 use std::collections::HashMap;
+use web_time::Instant;
 
 //FIXME: handle this with macros, or use bevy-inspectable-egui
 pub const FLUIDS_RENDERING_MAP: [(&str, FluidsRenderingMode); 3] = [
@@ -330,7 +331,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
     }
 
     fn step(&mut self, physics: &mut PhysicsState) {
-        let step_time = instant::now();
+        let step_time = Instant::now();
         let dt = physics.integration_parameters.dt;
         self.fluids_pipeline.step(
             &physics.gravity,
@@ -339,7 +340,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             &mut physics.bodies,
         );
 
-        self.step_time = instant::now() - step_time;
+        self.step_time = step_time.elapsed().as_secs_f64();
     }
 
     fn draw(
