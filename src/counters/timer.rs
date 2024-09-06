@@ -6,7 +6,7 @@ use web_time::Instant;
 pub struct Timer {
     enabled: bool,
     time: f64,
-    start: Option<f64>,
+    start: Option<Instant>,
 }
 
 impl Timer {
@@ -38,7 +38,7 @@ impl Timer {
     pub fn start(&mut self) {
         if self.enabled {
             self.time = 0.0;
-            self.start = Some(Instant::now().elapsed().as_secs_f64());
+            self.start = Some(Instant::now());
         }
     }
 
@@ -46,7 +46,7 @@ impl Timer {
     pub fn pause(&mut self) {
         if self.enabled {
             if let Some(start) = self.start {
-                self.time += Instant::now().elapsed().as_secs_f64() - start;
+                self.time += start.elapsed().as_secs_f64();
             }
             self.start = None;
         }
@@ -55,7 +55,7 @@ impl Timer {
     /// Resume the timer.
     pub fn resume(&mut self) {
         if self.enabled {
-            self.start = Some(Instant::now().elapsed().as_secs_f64());
+            self.start = Some(Instant::now());
         }
     }
 

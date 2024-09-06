@@ -58,7 +58,7 @@ impl HarnessPlugin for FluidsHarnessPlugin {
     }
 
     fn step(&mut self, physics: &mut PhysicsState, _run_state: &RunState) {
-        let step_time = Instant::now().elapsed().as_secs_f64();
+        let step_time = Instant::now();
         let dt = physics.integration_parameters.dt;
         self.fluids_pipeline.step(
             &physics.gravity,
@@ -67,7 +67,7 @@ impl HarnessPlugin for FluidsHarnessPlugin {
             &mut physics.bodies,
         );
 
-        self.step_time = Instant::now().elapsed().as_secs_f64() - step_time;
+        self.step_time = step_time.elapsed().as_secs_f64();
     }
 
     fn profiling_string(&self) -> String {
