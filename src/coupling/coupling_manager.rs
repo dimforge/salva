@@ -4,7 +4,7 @@ use crate::object::{BoundarySet, Fluid};
 use crate::TimestepManager;
 
 /// Trait that needs to be implemented by middlewares responsible for
-/// coupling bodies from a rigid-body physic framework (nphysics, bullet, PhysX, etc.)
+/// coupling bodies from a rigid-body physic framework (rapier, bullet, PhysX, etc.)
 /// with boundary objects of salva.
 pub trait CouplingManager {
     /// Updates the boundary objects from the coupled bodies.

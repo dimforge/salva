@@ -1,5 +1,5 @@
 [workspace]
-members = [ "build/salva2d", "build/salva3d", "examples2d", "examples3d" ]
+members = ["build/salva2d", "build/salva3d", "examples2d", "examples3d"]
 resolver = "2"
 
 [profile.release]
@@ -36,8 +36,3 @@ salva3d = { path = "./build/salva3d" }
 # rapier3d = { path = "../rapier/build/rapier3d" }
 # rapier_testbed2d = { path = "../rapier/build/rapier_testbed2d" }
 # rapier_testbed3d = { path = "../rapier/build/rapier_testbed3d" }
-
-#nphysics2d = { path = "../nphysics/build/nphysics2d" }
-#nphysics3d = { path = "../nphysics/build/nphysics3d" }
-#ncollide2d = { path = "../ncollide/build/ncollide2d" }
-#ncollide3d = { path = "../ncollide/build/ncollide3d" }

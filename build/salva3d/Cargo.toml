@@ -1,32 +1,37 @@
 [package]
-name    = "salva3d"
+name = "salva3d"
 version = "0.9.0"
-authors = [ "Sébastien Crozet <developer@crozet.re>" ]
+authors = ["Sébastien Crozet <developer@crozet.re>"]
 description = "3-dimensional particle-based fluid dynamics in Rust."
 documentation = "https://salva.rs/rustdoc/salva3d/index.html"
 homepage = "https://salva.rs"
 repository = "https://github.com/dimforge/salva"
 readme = "README.md"
-keywords = [ "physics", "dynamics", "particles", "fluids", "SPH" ]
+keywords = ["physics", "dynamics", "particles", "fluids", "SPH"]
 license = "Apache-2.0"
 edition = "2021"
 
+[lints]
+rust.unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(feature, values("dim2"))',
+] }
+
 [features]
-default = [ "dim3" ]
-dim3    = [ ]
-parallel = [ "rayon" ]
-rapier = [ "parry", "rapier3d" ]
-sampling = [ "rapier" ]
-rapier-testbed = [ "rapier", "rapier_testbed3d", "graphics" ]
-rapier-harness = [ "rapier-testbed" ]
-parry = [ "parry3d" ]
-wasm-bindgen = [ "rapier3d/wasm-bindgen" ]
-graphics = [ "bevy", "bevy_egui" ]
+default = ["dim3"]
+dim3 = []
+parallel = ["rayon"]
+rapier = ["parry", "rapier3d"]
+sampling = ["rapier"]
+rapier-testbed = ["rapier", "rapier_testbed3d", "graphics"]
+rapier-harness = ["rapier-testbed"]
+parry = ["parry3d"]
+wasm-bindgen = ["rapier3d/wasm-bindgen"]
+graphics = ["bevy", "bevy_egui"]
 
 [lib]
 name = "salva3d"
 path = "../../src/lib.rs"
-required-features = [ "dim3" ]
+required-features = ["dim3"]
 
 [dependencies]
 approx = "0.5"
@@ -34,7 +39,7 @@ num-traits = "0.2"
 fnv = "1.0"
 itertools = "0.13"
 generational-arena = "0.2"
-instant = { version = "0.1", features = [ "now" ] }
+instant = { version = "0.1", features = ["now"] }
 rayon = { version = "1.8", optional = true }
 
 nalgebra = "0.33"
@@ -45,8 +50,15 @@ rapier_testbed3d = { version = "0.21", optional = true }
 bevy_egui = { version = "0.26", features = ["immutable_ctx"], optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-bevy = { version = "0.13", default-features = false, features = ["bevy_winit", "bevy_render", "x11"], optional = true }
+bevy = { version = "0.13", default-features = false, features = [
+    "bevy_winit",
+    "bevy_render",
+    "x11",
+], optional = true }
 
 # Dependencies for WASM only.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy = { version = "0.13", default-features = false, features = ["bevy_winit", "bevy_render"], optional = true }
+bevy = { version = "0.13", default-features = false, features = [
+    "bevy_winit",
+    "bevy_render",
+], optional = true }
