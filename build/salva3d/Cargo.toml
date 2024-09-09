@@ -11,6 +11,11 @@ keywords = ["physics", "dynamics", "particles", "fluids", "SPH"]
 license = "Apache-2.0"
 edition = "2021"
 
+[lints]
+rust.unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(feature, values("dim2"))',
+] }
+
 [features]
 default = ["dim3"]
 dim3 = []
@@ -22,9 +27,6 @@ rapier-harness = ["rapier-testbed"]
 parry = ["parry3d"]
 wasm-bindgen = ["rapier3d/wasm-bindgen"]
 graphics = ["bevy", "bevy_egui"]
-
-[lints]
-workspace = true
 
 [lib]
 name = "salva3d"

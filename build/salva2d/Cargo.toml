@@ -19,7 +19,9 @@ license = "Apache-2.0"
 edition = "2021"
 
 [lints]
-workspace = true
+rust.unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(feature, values("dim3"))',
+] }
 
 [badges]
 maintenance = { status = "actively-developed" }

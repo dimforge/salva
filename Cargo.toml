@@ -2,11 +2,6 @@
 members = ["build/salva2d", "build/salva3d", "examples2d", "examples3d"]
 resolver = "2"
 
-[workspace.lints]
-rust.unexpected_cfgs = { level = "warn", check-cfg = [
-    'cfg(feature, values("dim2", "dim3", "nphysics", "ncollide"))',
-] }
-
 [profile.release]
 #lto = true
 #codegen-units = 1
@@ -41,8 +36,3 @@ rapier_testbed3d = { git = "https://github.com/dimforge/rapier" }
 # rapier3d = { path = "../rapier/crates/rapier3d" }
 # rapier_testbed2d = { path = "../rapier/crates/rapier_testbed2d" }
 # rapier_testbed3d = { path = "../rapier/crates/rapier_testbed3d" }
-
-#nphysics2d = { path = "../nphysics/build/nphysics2d" }
-#nphysics3d = { path = "../nphysics/build/nphysics3d" }
-#ncollide2d = { path = "../ncollide/build/ncollide2d" }
-#ncollide3d = { path = "../ncollide/build/ncollide3d" }

@@ -17,7 +17,7 @@
 </p>
 <p align = "center">
     <strong>
-        <a href="https://salva.rs">Users guide</a> | <a href="https://docs.rs/salva2d/latest/salva2d">2D Documentation</a> | <a href="https://docs.rs/salva3d/latest/salva3d">3D Documentation</a> | <a href="https://discourse.nphysics.org">Forum</a>
+        <a href="https://salva.rs">Users guide</a> | <a href="https://docs.rs/salva2d/latest/salva2d">2D Documentation</a> | <a href="https://docs.rs/salva3d/latest/salva3d">3D Documentation</a> | <a href="https://discord.gg/vt9DJSW">Discord</a>
     </strong>
 </p>
 
@@ -25,13 +25,13 @@
 
 **Salva** is a 2 and 3-dimensional particle-based fluid simulation engine for games and animations.
 It uses [nalgebra](https://nalgebra.org) for vector/matrix math and can optionally interface with
-[nphysics](https://nphysics.org) for two-way coupling with rigid bodies, multibodies, and deformable bodies.
+[rapier](https://rapier.rs) for two-way coupling with rigid bodies, multibodies, and deformable bodies.
 2D and 3D implementations both share (mostly) the same code!
 
 
 Examples are available in the `examples2d` and `examples3d` directories.  Because those demos are based on
 WASM and WebGl 1.0 they should work on most modern browsers. Feel free to ask for help
-and discuss features on the official [user forum](https://discourse.nphysics.org).
+and discuss features on the official [discord](https://discord.gg/vt9DJSW).
 
 ## Why the name Salva?
 
@@ -44,5 +44,5 @@ is inspired from its renown painting [The Persistence of Memory](https://en.wiki
 - **Surface tension:** WCSPH surface tension, and methods from He et al. 2014 and Akinci et al. 2013
 - **Elasticity:** method from Becker et al. 2009
 - **Multiphase fluids**: mix several fluids with different characteristics (densities, viscosities, etc.)
-- Optional **two-way coupling** with bodies from **nphysics**.
+- Optional **two-way coupling** with bodies from **rapier**.
 - **WASM** support
