@@ -37,21 +37,21 @@ The name of this library is inspired from the famous surrealist artist `Salvador
 
 extern crate nalgebra as na;
 extern crate num_traits as num;
-#[cfg(all(feature = "dim2", feature = "f32"))]
+#[cfg(all(feature = "dim2", feature = "f32", feature = "parry"))]
 pub extern crate parry2d as parry;
-#[cfg(all(feature = "dim2", feature = "f64"))]
+#[cfg(all(feature = "dim2", feature = "f64", feature = "parry"))]
 pub extern crate parry2d_f64 as parry;
-#[cfg(all(feature = "dim3", feature = "f32"))]
+#[cfg(all(feature = "dim3", feature = "f32", feature = "parry"))]
 pub extern crate parry3d as parry;
-#[cfg(all(feature = "dim3", feature = "f64"))]
+#[cfg(all(feature = "dim3", feature = "f64", feature = "parry"))]
 pub extern crate parry3d_f64 as parry;
-#[cfg(all(feature = "dim2", feature = "f32"))]
+#[cfg(all(feature = "dim2", feature = "f32", feature = "rapier"))]
 pub extern crate rapier2d as rapier;
-#[cfg(all(feature = "dim2", feature = "f64"))]
+#[cfg(all(feature = "dim2", feature = "f64", feature = "rapier"))]
 pub extern crate rapier2d_f64 as rapier;
-#[cfg(all(feature = "dim3", feature = "f32"))]
+#[cfg(all(feature = "dim3", feature = "f32", feature = "rapier"))]
 pub extern crate rapier3d as rapier;
-#[cfg(all(feature = "dim3", feature = "f64"))]
+#[cfg(all(feature = "dim3", feature = "f64", feature = "rapier"))]
 pub extern crate rapier3d_f64 as rapier;
 #[cfg(all(feature = "dim2", feature = "f32", feature = "rapier-testbed"))]
 pub extern crate rapier_testbed2d as rapier_testbed;
@@ -126,10 +126,11 @@ pub mod math {
     /// The maximum number of possible translations of a rigid body.
     pub const DIM: usize = 3;
 
-    /// The scalar type.
     #[cfg(all(feature = "f32"))]
+    /// The scalar type.
     pub type Real = f32;
     #[cfg(all(feature = "f64"))]
+    /// The scalar type.
     pub type Real = f64;
 
     /// The dimension of the ambient space.
@@ -210,10 +211,11 @@ pub mod math {
     /// The maximum number of possible translations of a rigid body.
     pub const DIM: usize = 2;
 
-    /// The scalar type.
     #[cfg(all(feature = "f32"))]
+    /// The scalar type.
     pub type Real = f32;
     #[cfg(all(feature = "f64"))]
+    /// The scalar type.
     pub type Real = f64;
 
     /// The dimension of the ambient space.

@@ -13,7 +13,7 @@ edition = "2021"
 
 [lints]
 rust.unexpected_cfgs = { level = "warn", check-cfg = [
-    'cfg(feature, values("dim2"))',
+    'cfg(feature, values("dim2", "f64"))',
 ] }
 
 [features]

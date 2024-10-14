@@ -16,13 +16,18 @@ default = [ "dim3", "f64" ]
 dim3 = [ ]
 f64 = [ ]
 parallel = [ "rayon" ]
-rapier = [ "parry", "rapier3d" ]
+rapier = [ "parry", "rapier3d-f64" ]
 sampling = [ "rapier" ]
 rapier-testbed = [ "rapier", "rapier_testbed3d", "graphics" ]
 rapier-harness = [ "rapier-testbed" ]
-parry = [ "parry3d" ]
-wasm-bindgen = [ "rapier3d/wasm-bindgen" ]
+parry = [ "parry3d-f64" ]
+wasm-bindgen = [ "rapier3d-f64/wasm-bindgen" ]
 graphics = [ "bevy", "bevy_egui" ]
+
+[lints]
+rust.unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(feature, values("dim2", "f32"))',
+] }
 
 [lib]
 name = "salva3d_f64"
@@ -39,8 +44,9 @@ instant = { version = "0.1", features = [ "now" ] }
 rayon = { version = "1.8", optional = true }
 
 nalgebra = "0.33"
-parry3d = { version = "0.16", optional = true }
-rapier3d = { version = "0.21", optional = true }
+parry3d-f64 = { version = "0.16", optional = true }
+rapier3d-f64 = { version = "0.21", optional = true }
+# TODO update it to f64
 rapier_testbed3d = { version = "0.21", optional = true }
 
 bevy_egui = { version = "0.26", features = ["immutable_ctx"], optional = true }
