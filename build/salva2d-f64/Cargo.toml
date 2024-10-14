@@ -1,5 +1,5 @@
 [package]
-name    = "salva2d-f64"
+name = "salva2d-f64"
 version = "0.9.0"
 authors = [ "Sébastien Crozet <developer@crozet.re>" ]
 description = "2-dimensional particle-based fluid dynamics in Rust."
@@ -17,7 +17,7 @@ maintenance = { status = "actively-developed" }
 
 [features]
 default = [ "dim2", "f64" ]
-dim2    = [ ]
+dim2 = [ ]
 f64 = [ ]
 parallel = [ "rayon" ]
 sampling = [ "rapier" ]

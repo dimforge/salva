@@ -18,7 +18,7 @@ rust.unexpected_cfgs = { level = "warn", check-cfg = [
 
 [features]
 default = [ "dim3", "f32" ]
-dim3    = [ ]
+dim3 = [ ]
 f32 = [ ]
 parallel = [ "rayon" ]
 rapier = [ "parry", "rapier3d" ]
