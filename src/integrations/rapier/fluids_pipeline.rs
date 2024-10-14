@@ -2,7 +2,7 @@ use crate::coupling::CouplingManager;
 use crate::geometry::{HGrid, HGridEntry};
 use crate::object::{BoundaryHandle, BoundarySet, Fluid};
 use crate::solver::DFSPHSolver;
-use crate::LiquidWorld;
+use crate::{math, LiquidWorld};
 use crate::TimestepManager;
 use approx::AbsDiffEq;
 use na::Unit;
@@ -31,7 +31,7 @@ impl FluidsPipeline {
     /// - `particle_radius`: the radius of every particle for the fluid simulation.
     /// - `smoothing_factor`: the smoothing factor used to compute the SPH kernel radius.
     ///    The kernel radius will be computed as `particle_radius * smoothing_factor * 2.0.
-    pub fn new(particle_radius: f32, smoothing_factor: f32) -> Self {
+    pub fn new(particle_radius: math::Real, smoothing_factor: math::Real) -> Self {
         let dfsph: DFSPHSolver = DFSPHSolver::new();
 
         Self {
@@ -47,8 +47,8 @@ impl FluidsPipeline {
     /// However, it will not integrate these forces. Use the `PhysicsPipeline` for this integration.
     pub fn step(
         &mut self,
-        gravity: &Vector<f32>,
-        dt: f32,
+        gravity: &Vector<math::Real>,
+        dt: math::Real,
         colliders: &ColliderSet,
         bodies: &mut RigidBodySet,
     ) {
@@ -66,7 +66,7 @@ pub enum ColliderSampling {
     ///
     /// It is recommended that those points are separated by a distance smaller or equal to twice
     /// the particle radius used to initialize the LiquidWorld.
-    StaticSampling(Vec<Point<f32>>),
+    StaticSampling(Vec<Point<math::Real>>),
     /// The collider shape is approximated by a dynamic set of points automatically computed based on contacts with fluid particles.
     DynamicContactSampling,
 }
@@ -147,8 +147,8 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
     fn update_boundaries(
         &mut self,
         timestep: &TimestepManager,
-        h: f32,
-        particle_radius: f32,
+        h: math::Real,
+        particle_radius: math::Real,
         hgrid: &HGrid<HGridEntry>,
         fluids: &mut [Fluid],
         boundaries: &mut BoundarySet,
@@ -187,11 +187,11 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
                                 .push(velocity.unwrap_or(Vector::zeros()));
                         }
 
-                        boundary.volumes.resize(points.len(), na::zero::<f32>());
+                        boundary.volumes.resize(points.len(), na::zero::<math::Real>());
                     }
                     ColliderSampling::DynamicContactSampling => {
-                        let prediction = h * na::convert::<_, f32>(0.5);
-                        let margin = particle_radius * na::convert::<_, f32>(0.1);
+                        let prediction = h * na::convert::<_, math::Real>(0.5);
+                        let margin = particle_radius * na::convert::<_, math::Real>(0.1);
                         let collider_pos = collider.position();
                         let aabb = collider
                             .shape()
@@ -218,7 +218,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
                                         let dpt = particle_pos - proj.point;
 
                                         if let Some((normal, depth)) =
-                                            Unit::try_new_and_get(dpt, f32::default_epsilon())
+                                            Unit::try_new_and_get(dpt, math::Real::default_epsilon())
                                         {
                                             if proj.is_inside {
                                                 fluid.positions[*particle_id] -=
@@ -227,7 +227,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
                                                 let vel_err =
                                                     normal.dot(&fluid.velocities[*particle_id]);
 
-                                                if vel_err > na::zero::<f32>() {
+                                                if vel_err > na::zero::<math::Real>() {
                                                     fluid.velocities[*particle_id] -=
                                                         *normal * vel_err;
                                                 }
@@ -243,7 +243,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
                                             .velocities
                                             .push(velocity.unwrap_or(Vector::zeros()));
                                         boundary.positions.push(proj.point);
-                                        boundary.volumes.push(na::zero::<f32>());
+                                        boundary.volumes.push(na::zero::<math::Real>());
                                         coupling.features.push(feature);
                                     }
                                 }
