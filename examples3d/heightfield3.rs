@@ -7,7 +7,7 @@ use rapier_testbed3d::Testbed;
 use salva3d::integrations::rapier::ColliderSampling;
 use salva3d::integrations::rapier::FluidsPipeline;
 use salva3d::integrations::rapier::FluidsTestbedPlugin;
-use salva3d::object::Boundary;
+use salva3d::object::{interaction_groups::InteractionGroups, Boundary};
 use salva3d::solver::ArtificialViscosity;
 
 #[path = "./helper.rs"]
@@ -71,7 +71,7 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let bo_handle = fluids_pipeline
         .liquid_world
-        .add_boundary(Boundary::new(Vec::new()));
+        .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
 
     fluids_pipeline.coupling.register_coupling(
         bo_handle,

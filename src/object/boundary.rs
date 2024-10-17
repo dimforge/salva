@@ -3,6 +3,8 @@ use crate::object::{ContiguousArena, ContiguousArenaIndex};
 
 use std::sync::RwLock;
 
+use super::interaction_groups::InteractionGroups;
+
 /// A boundary object.
 ///
 /// A boundary object is composed of static particles, or of particles coupled with non-fluid bodies.
@@ -17,11 +19,13 @@ pub struct Boundary {
     /// If this is set to `None` (which is the default), the boundary won't receive any
     /// force for fluids.
     pub forces: Option<RwLock<Vec<Vector<Real>>>>,
+    /// Determines which fluids this boundary is allowed to interact with.
+    pub fluid_interaction: InteractionGroups,
 }
 
 impl Boundary {
     /// Initialize a boundary object with the given particles.
-    pub fn new(particle_positions: Vec<Point<Real>>) -> Self {
+    pub fn new(particle_positions: Vec<Point<Real>>, fluid_interaction: InteractionGroups) -> Self {
         let num_particles = particle_positions.len();
         let velocities = std::iter::repeat(Vector::zeros())
             .take(num_particles)
@@ -35,6 +39,7 @@ impl Boundary {
             velocities,
             volumes,
             forces: None,
+            fluid_interaction,
         }
     }
 
