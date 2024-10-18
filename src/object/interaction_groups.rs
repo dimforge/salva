@@ -16,7 +16,6 @@
 /// ```ignore
 /// (self.memberships & rhs.filter) != 0 && (rhs.memberships & self.filter) != 0
 /// ```
-#[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[repr(C)]
 pub struct InteractionGroups {
@@ -81,7 +80,6 @@ impl Default for InteractionGroups {
 
 bitflags::bitflags! {
     /// A bit mask identifying groups for interaction.
-    #[cfg_attr(feature = "serde-serialize", derive(Serialize, Deserialize))]
     #[derive(Copy, Clone, PartialEq, Eq, Debug, Hash)]
     pub struct Group: u32 {
         /// The group n°1.
