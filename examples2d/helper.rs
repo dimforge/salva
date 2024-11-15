@@ -1,5 +1,5 @@
 use na::{Point2, Vector2};
-use salva2d::object::Fluid;
+use salva2d::object::{interaction_groups::InteractionGroups, Fluid};
 
 pub fn cube_fluid(ni: usize, nj: usize, particle_rad: f32, density: f32) -> Fluid {
     let mut points = Vec::new();
@@ -13,5 +13,5 @@ pub fn cube_fluid(ni: usize, nj: usize, particle_rad: f32, density: f32) -> Flui
         }
     }
 
-    Fluid::new(points, particle_rad, density)
+    Fluid::new(points, particle_rad, density, InteractionGroups::default())
 }

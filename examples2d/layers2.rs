@@ -5,7 +5,7 @@ use rapier2d::dynamics::{ImpulseJointSet, MultibodyJointSet, RigidBodyBuilder, R
 use rapier2d::geometry::{Collider, ColliderBuilder, ColliderSet};
 use rapier_testbed2d::Testbed;
 use salva2d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
-use salva2d::object::interaction_groups::InteractionGroups;
+use salva2d::object::interaction_groups::{Group, InteractionGroups};
 use salva2d::object::{Boundary, Fluid};
 use salva2d::solver::{ArtificialViscosity, Becker2009Elasticity, XSPHViscosity};
 use std::f32;
@@ -53,7 +53,12 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let elasticity: Becker2009Elasticity = Becker2009Elasticity::new(1_000.0, 0.3, true);
     let viscosity = XSPHViscosity::new(0.5, 1.0);
-    let mut fluid = Fluid::new(points1, PARTICLE_RADIUS, 1.0, InteractionGroups::default());
+    let mut fluid = Fluid::new(
+        points1,
+        PARTICLE_RADIUS,
+        1.0,
+        InteractionGroups::new(Group::GROUP_1, Group::GROUP_1),
+    );
     fluid.nonpressure_forces.push(Box::new(elasticity));
     fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
     let fluid_handle = fluids_pipeline.liquid_world.add_fluid(fluid);
@@ -61,14 +66,19 @@ pub fn init_world(testbed: &mut Testbed) {
 
     let elasticity: Becker2009Elasticity = Becker2009Elasticity::new(1_000.0, 0.3, true);
     let viscosity = XSPHViscosity::new(0.5, 1.0);
-    let mut fluid = Fluid::new(points2, PARTICLE_RADIUS, 1.0, InteractionGroups::default());
+    let mut fluid = Fluid::new(
+        points2,
+        PARTICLE_RADIUS,
+        1.0,
+        InteractionGroups::new(Group::GROUP_2, Group::GROUP_2),
+    );
     fluid.nonpressure_forces.push(Box::new(elasticity));
     fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
     let fluid_handle = fluids_pipeline.liquid_world.add_fluid(fluid);
     plugin.set_fluid_color(fluid_handle, Point3::new(1.0, 0.4, 0.6));
 
     let viscosity = ArtificialViscosity::new(0.5, 0.0);
-    let mut fluid = Fluid::new(points3, PARTICLE_RADIUS, 1.0, InteractionGroups::default());
+    let mut fluid = Fluid::new(points3, PARTICLE_RADIUS, 1.0, InteractionGroups::none());
     fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
     let fluid_handle = fluids_pipeline.liquid_world.add_fluid(fluid);
     plugin.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));
@@ -93,7 +103,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let co_handle = colliders.insert_with_parent(collider, handle, &mut bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
-        .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
+        .add_boundary(Boundary::new(Vec::new(), InteractionGroups::all()));
     fluids_pipeline.coupling.register_coupling(
         bo_handle,
         co_handle,
@@ -104,30 +114,53 @@ pub fn init_world(testbed: &mut Testbed) {
      * Create a dynamic rigid-bodies.
      */
     let rad = 0.4;
-    let mut build_rigid_body_with_coupling = |x, y, collider: Collider| {
-        let samples =
-            salva2d::sampling::shape_surface_ray_sample(collider.shape(), PARTICLE_RADIUS).unwrap();
-        let rb = RigidBodyBuilder::dynamic()
-            .translation(Vector2::new(x, y))
-            .build();
-        let rb_handle = bodies.insert(rb);
-        let co_handle = colliders.insert_with_parent(collider, rb_handle, &mut bodies);
-        let bo_handle = fluids_pipeline
-            .liquid_world
-            .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
-        fluids_pipeline.coupling.register_coupling(
-            bo_handle,
-            co_handle,
-            ColliderSampling::StaticSampling(samples.clone()),
-        );
-    };
+    let mut build_rigid_body_with_coupling =
+        |x, y, mut collider: Collider, interaction_group: InteractionGroups| {
+            let samples =
+                salva2d::sampling::shape_surface_ray_sample(collider.shape(), PARTICLE_RADIUS)
+                    .unwrap();
+            let rb = RigidBodyBuilder::dynamic()
+                .translation(Vector2::new(x, y))
+                .build();
+            let rb_handle = bodies.insert(rb);
+            let membership: u32 = interaction_group.memberships.into();
+            let filter: u32 = interaction_group.filter.into();
+            collider.set_collision_groups(rapier2d::geometry::InteractionGroups::new(
+                rapier2d::geometry::Group::from(membership),
+                rapier2d::geometry::Group::from(filter),
+            ));
+            let co_handle = colliders.insert_with_parent(collider, rb_handle, &mut bodies);
+            let bo_handle = fluids_pipeline
+                .liquid_world
+                .add_boundary(Boundary::new(Vec::new(), interaction_group));
+            fluids_pipeline.coupling.register_coupling(
+                bo_handle,
+                co_handle,
+                ColliderSampling::StaticSampling(samples.clone()),
+            );
+        };
 
     let co1 = ColliderBuilder::cuboid(rad, rad).density(0.8).build();
     let co2 = ColliderBuilder::ball(rad).density(0.8).build();
     let co3 = ColliderBuilder::capsule_y(rad, rad).density(0.8).build();
-    build_rigid_body_with_coupling(0.0, 10.0, co1);
-    build_rigid_body_with_coupling(-2.0, 10.0, co2);
-    build_rigid_body_with_coupling(2.0, 10.5, co3);
+    build_rigid_body_with_coupling(
+        0.0,
+        10.0,
+        co1,
+        InteractionGroups::new(Group::GROUP_2, Group::GROUP_2),
+    );
+    build_rigid_body_with_coupling(
+        -2.0,
+        10.0,
+        co2,
+        InteractionGroups::new(Group::GROUP_1, Group::GROUP_1),
+    );
+    build_rigid_body_with_coupling(
+        2.0,
+        10.5,
+        co3,
+        InteractionGroups::new(Group::GROUP_3, Group::GROUP_3),
+    );
 
     /*
      * Set up the testbed.

@@ -9,6 +9,7 @@ use rapier_testbed2d::{Testbed, TestbedApp};
 mod basic2;
 mod custom_forces2;
 mod elasticity2;
+mod layers2;
 mod surface_tension2;
 
 fn demo_name_from_command_line() -> Option<String> {
@@ -47,6 +48,7 @@ fn main() {
 
     let mut builders: Vec<(_, fn(&mut Testbed))> = vec![
         ("Basic", basic2::init_world),
+        ("Layers", layers2::init_world),
         ("Custom forces", custom_forces2::init_world),
         ("Elasticity", elasticity2::init_world),
         ("Surface tension", surface_tension2::init_world),

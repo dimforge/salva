@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- `Fluid` now has a new parameter `InteractionGroup`,
+  which controls which static particles (`Boundary`s) can interact with it.
+
 ### Changed
 
 - Update dependencies:
