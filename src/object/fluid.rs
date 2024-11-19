@@ -28,8 +28,9 @@ pub struct Fluid {
     num_deleted_particles: usize,
     /// The particles radius.
     particle_radius: Real,
-    /// The groups controlling which static particles ([`Boundary`]) can interact with this fluid.
-    pub boundary_interaction: InteractionGroups,
+    /// The groups controlling which other particles can interact with this fluid.
+    /// A fluid always interacts with itself.
+    pub interaction_groups: InteractionGroups,
 }
 
 impl Fluid {
@@ -40,7 +41,7 @@ impl Fluid {
         particle_positions: Vec<Point<Real>>,
         particle_radius: Real, // XXX: remove this parameter since it is already defined by the liquid world.
         density0: Real,
-        boundary_interaction: InteractionGroups,
+        interaction_groups: InteractionGroups,
     ) -> Self {
         let num_particles = particle_positions.len();
         let velocities: Vec<_> = std::iter::repeat(Vector::zeros())
@@ -58,7 +59,7 @@ impl Fluid {
             volumes: std::iter::repeat(particle_volume)
                 .take(num_particles)
                 .collect(),
-            boundary_interaction,
+            interaction_groups,
             deleted_particles: std::iter::repeat(false).take(num_particles).collect(),
             num_deleted_particles: 0,
             density0,

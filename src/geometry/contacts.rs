@@ -273,8 +273,10 @@ fn compute_contacts_for_pair_of_cells(
                         HGridEntry::BoundaryParticle(boundary_j, particle_j) => {
                             let bi = &boundaries[*boundary_i];
                             let bj = &boundaries[*boundary_j];
-                            if !bi.fluid_interaction.test(bj.fluid_interaction) {
-                                continue;
+                            if *boundary_i != *boundary_j {
+                                if !bi.interaction_groups.test(bj.interaction_groups) {
+                                    continue;
+                                }
                             }
 
                             let pi = &bi.positions[*particle_i];
@@ -311,7 +313,7 @@ fn compute_contacts_for_pair_of_cells(
                             }
                             let bi = &boundaries[*boundary_i];
                             let fj = &fluids[*fluid_j];
-                            if !bi.fluid_interaction.test(fj.boundary_interaction) {
+                            if !bi.interaction_groups.test(fj.interaction_groups) {
                                 continue;
                             }
                             let pi = &boundaries[*boundary_i].positions[*particle_i];
@@ -343,13 +345,24 @@ fn compute_contacts_for_pair_of_cells(
                     let pj = if is_boundary_j {
                         let bj = &boundaries[fluid_j];
                         if !fluids[*fluid_i]
-                            .boundary_interaction
-                            .test(bj.fluid_interaction)
+                            .interaction_groups
+                            .test(bj.interaction_groups)
                         {
                             continue;
                         }
                         boundaries[fluid_j].positions[particle_j]
                     } else {
+                        if *fluid_i != fluid_j {
+                            let fluid_i_data = &fluids[*fluid_i];
+                            let fluid_j_data = &fluids[fluid_j];
+
+                            if !fluid_i_data
+                                .interaction_groups
+                                .test(fluid_j_data.interaction_groups)
+                            {
+                                continue;
+                            }
+                        }
                         fluids[fluid_j].positions[particle_j]
                     };
 
