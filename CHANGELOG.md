@@ -4,8 +4,8 @@
 
 ### Added
 
-- `Fluid` now has a new parameter `InteractionGroup`,
-  which controls which static particles (`Boundary`s) can interact with it.
+- `Fluid` and `Boundary`s now have a new property `interaction_groups`,
+  which controls which other particles can interact with it.
 
 ### Changed
 
