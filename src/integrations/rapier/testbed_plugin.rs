@@ -2,6 +2,7 @@ use crate::math::{Isometry, Point, Real, Rotation, Translation, Vector};
 use crate::object::{BoundaryHandle, FluidHandle};
 use bevy::math::Quat;
 use bevy::prelude::{Assets, Commands, Mesh, Query, Transform};
+use bevy_egui::egui;
 use bevy_egui::{egui::ComboBox, egui::Window, EguiContexts};
 #[cfg(feature = "dim3")]
 use na::Quaternion;
@@ -487,7 +488,18 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                                 || changed;
                         }
                     });
-
+                let counters = self.fluids_pipeline.liquid_world.counters;
+                let _ = egui::CollapsingHeader::new(format!(
+                    "Total: {:.2}ms - {} fps",
+                    counters.step_time.time(),
+                    (1000.0 / counters.step_time.time()).round()
+                ))
+                .id_source("total_fluids")
+                .show(ui, |ui| {
+                    let _ = ui.label(format!("{}", counters));
+                    // // Ideally:
+                    // p.profiling_ui(ui);
+                });
                 if changed {
                     // FIXME: not too sure what to do here for color
                     // let fluid_handle = self
