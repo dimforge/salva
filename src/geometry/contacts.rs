@@ -273,10 +273,10 @@ fn compute_contacts_for_pair_of_cells(
                         HGridEntry::BoundaryParticle(boundary_j, particle_j) => {
                             let bi = &boundaries[*boundary_i];
                             let bj = &boundaries[*boundary_j];
-                            if *boundary_i != *boundary_j {
-                                if !bi.interaction_groups.test(bj.interaction_groups) {
-                                    continue;
-                                }
+                            if *boundary_i != *boundary_j
+                                && !bi.interaction_groups.test(bj.interaction_groups)
+                            {
+                                continue;
                             }
 
                             let pi = &bi.positions[*particle_i];
@@ -353,13 +353,10 @@ fn compute_contacts_for_pair_of_cells(
                         boundaries[fluid_j].positions[particle_j]
                     } else {
                         if *fluid_i != fluid_j {
-                            let fluid_i_data = &fluids[*fluid_i];
-                            let fluid_j_data = &fluids[fluid_j];
+                            let groups_i = &fluids[*fluid_i].interaction_groups;
+                            let groups_j = &fluids[fluid_j].interaction_groups;
 
-                            if !fluid_i_data
-                                .interaction_groups
-                                .test(fluid_j_data.interaction_groups)
-                            {
+                            if !groups_i.test(*groups_j) {
                                 continue;
                             }
                         }
