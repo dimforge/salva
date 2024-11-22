@@ -78,7 +78,12 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Point3::new(1.0, 0.4, 0.6));
 
     let viscosity = ArtificialViscosity::new(0.5, 0.0);
-    let mut fluid = Fluid::new(points3, PARTICLE_RADIUS, 1.0, InteractionGroups::none());
+    let mut fluid = Fluid::new(
+        points3,
+        PARTICLE_RADIUS,
+        1.0,
+        InteractionGroups::new(Group::GROUP_2, Group::GROUP_2),
+    );
     fluid.nonpressure_forces.push(Box::new(viscosity.clone()));
     let fluid_handle = fluids_pipeline.liquid_world.add_fluid(fluid);
     plugin.set_fluid_color(fluid_handle, Point3::new(0.6, 0.8, 0.5));

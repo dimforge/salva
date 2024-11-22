@@ -273,7 +273,9 @@ fn compute_contacts_for_pair_of_cells(
                         HGridEntry::BoundaryParticle(boundary_j, particle_j) => {
                             let bi = &boundaries[*boundary_i];
                             let bj = &boundaries[*boundary_j];
-                            if !bi.fluid_interaction.test(bj.fluid_interaction) {
+                            if *boundary_i != *boundary_j
+                                && !bi.interaction_groups.test(bj.interaction_groups)
+                            {
                                 continue;
                             }
 
@@ -311,7 +313,7 @@ fn compute_contacts_for_pair_of_cells(
                             }
                             let bi = &boundaries[*boundary_i];
                             let fj = &fluids[*fluid_j];
-                            if !bi.fluid_interaction.test(fj.boundary_interaction) {
+                            if !bi.interaction_groups.test(fj.interaction_groups) {
                                 continue;
                             }
                             let pi = &boundaries[*boundary_i].positions[*particle_i];
@@ -343,13 +345,21 @@ fn compute_contacts_for_pair_of_cells(
                     let pj = if is_boundary_j {
                         let bj = &boundaries[fluid_j];
                         if !fluids[*fluid_i]
-                            .boundary_interaction
-                            .test(bj.fluid_interaction)
+                            .interaction_groups
+                            .test(bj.interaction_groups)
                         {
                             continue;
                         }
                         boundaries[fluid_j].positions[particle_j]
                     } else {
+                        if *fluid_i != fluid_j {
+                            let groups_i = &fluids[*fluid_i].interaction_groups;
+                            let groups_j = &fluids[fluid_j].interaction_groups;
+
+                            if !groups_i.test(*groups_j) {
+                                continue;
+                            }
+                        }
                         fluids[fluid_j].positions[particle_j]
                     };
 
