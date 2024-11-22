@@ -7,6 +7,7 @@ use rapier_testbed3d::{Testbed, TestbedApp};
 use salva3d::integrations::rapier::{
     ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
 };
+use salva3d::object::interaction_groups::InteractionGroups;
 use salva3d::object::Boundary;
 use salva3d::solver::{Becker2009Elasticity, XSPHViscosity};
 use std::f32;
@@ -83,7 +84,7 @@ pub fn init_world(testbed: &mut Testbed) {
     let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
-        .add_boundary(Boundary::new(Vec::new()));
+        .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
     fluids_pipeline.coupling.register_coupling(
         bo_handle,
         co_handle,

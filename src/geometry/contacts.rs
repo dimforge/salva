@@ -271,8 +271,14 @@ fn compute_contacts_for_pair_of_cells(
                     // Those will already be detected as fluid-boundary contacts instead.
                     match entry {
                         HGridEntry::BoundaryParticle(boundary_j, particle_j) => {
-                            let pi = &boundaries[*boundary_i].positions[*particle_i];
-                            let pj = &boundaries[*boundary_j].positions[*particle_j];
+                            let bi = &boundaries[*boundary_i];
+                            let bj = &boundaries[*boundary_j];
+                            if !bi.fluid_interaction.test(bj.fluid_interaction) {
+                                continue;
+                            }
+
+                            let pi = &bi.positions[*particle_i];
+                            let pj = &bj.positions[*particle_j];
 
                             if na::distance_squared(pi, pj) <= h * h {
                                 let contact = Contact {
@@ -303,7 +309,11 @@ fn compute_contacts_for_pair_of_cells(
                                 // fluid particle.
                                 continue;
                             }
-
+                            let bi = &boundaries[*boundary_i];
+                            let fj = &fluids[*fluid_j];
+                            if !bi.fluid_interaction.test(fj.boundary_interaction) {
+                                continue;
+                            }
                             let pi = &boundaries[*boundary_i].positions[*particle_i];
                             let pj = &fluids[*fluid_j].positions[*particle_j];
 
@@ -331,6 +341,13 @@ fn compute_contacts_for_pair_of_cells(
                     let (fluid_j, particle_j, is_boundary_j) = entry.into_tuple();
                     let pi = fluids[*fluid_i].positions[*particle_i];
                     let pj = if is_boundary_j {
+                        let bj = &boundaries[fluid_j];
+                        if !fluids[*fluid_i]
+                            .boundary_interaction
+                            .test(bj.fluid_interaction)
+                        {
+                            continue;
+                        }
                         boundaries[fluid_j].positions[particle_j]
                     } else {
                         fluids[fluid_j].positions[particle_j]
