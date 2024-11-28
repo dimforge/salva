@@ -15,3 +15,4 @@ STYLE.md
 Cargo.lock
 .idea
 .vscode
+.DS_Store

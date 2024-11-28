@@ -50,23 +50,23 @@ pub enum FluidsRenderingMode {
     /// Use a red taint the closer to `max` the velocity is.
     VelocityColor {
         /// Fluids with a velocity smaller than this will not have any red taint.
-        min: f32,
+        min: Real,
         /// Fluids with a velocity greater than this will be completely red.
-        max: f32,
+        max: Real,
     },
     // /// Use a red taint the closer to `max` the velocity is, with opacity, low velocity is more transparent
     // VelocityColorOpacity {
     //     /// Fluids with a velocity smaller than this will not have any red taint.
-    //     min: f32,
+    //     min: Real,
     //     /// Fluids with a velocity greater than this will be completely red.
-    //     max: f32,
+    //     max: Real,
     // },
     /// Show particles as arrows indicating the velocity
     VelocityArrows {
         /// Fluids with a velocity smaller than this will not have any red taint.
-        min: f32,
+        min: Real,
         /// Fluids with a velocity greater than this will be completely red.
-        max: f32,
+        max: Real,
     },
 }
 
@@ -84,9 +84,9 @@ pub struct FluidsTestbedPlugin {
     fluids_pipeline: FluidsPipeline,
     f2sn: HashMap<FluidHandle, Vec<EntityWithGraphics>>,
     boundary2sn: HashMap<BoundaryHandle, Vec<EntityWithGraphics>>,
-    f2color: HashMap<FluidHandle, Point3<f32>>,
-    ground_color: Point3<f32>,
-    default_fluid_color: Point3<f32>,
+    f2color: HashMap<FluidHandle, Point3<Real>>,
+    ground_color: Point3<Real>,
+    default_fluid_color: Point3<Real>,
     queue_graphics_reset: bool,
 }
 
@@ -120,7 +120,7 @@ impl FluidsTestbedPlugin {
     }
 
     /// Sets the color used to render the specified fluid.
-    pub fn set_fluid_color(&mut self, fluid: FluidHandle, color: Point3<f32>) {
+    pub fn set_fluid_color(&mut self, fluid: FluidHandle, color: Point3<Real>) {
         let _ = self.f2color.insert(fluid, color);
     }
 
@@ -138,14 +138,14 @@ impl FluidsTestbedPlugin {
     fn add_particle_graphics(
         &self,
         particle: &Point<Real>,
-        particle_radius: f32,
+        particle_radius: Real,
         graphics: &mut GraphicsManager,
         commands: &mut Commands,
         meshes: &mut Assets<Mesh>,
         materials: &mut Assets<BevyMaterial>,
         _components: &mut Query<&mut Transform>,
         _harness: &mut Harness,
-        color: &Point3<f32>,
+        color: &Point3<Real>,
         force_shape: Option<SharedShape>,
     ) -> Vec<EntityWithGraphics> {
         let shape = if let Some(shape) = force_shape {
@@ -186,11 +186,11 @@ impl FluidsTestbedPlugin {
     }
 
     fn lerp_velocity(
-        velocity: Vector<f32>,
-        start: Vector3<f32>,
-        min: f32,
-        max: f32,
-    ) -> Vector3<f32> {
+        velocity: Vector<Real>,
+        start: Vector3<Real>,
+        min: Real,
+        max: Real,
+    ) -> Vector3<Real> {
         let end = Vector3::new(1.0, 0.0, 0.0);
         let vel: Vector<Real> = na::convert_unchecked(velocity);
         let vel: Vector<Real> = na::convert(vel);
@@ -357,7 +357,7 @@ impl TestbedPlugin for FluidsTestbedPlugin {
             self.queue_graphics_reset = false;
         }
 
-        let (mut min, mut max) = (f32::MAX, f32::MIN);
+        let (mut min, mut max) = (Real::MAX, Real::MIN);
         for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
             if let Some(entities) = self.f2sn.get_mut(&handle) {
                 for (idx, particle) in fluid.positions.iter().enumerate() {
