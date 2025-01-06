@@ -33,7 +33,6 @@ rapier = ["parry", "rapier2d"]
 rapier-testbed = ["rapier", "rapier_testbed2d", "graphics"]
 rapier-harness = ["rapier-testbed"]
 parry = ["parry2d"]
-wasm-bindgen = ["rapier2d/wasm-bindgen"]
 graphics = ["bevy", "bevy_egui"]
 
 [lints]
