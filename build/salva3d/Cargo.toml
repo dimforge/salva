@@ -25,7 +25,6 @@ sampling = ["rapier"]
 rapier-testbed = ["rapier", "rapier_testbed3d", "graphics"]
 rapier-harness = ["rapier-testbed"]
 parry = ["parry3d"]
-wasm-bindgen = ["rapier3d/wasm-bindgen"]
 graphics = ["bevy", "bevy_egui"]
 
 [lib]

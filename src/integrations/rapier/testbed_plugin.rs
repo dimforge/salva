@@ -497,8 +497,6 @@ impl TestbedPlugin for FluidsTestbedPlugin {
                 .id_source("total_fluids")
                 .show(ui, |ui| {
                     let _ = ui.label(format!("{}", counters));
-                    // // Ideally:
-                    // p.profiling_ui(ui);
                 });
                 if changed {
                     // FIXME: not too sure what to do here for color
