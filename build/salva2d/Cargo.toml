@@ -30,13 +30,10 @@ rapier = ["parry", "rapier2d"]
 rapier-testbed = ["rapier", "rapier_testbed2d", "graphics"]
 rapier-harness = ["rapier-testbed"]
 parry = ["parry2d"]
-wasm-bindgen = ["rapier2d/wasm-bindgen"]
 graphics = ["bevy", "bevy_egui"]
 
 [lints]
-rust.unexpected_cfgs = { level = "warn", check-cfg = [
-    'cfg(feature, values("dim3"))',
-] }
+workspace = true
 
 [lib]
 name = "salva2d"
@@ -47,21 +44,21 @@ required-features = ["dim2"]
 approx = "0.5"
 num-traits = "0.2"
 fnv = "1.0"
-itertools = "0.13"
+itertools = "0.14"
 generational-arena = "0.2"
 instant = { version = "0.1", features = ["now"] }
 rayon = { version = "1.8", optional = true }
 
 nalgebra = "0.33"
-parry2d = { version = "0.16", optional = true }
-rapier2d = { version = "0.21", optional = true }
-rapier_testbed2d = { version = "0.21", optional = true }
+parry2d = { version = "0.18", optional = true }
+rapier2d = { version = "0.23", optional = true }
+rapier_testbed2d = { version = "0.23", optional = true }
 
-bevy_egui = { version = "0.26", features = ["immutable_ctx"], optional = true }
+bevy_egui = { version = "0.31", features = ["immutable_ctx"], optional = true }
 bitflags = "2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-bevy = { version = "0.13.2", default-features = false, features = [
+bevy = { version = "0.15", default-features = false, features = [
     "bevy_winit",
     "bevy_render",
     "x11",
@@ -69,7 +66,7 @@ bevy = { version = "0.13.2", default-features = false, features = [
 
 # Dependencies for WASM only.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy = { version = "0.13", default-features = false, features = [
+bevy = { version = "0.15", default-features = false, features = [
     "bevy_winit",
     "bevy_render",
 ], optional = true }
