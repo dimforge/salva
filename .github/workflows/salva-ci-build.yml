@@ -60,7 +60,7 @@ jobs:
         feature: [default, parallel]
     steps:
       - uses: actions/checkout@v2
-      - run: sudo apt-get install -y cmake libxcb-composite0-dev libx11-dev libasound2-dev libudev-dev
+      - run: sudo apt-get update; sudo apt-get install -y cmake libxcb-composite0-dev libx11-dev libasound2-dev libudev-dev
       - name: build ${{ matrix.package }} --features ${{ matrix.feature }}
         run: cargo build --verbose -p ${{ matrix.package }} --features ${{ matrix.feature }}
   build-wasm:
