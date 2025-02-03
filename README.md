@@ -35,8 +35,8 @@ and discuss features on the official [discord](https://discord.gg/vt9DJSW).
 
 ## Why the name Salva?
 
-The name of this library is inspired from the famous surrealist artist `Salvador Dalì`. The logo of `Salva`
-is inspired from its renown painting [The Persistence of Memory](https://en.wikipedia.org/wiki/The_Persistence_of_Memory).
+The name of this library is derived from the renowned surrealist artist `Salvador Dalì`.
+The `Salva` logo draws inspiration from his famous painting, [The Persistence of Memory](https://en.wikipedia.org/wiki/The_Persistence_of_Memory).
 
 ## Features
 - **Pressure resolution:** DFSPH and IISPH.
