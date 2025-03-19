@@ -217,24 +217,27 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
 
                                         let dpt = particle_pos - proj.point;
 
-                                        if let Some((normal, depth)) =
+                                        let Some((normal, depth)) =
                                             Unit::try_new_and_get(dpt, f32::default_epsilon())
-                                        {
-                                            if proj.is_inside {
-                                                fluid.positions[*particle_id] -=
-                                                    *normal * (depth + margin);
+                                        else {
+                                            continue;
+                                        };
+                                        if proj.is_inside {
+                                            fluid.positions[*particle_id] -=
+                                                *normal * (depth + margin);
 
-                                                let vel_err =
-                                                    normal.dot(&fluid.velocities[*particle_id]);
+                                            let vel_err =
+                                                normal.dot(&fluid.velocities[*particle_id]);
 
-                                                if vel_err > na::zero::<f32>() {
-                                                    fluid.velocities[*particle_id] -=
-                                                        *normal * vel_err;
-                                                }
-                                            } else if depth > h + prediction {
-                                                continue;
+                                            if vel_err > na::zero::<f32>() {
+                                                fluid.velocities[*particle_id] -= *normal * vel_err;
                                             }
+                                        } else if depth > h + prediction {
+                                            continue;
                                         }
+
+                                        let normal = if proj.is_inside { -normal } else { normal };
+                                        let pos = proj.point - *normal * particle_radius;
 
                                         let velocity =
                                             body.map(|b| b.velocity_at_point(&proj.point));
@@ -242,7 +245,7 @@ impl<'a> CouplingManager for ColliderCouplingManager<'a> {
                                         boundary
                                             .velocities
                                             .push(velocity.unwrap_or(Vector::zeros()));
-                                        boundary.positions.push(proj.point);
+                                        boundary.positions.push(pos);
                                         boundary.volumes.push(na::zero::<f32>());
                                         coupling.features.push(feature);
                                     }
