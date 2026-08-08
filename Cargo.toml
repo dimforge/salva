@@ -22,6 +22,16 @@ salva2d-f64 = { path = "./build/salva2d-f64" }
 salva3d = { path = "./build/salva3d" }
 salva3d-f64 = { path = "./build/salva3d-f64" }
 
+## TODO: remove these patches once a rapier release ships
+#rapier2d = { git = "file:///Users/sebcrozet/work/rapier", branch = "testbed-pub-window" }
+#rapier2d-f64 = { git = "file:///Users/sebcrozet/work/rapier", branch = "testbed-pub-window" }
+#rapier3d = { git = "file:///Users/sebcrozet/work/rapier", branch = "testbed-pub-window" }
+#rapier3d-f64 = { git = "file:///Users/sebcrozet/work/rapier", branch = "testbed-pub-window" }
+#rapier_testbed2d = { git = "file:///Users/sebcrozet/work/rapier", branch = "testbed-pub-window" }
+#rapier_testbed2d-f64 = { git = "file:///Users/sebcrozet/work/rapier", branch = "testbed-pub-window" }
+#rapier_testbed3d = { git = "file:///Users/sebcrozet/work/rapier", branch = "testbed-pub-window" }
+#rapier_testbed3d-f64 = { git = "file:///Users/sebcrozet/work/rapier", branch = "testbed-pub-window" }
+
 #parry2d = { git = "https://github.com/sebcrozet/parry" }
 #parry3d = { git = "https://github.com/sebcrozet/parry" }
 

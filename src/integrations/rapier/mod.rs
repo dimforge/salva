@@ -7,11 +7,6 @@ pub use fluids_pipeline::{
 
 mod fluids_pipeline;
 
-#[cfg(feature = "rapier-harness")]
-mod harness_plugin;
-#[cfg(feature = "rapier-harness")]
-pub use harness_plugin::FluidsHarnessPlugin;
-
 #[cfg(feature = "rapier-testbed")]
 mod testbed_plugin;
 #[cfg(feature = "rapier-testbed")]

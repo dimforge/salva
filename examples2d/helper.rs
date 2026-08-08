@@ -1,4 +1,4 @@
-use na::Vector2;
+use nalgebra::Vector2;
 use salva2d::object::{interaction_groups::InteractionGroups, Fluid};
 
 pub fn cube_fluid(ni: usize, nj: usize, particle_rad: f32, density: f32) -> Fluid {

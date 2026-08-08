@@ -1,9 +1,11 @@
 extern crate nalgebra as na;
 
 use na::{Isometry3, Vector3};
-use rapier3d::dynamics::{ImpulseJointSet, MultibodyJointSet, RigidBodyBuilder, RigidBodySet};
-use rapier3d::geometry::{ColliderBuilder, ColliderSet};
-use rapier_testbed3d::{Example, Testbed, TestbedApp};
+use rapier3d::dynamics::RigidBodyBuilder;
+use rapier3d::geometry::ColliderBuilder;
+use rapier3d::math::Vector;
+use rapier3d::pipeline::PhysicsWorld;
+use rapier_testbed3d::TestbedViewer;
 use salva3d::integrations::rapier::{
     ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
 };
@@ -18,18 +20,17 @@ mod helper;
 const PARTICLE_RADIUS: f32 = 0.005;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
-pub fn init_world(testbed: &mut Testbed) {
+pub async fn run(viewer: &mut TestbedViewer) -> anyhow::Result<()> {
     /*
      * World
      */
     // We want to simulate a 1cm³ droplet. We use the spacial unit 1 = 1dm.
     // Therefore each particles must have a diameter of 0.005, and the gravity is -0.981 instead of -9.81.
-    let gravity = Vector3::y() * -0.981;
+    let mut world = PhysicsWorld::new();
+    world.gravity = Vector::Y * -0.981;
+    world.integration_parameters.dt = 1.0 / 200.0;
+
     let mut plugin = FluidsTestbedPlugin::new();
-    let mut bodies = RigidBodySet::new();
-    let mut colliders = ColliderSet::new();
-    let impulse_joints = ImpulseJointSet::new();
-    let multibody_joints = MultibodyJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     /*
@@ -46,14 +47,16 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Vector3::new(0.8, 0.7, 1.0));
 
     // Setup the ground.
-    let ground_handle = bodies.insert(RigidBodyBuilder::fixed().build());
+    let ground_handle = world.bodies.insert(RigidBodyBuilder::fixed().build());
 
     let ground_thickness = 0.02;
     let ground_half_width = 0.15;
 
     let co =
         ColliderBuilder::cuboid(ground_half_width, ground_thickness, ground_half_width).build();
-    let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
+    let co_handle = world
+        .colliders
+        .insert_with_parent(co, ground_handle, &mut world.bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
@@ -65,28 +68,23 @@ pub fn init_world(testbed: &mut Testbed) {
     );
 
     /*
-     * Set up the testbed.
+     * Set up the viewer and run the simulation.
      */
     plugin.set_pipeline(fluids_pipeline);
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
-    plugin.add_to_testbed(testbed);
-    testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world_with_params(
-        bodies,
-        colliders,
-        impulse_joints,
-        multibody_joints,
-        gravity.into(),
-        (),
-    );
-    testbed.integration_parameters_mut().dt = 1.0 / 200.0;
-    testbed.look_at(
-        Vector3::new(0.25, 0.25, 0.25).into(),
-        Vector3::zeros().into(),
-    );
-}
+    viewer.set_world(&mut world);
+    viewer.set_body_wireframe(ground_handle, true);
+    viewer.look_at(Vector::new(0.25, 0.25, 0.25), Vector::ZERO);
 
-fn main() {
-    let testbed = TestbedApp::from_builders(vec![Example::demo("Surface tension", init_world)]);
-    pollster::block_on(testbed.run());
+    while viewer.render_frame(&mut world).await {
+        plugin.update_from_settings(viewer.example_settings_mut());
+        plugin.draw(viewer);
+
+        if viewer.simulating() {
+            world.step();
+            plugin.step(&mut world);
+        }
+    }
+
+    Ok(())
 }

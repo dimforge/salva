@@ -1,30 +1,29 @@
 extern crate nalgebra as na;
 
 use na::{Unit, Vector2, Vector3};
-use rapier2d::dynamics::{ImpulseJointSet, MultibodyJointSet, RigidBodySet};
-use rapier2d::geometry::ColliderSet;
-use rapier_testbed2d::Testbed;
+use rapier2d::math::Vector;
+use rapier2d::pipeline::PhysicsWorld;
+use rapier_testbed2d::TestbedViewer;
 use salva2d::integrations::rapier::{FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin};
 use salva2d::object::{Boundary, Fluid};
 use salva2d::solver::NonPressureForce;
 use std::f32;
 
-const PARTICLE_RADIUS: f32 = 0.025;
-const SMOOTHING_FACTOR: f32 = 2.0;
-
 #[path = "./helper.rs"]
 mod helper;
 
-pub fn init_world(testbed: &mut Testbed) {
+const PARTICLE_RADIUS: f32 = 0.025;
+const SMOOTHING_FACTOR: f32 = 2.0;
+
+pub async fn run(viewer: &mut TestbedViewer) -> anyhow::Result<()> {
     /*
      * World
      */
-    let gravity = Vector2::zeros();
+    let mut world = PhysicsWorld::new();
+    world.gravity = Vector::ZERO;
+    world.integration_parameters.dt = 1.0 / 200.0;
+
     let mut plugin = FluidsTestbedPlugin::new();
-    let bodies = RigidBodySet::new();
-    let colliders = ColliderSet::new();
-    let impulse_joints = ImpulseJointSet::new();
-    let multibody_joints = MultibodyJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     // Liquid.
@@ -42,21 +41,24 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Vector3::new(0.8, 0.7, 1.0));
 
     /*
-     * Set up the testbed.
+     * Set up the viewer and run the simulation.
      */
     plugin.set_pipeline(fluids_pipeline);
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
-    plugin.add_to_testbed(testbed);
-    testbed.set_world_with_params(
-        bodies,
-        colliders,
-        impulse_joints,
-        multibody_joints,
-        gravity.into(),
-        (),
-    );
-    testbed.integration_parameters_mut().dt = 1.0 / 200.0;
-    testbed.look_at(Vector2::zeros().into(), 300.0);
+    viewer.set_world(&mut world);
+    viewer.look_at(Vector::ZERO, 300.0);
+
+    while viewer.render_frame(&mut world).await {
+        plugin.update_from_settings(viewer.example_settings_mut());
+        plugin.draw(viewer);
+
+        if viewer.simulating() {
+            world.step();
+            plugin.step(&mut world);
+        }
+    }
+
+    Ok(())
 }
 
 struct CustomForceField {

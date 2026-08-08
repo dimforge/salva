@@ -1,9 +1,10 @@
 extern crate nalgebra as na;
 
 use na::{Vector2, Vector3};
-use rapier2d::dynamics::{ImpulseJointSet, MultibodyJointSet, RigidBodyBuilder, RigidBodySet};
-use rapier2d::geometry::{Collider, ColliderBuilder, ColliderSet};
-use rapier_testbed2d::Testbed;
+use rapier2d::dynamics::RigidBodyBuilder;
+use rapier2d::geometry::{Collider, ColliderBuilder};
+use rapier2d::pipeline::PhysicsWorld;
+use rapier_testbed2d::TestbedViewer;
 use salva2d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva2d::object::interaction_groups::InteractionGroups;
 use salva2d::object::{Boundary, Fluid};
@@ -13,16 +14,15 @@ use std::f32;
 const PARTICLE_RADIUS: f32 = 0.1;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
-pub fn init_world(testbed: &mut Testbed) {
+pub async fn run(viewer: &mut TestbedViewer) -> anyhow::Result<()> {
     /*
      * World
      */
-    let gravity = Vector2::y() * -9.81;
+    let mut world = PhysicsWorld::new();
+    world.gravity = (Vector2::y() * -9.81).into();
+    world.integration_parameters.dt = 1.0 / 200.0;
+
     let mut plugin = FluidsTestbedPlugin::new();
-    let mut bodies = RigidBodySet::new();
-    let mut colliders = ColliderSet::new();
-    let impulse_joints = ImpulseJointSet::new();
-    let multibody_joints = MultibodyJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     // Liquid.
@@ -90,9 +90,11 @@ pub fn init_world(testbed: &mut Testbed) {
         .collect();
 
     let rigid_body = RigidBodyBuilder::fixed().build();
-    let handle = bodies.insert(rigid_body);
+    let handle = world.bodies.insert(rigid_body);
     let collider = ColliderBuilder::heightfield(heights, ground_size.into()).build();
-    let co_handle = colliders.insert_with_parent(collider, handle, &mut bodies);
+    let co_handle = world
+        .colliders
+        .insert_with_parent(collider, handle, &mut world.bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
@@ -103,48 +105,55 @@ pub fn init_world(testbed: &mut Testbed) {
     );
 
     /*
-     * Create a dynamic rigid-bodies.
+     * Create the dynamic rigid-bodies.
      */
     let rad = 0.4;
-    let mut build_rigid_body_with_coupling = |x, y, collider: Collider| {
-        let samples =
-            salva2d::sampling::shape_surface_ray_sample(collider.shape(), PARTICLE_RADIUS).unwrap();
-        let rb = RigidBodyBuilder::dynamic()
-            .translation(Vector2::new(x, y).into())
-            .build();
-        let rb_handle = bodies.insert(rb);
-        let co_handle = colliders.insert_with_parent(collider, rb_handle, &mut bodies);
-        let bo_handle = fluids_pipeline
-            .liquid_world
-            .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
-        fluids_pipeline.coupling.register_coupling(
-            bo_handle,
-            co_handle,
-            ColliderSampling::StaticSampling(samples.clone()),
-        );
-    };
+    let mut build_rigid_body_with_coupling =
+        |world: &mut PhysicsWorld, x, y, collider: Collider| {
+            let samples =
+                salva2d::sampling::shape_surface_ray_sample(collider.shape(), PARTICLE_RADIUS)
+                    .unwrap();
+            let rb = RigidBodyBuilder::dynamic()
+                .translation(Vector2::new(x, y).into())
+                .build();
+            let rb_handle = world.bodies.insert(rb);
+            let co_handle =
+                world
+                    .colliders
+                    .insert_with_parent(collider, rb_handle, &mut world.bodies);
+            let bo_handle = fluids_pipeline
+                .liquid_world
+                .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
+            fluids_pipeline.coupling.register_coupling(
+                bo_handle,
+                co_handle,
+                ColliderSampling::StaticSampling(samples.clone()),
+            );
+        };
 
     let co1 = ColliderBuilder::cuboid(rad, rad).density(0.8).build();
     let co2 = ColliderBuilder::ball(rad).density(0.8).build();
     let co3 = ColliderBuilder::capsule_y(rad, rad).density(0.8).build();
-    build_rigid_body_with_coupling(0.0, 10.0, co1);
-    build_rigid_body_with_coupling(-2.0, 10.0, co2);
-    build_rigid_body_with_coupling(2.0, 10.5, co3);
+    build_rigid_body_with_coupling(&mut world, 0.0, 10.0, co1);
+    build_rigid_body_with_coupling(&mut world, -2.0, 10.0, co2);
+    build_rigid_body_with_coupling(&mut world, 2.0, 10.5, co3);
 
     /*
-     * Set up the testbed.
+     * Set up the viewer and run the simulation.
      */
     plugin.set_pipeline(fluids_pipeline);
-    plugin.add_to_testbed(testbed);
-    testbed.set_world_with_params(
-        bodies,
-        colliders,
-        impulse_joints,
-        multibody_joints,
-        gravity.into(),
-        (),
-    );
-    testbed.integration_parameters_mut().dt = 1.0 / 200.0;
-    testbed.look_at(Vector2::new(0.0, 5.5).into(), 50.0);
-    //    testbed.enable_boundary_particles_rendering(true);
+    viewer.set_world(&mut world);
+    viewer.look_at(Vector2::new(0.0, 5.5).into(), 50.0);
+
+    while viewer.render_frame(&mut world).await {
+        plugin.update_from_settings(viewer.example_settings_mut());
+        plugin.draw(viewer);
+
+        if viewer.simulating() {
+            world.step();
+            plugin.step(&mut world);
+        }
+    }
+
+    Ok(())
 }

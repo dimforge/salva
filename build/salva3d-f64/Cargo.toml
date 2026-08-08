@@ -6,7 +6,7 @@ description = "3-dimensional particle-based fluid dynamics in Rust."
 documentation = "https://salva.rs/rustdoc/salva3d/index.html"
 homepage = "https://salva.rs"
 repository = "https://github.com/dimforge/salva"
-readme = "README.md"
+readme = "../../README.md"
 keywords = [ "physics", "dynamics", "particles", "fluids", "SPH" ]
 license = "Apache-2.0"
 edition = "2021"
@@ -18,11 +18,9 @@ f64 = [ ]
 parallel = [ "rayon" ]
 rapier = [ "parry", "rapier3d-f64" ]
 sampling = [ "rapier" ]
-rapier-testbed = [ "rapier", "rapier_testbed3d", "graphics" ]
-rapier-harness = [ "rapier-testbed" ]
+rapier-testbed = [ "rapier", "rapier_testbed3d-f64", "kiss3d" ]
 parry = [ "parry3d-f64" ]
 wasm-bindgen = [ ]
-graphics = [ "bevy", "bevy_egui" ]
 
 [lints]
 rust.unexpected_cfgs = { level = "warn", check-cfg = [
@@ -44,17 +42,9 @@ rayon = { version = "1.8", optional = true }
 
 nalgebra = { version = "0.35", features = ["convert-glam033"] }
 glamx = { version = "0.3", features = ["nalgebra"] }
-parry3d-f64 = { version = "0.28", optional = true }
-rapier3d-f64 = { version = "0.33", optional = true }
-# TODO update it to f64
-rapier_testbed3d = { version = "0.33", optional = true }
+parry3d-f64 = { version = "0.30", optional = true }
+rapier3d-f64 = { version = "0.35.1", optional = true }
+rapier_testbed3d-f64 = { version = "0.35.1", optional = true }
+kiss3d = { version = "0.45", optional = true }
 
-bevy_egui = { version = "0.26", features = ["immutable_ctx"], optional = true }
 bitflags = "2"
-
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-bevy = { version = "0.13", default-features = false, features = ["bevy_winit", "bevy_render", "x11"], optional = true }
-
-# Dependencies for WASM only.
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-bevy = { version = "0.13", default-features = false, features = ["bevy_winit", "bevy_render"], optional = true }

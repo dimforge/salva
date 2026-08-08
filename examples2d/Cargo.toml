@@ -2,31 +2,24 @@
 name = "examples2d"
 version = "0.1.0"
 authors = ["Sébastien Crozet <developer@crozet.re>"]
-edition = "2018"
+edition = "2021"
+publish = false
 
 [features]
 default = ["parallel"]
-parallel = [ "rapier_testbed2d/parallel", "salva2d/parallel" ]
+parallel = ["rapier2d/parallel", "rapier_testbed2d/parallel", "salva2d/parallel"]
 
 [dependencies]
-Inflector  = "0.11"
-nalgebra   = "0"
-parry2d = "0.28"
-rapier2d = "0.33"
-rapier_testbed2d = "0.33"
-parry3d = "0.28"
-bevy = "0.15"
-pollster = "0.4"
+anyhow = "1"
+nalgebra = "0.35"
+parry2d = "0.30"
+rapier2d = "0.35.1"
+rapier_testbed2d = "0.35.1"
+kiss3d = { version = "0.45", features = ["rt_switcher"] }
 
 [dependencies.salva2d]
 path = "../build/salva2d"
 features = ["rapier", "rapier-testbed", "sampling"]
-
-[target.wasm32-unknown-unknown.dependencies]
-stdweb = "0.4"
-
-[target.wasm32-unknown-emscripten.dependencies]
-stdweb = "0.4"
 
 [[bin]]
 name = "all_examples2"

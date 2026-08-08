@@ -1,9 +1,10 @@
 extern crate nalgebra as na;
 
 use na::{Isometry2, Vector2, Vector3};
-use rapier2d::dynamics::{ImpulseJointSet, MultibodyJointSet, RigidBodyBuilder, RigidBodySet};
-use rapier2d::geometry::{ColliderBuilder, ColliderSet};
-use rapier_testbed2d::Testbed;
+use rapier2d::dynamics::RigidBodyBuilder;
+use rapier2d::geometry::ColliderBuilder;
+use rapier2d::pipeline::PhysicsWorld;
+use rapier_testbed2d::TestbedViewer;
 use salva2d::integrations::rapier::{
     ColliderSampling, FluidsPipeline, FluidsRenderingMode, FluidsTestbedPlugin,
 };
@@ -18,16 +19,15 @@ mod helper;
 const PARTICLE_RADIUS: f32 = 0.1;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
-pub fn init_world(testbed: &mut Testbed) {
+pub async fn run(viewer: &mut TestbedViewer) -> anyhow::Result<()> {
     /*
      * World
      */
-    let gravity = Vector2::y() * -9.81;
+    let mut world = PhysicsWorld::new();
+    world.gravity = (Vector2::y() * -9.81).into();
+    world.integration_parameters.dt = 1.0 / 200.0;
+
     let mut plugin = FluidsTestbedPlugin::new();
-    let mut bodies = RigidBodySet::new();
-    let mut colliders = ColliderSet::new();
-    let impulse_joints = ImpulseJointSet::new();
-    let multibody_joints = MultibodyJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     let ground_thickness = 0.2;
@@ -64,9 +64,11 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Vector3::new(0.6, 0.8, 0.5));
 
     // Setup the ground.
-    let ground_handle = bodies.insert(RigidBodyBuilder::fixed().build());
+    let ground_handle = world.bodies.insert(RigidBodyBuilder::fixed().build());
     let co = ColliderBuilder::cuboid(ground_half_width, ground_thickness).build();
-    let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
+    let co_handle = world
+        .colliders
+        .insert_with_parent(co, ground_handle, &mut world.bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
@@ -77,19 +79,22 @@ pub fn init_world(testbed: &mut Testbed) {
     );
 
     /*
-     * Set up the testbed.
+     * Set up the viewer and run the simulation.
      */
     plugin.set_pipeline(fluids_pipeline);
     plugin.set_fluid_rendering_mode(FluidsRenderingMode::VelocityColor { min: 0.0, max: 5.0 });
-    plugin.add_to_testbed(testbed);
-    testbed.set_world_with_params(
-        bodies,
-        colliders,
-        impulse_joints,
-        multibody_joints,
-        gravity.into(),
-        (),
-    );
-    testbed.integration_parameters_mut().dt = 1.0 / 200.0;
-    testbed.look_at(Vector2::new(0.0, 1.0).into(), 100.0);
+    viewer.set_world(&mut world);
+    viewer.look_at(Vector2::new(0.0, 1.0).into(), 100.0);
+
+    while viewer.render_frame(&mut world).await {
+        plugin.update_from_settings(viewer.example_settings_mut());
+        plugin.draw(viewer);
+
+        if viewer.simulating() {
+            world.step();
+            plugin.step(&mut world);
+        }
+    }
+
+    Ok(())
 }

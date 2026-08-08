@@ -1,20 +1,16 @@
 use crate::math::{Real, Vector};
 use crate::object::{BoundaryHandle, FluidHandle};
 #[cfg(feature = "dim2")]
-use kiss3d::prelude::Vec2;
+use kiss3d::prelude::{InstanceData2d as InstanceData, Mat2, SceneNode2d as SceneNode, Vec2};
 #[cfg(feature = "dim3")]
-use kiss3d::prelude::Vec3;
+use kiss3d::prelude::{InstanceData3d as InstanceData, Mat3, SceneNode3d as SceneNode, Vec3};
 use kiss3d::{color::Color, window::Window};
 use na::Vector3;
-use rapier_testbed::{
-    egui, harness::Harness, settings::ExampleSettings, GraphicsManager, PhysicsState, Testbed,
-    TestbedPlugin,
-};
+use rapier::pipeline::PhysicsWorld;
+use rapier_testbed::{egui, settings::ExampleSettings, TestbedViewer};
 
 use crate::integrations::rapier::{DfsphParameters, FluidsPipeline};
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 pub const FLUIDS_RENDERING_MAP: [(&str, FluidsRenderingMode); 3] = [
     ("Static", FluidsRenderingMode::StaticColor),
@@ -63,25 +59,38 @@ pub enum FluidsRenderingMode {
     },
 }
 
-/// A user-defined callback executed at each frame.
-pub type FluidCallback = Box<dyn FnMut(&mut Harness, &mut FluidsPipeline)>;
-
-/// A plugin for stepping fluids inside the Rapier testbed.
+/// Fluid simulation and rendering support for the Rapier testbed.
+///
+/// The testbed no longer has a plugin system: the example owns its render
+/// loop and calls this helper explicitly, e.g.:
+///
+/// ```ignore
+/// while viewer.render_frame(&mut world).await {
+///     plugin.update_from_settings(viewer.example_settings_mut());
+///     plugin.draw(viewer);
+///     if viewer.simulating() {
+///         world.step();
+///         plugin.step(&mut world);
+///     }
+/// }
+/// ```
 pub struct FluidsTestbedPlugin {
     /// Whether to render the boundary particles.
     pub render_boundary_particles: bool,
     /// Rendering mode of fluid particles.
     pub fluids_rendering_mode: FluidsRenderingMode,
-    callbacks: Vec<FluidCallback>,
-    step_time: f64,
     fluids_pipeline: FluidsPipeline,
     dfsph_parameters: DfsphParameters,
     f2color: HashMap<FluidHandle, Vector3<Real>>,
     boundary2color: HashMap<BoundaryHandle, Vector3<Real>>,
     default_fluid_color: Vector3<Real>,
+    // Scene nodes holding one instance (a low-resolution sphere) per particle.
+    // They are (re)created lazily on the first `draw` after each example
+    // (re)start, since the testbed clears the whole kiss3d scene between
+    // examples.
+    fluids_node: Option<SceneNode>,
+    boundaries_node: Option<SceneNode>,
 }
-
-struct SharedFluidsTestbedPlugin(Rc<RefCell<FluidsTestbedPlugin>>);
 
 impl FluidsTestbedPlugin {
     /// Initializes the plugin.
@@ -89,39 +98,14 @@ impl FluidsTestbedPlugin {
         Self {
             render_boundary_particles: false,
             fluids_rendering_mode: FluidsRenderingMode::StaticColor,
-            step_time: 0.0,
-            callbacks: Vec::new(),
             fluids_pipeline: FluidsPipeline::new(0.025, 2.0),
             dfsph_parameters: DfsphParameters::default(),
             f2color: HashMap::new(),
             boundary2color: HashMap::new(),
             default_fluid_color: Vector3::new(0.0, 0.0, 0.5),
+            fluids_node: None,
+            boundaries_node: None,
         }
-    }
-
-    /// Adds a callback to be executed at each frame.
-    pub fn add_callback(&mut self, f: impl FnMut(&mut Harness, &mut FluidsPipeline) + 'static) {
-        self.callbacks.push(Box::new(f))
-    }
-
-    /// Adds this plugin to the Rapier testbed and registers fluid rendering.
-    pub fn add_to_testbed(self, testbed: &mut Testbed) {
-        let plugin = Rc::new(RefCell::new(self));
-        let renderer = Rc::clone(&plugin);
-
-        testbed.add_callback(move |graphics, _physics, _events, _run_state| {
-            if let Some(graphics) = graphics {
-                let mut renderer = renderer.borrow_mut();
-
-                if let Some(settings) = graphics.settings.as_deref_mut() {
-                    renderer.update_from_settings(settings);
-                }
-
-                renderer.draw_fluids(graphics.window);
-            }
-        });
-
-        testbed.add_plugin(SharedFluidsTestbedPlugin(plugin));
     }
 
     /// Sets the fluids pipeline used by the testbed.
@@ -131,9 +115,24 @@ impl FluidsTestbedPlugin {
         self.refresh_dfsph_parameters();
     }
 
+    /// The fluids pipeline managed by this plugin.
+    pub fn pipeline(&self) -> &FluidsPipeline {
+        &self.fluids_pipeline
+    }
+
+    /// Mutable access to the fluids pipeline managed by this plugin.
+    pub fn pipeline_mut(&mut self) -> &mut FluidsPipeline {
+        &mut self.fluids_pipeline
+    }
+
     /// Sets the color used to render the specified fluid.
     pub fn set_fluid_color(&mut self, fluid: FluidHandle, color: Vector3<Real>) {
         let _ = self.f2color.insert(fluid, color);
+    }
+
+    /// Sets the color used to render the specified boundary.
+    pub fn set_boundary_color(&mut self, boundary: BoundaryHandle, color: Vector3<Real>) {
+        let _ = self.boundary2color.insert(boundary, color);
     }
 
     /// Sets the way fluids are rendered.
@@ -144,6 +143,94 @@ impl FluidsTestbedPlugin {
     /// Enables the rendering of boundary particles.
     pub fn enable_boundary_particles_rendering(&mut self, enabled: bool) {
         self.render_boundary_particles = enabled;
+    }
+
+    /// Steps the fluids simulation, coupling it with the rigid-bodies of `world`.
+    ///
+    /// Call this right after `world.step()`.
+    pub fn step(&mut self, world: &mut PhysicsWorld) {
+        let dt = world.integration_parameters.dt;
+        self.fluids_pipeline
+            .step(&world.gravity, dt, &world.colliders, &mut world.bodies);
+    }
+
+    /// Renders the fluid (and optionally boundary) particles as instanced
+    /// low-resolution spheres (circles in 2D).
+    ///
+    /// Call this once per frame.
+    pub fn draw(&mut self, viewer: &mut TestbedViewer) {
+        let draw_velocities = matches!(
+            self.fluids_rendering_mode,
+            FluidsRenderingMode::VelocityArrows { .. }
+        );
+
+        // Collect one instance per particle (and the velocity arrows, drawn
+        // separately in immediate mode).
+        let mut fluid_instances = Vec::new();
+        let mut arrows = Vec::new();
+
+        for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
+            let diameter = Self::particle_diameter(fluid.particle_radius());
+
+            for (point, velocity) in fluid.positions.iter().zip(fluid.velocities.iter()) {
+                let color = self.fluid_color(handle, velocity);
+                fluid_instances.push(Self::particle_instance(point, color, diameter));
+
+                if draw_velocities && velocity.norm_squared() > na::zero() {
+                    arrows.push((*point, *velocity, color));
+                }
+            }
+        }
+
+        let mut boundary_instances = Vec::new();
+
+        if self.render_boundary_particles {
+            let default_color = Vector3::repeat(na::convert::<_, Real>(0.5));
+            let diameter =
+                Self::particle_diameter(self.fluids_pipeline.liquid_world.particle_radius());
+
+            for (handle, boundary) in self.fluids_pipeline.liquid_world.boundaries().iter() {
+                let color =
+                    Self::color(*self.boundary2color.get(&handle).unwrap_or(&default_color));
+
+                for point in &boundary.positions {
+                    boundary_instances.push(Self::particle_instance(point, color, diameter));
+                }
+            }
+        }
+
+        let window = viewer.window_mut();
+        for (point, velocity, color) in arrows {
+            Self::draw_velocity(window, &point, &velocity, color);
+        }
+
+        let scene = viewer.graphics_mut().scene_mut();
+
+        if self.fluids_node.is_none() {
+            self.fluids_node = Some(Self::particles_node(scene));
+        }
+        let _ = self
+            .fluids_node
+            .as_mut()
+            .unwrap()
+            .set_instances(&fluid_instances);
+
+        // An empty instance list renders nothing, so this also hides the
+        // boundaries when their rendering is disabled.
+        if self.boundaries_node.is_none() && !boundary_instances.is_empty() {
+            self.boundaries_node = Some(Self::particles_node(scene));
+        }
+        if let Some(boundaries_node) = &mut self.boundaries_node {
+            let _ = boundaries_node.set_instances(&boundary_instances);
+        }
+    }
+
+    /// A string summarizing the fluids simulation timings.
+    pub fn profiling_string(&self) -> String {
+        format!(
+            "Fluids: {:.2}ms",
+            self.fluids_pipeline.liquid_world.counters.step_time.time()
+        )
     }
 
     fn color(color: Vector3<Real>) -> Color {
@@ -189,8 +276,8 @@ impl FluidsTestbedPlugin {
         )
     }
 
-    fn particle_size(radius: Real) -> f32 {
-        (radius as f32 * 300.0).clamp(2.5, 8.0)
+    fn particle_diameter(radius: Real) -> f32 {
+        radius as f32 * 2.0
     }
 
     fn refresh_dfsph_parameters(&mut self) {
@@ -220,7 +307,10 @@ impl FluidsTestbedPlugin {
         value
     }
 
-    fn update_from_settings(&mut self, settings: &mut ExampleSettings) {
+    /// Registers and reads the fluid-related settings of the testbed's settings panel.
+    ///
+    /// Call this once per frame with `viewer.example_settings_mut()`.
+    pub fn update_from_settings(&mut self, settings: &mut ExampleSettings) {
         self.render_boundary_particles =
             settings.get_or_set_bool(SETTINGS_RENDER_BOUNDARIES, self.render_boundary_particles);
 
@@ -286,6 +376,33 @@ impl FluidsTestbedPlugin {
         }
     }
 
+    /// Draws an egui window with the fluid rendering options.
+    ///
+    /// Call this once per frame with `viewer.egui_context()`. This is an
+    /// alternative to [`Self::update_from_settings`] for examples that prefer
+    /// a dedicated window over the testbed's settings panel.
+    pub fn update_ui(&mut self, ui_context: &egui::Context) {
+        let _ = egui::Window::new("Fluids").show(ui_context, |ui| {
+            let _ = ui.checkbox(
+                &mut self.render_boundary_particles,
+                "Render boundary particles",
+            );
+
+            let selected = FLUIDS_RENDERING_MAP
+                .iter()
+                .find_map(|(name, mode)| (*mode == self.fluids_rendering_mode).then_some(*name))
+                .unwrap_or("Custom");
+
+            let _ = egui::ComboBox::from_label("Rendering mode")
+                .selected_text(selected)
+                .show_ui(ui, |ui| {
+                    for (name, mode) in FLUIDS_RENDERING_MAP {
+                        let _ = ui.selectable_value(&mut self.fluids_rendering_mode, mode, name);
+                    }
+                });
+        });
+    }
+
     #[cfg(feature = "dim2")]
     fn point(point: &Vector<Real>) -> Vec2 {
         Vec2::new(point.x as f32, point.y as f32)
@@ -296,14 +413,40 @@ impl FluidsTestbedPlugin {
         Vec3::new(point.x as f32, point.y as f32, point.z as f32)
     }
 
+    /// Creates the unit-diameter node whose instances render the particles.
     #[cfg(feature = "dim2")]
-    fn draw_particle(window: &mut Window, point: &Vector<Real>, color: Color, size: f32) {
-        window.draw_point_2d(Self::point(point), color, size);
+    fn particles_node(scene: &mut SceneNode) -> SceneNode {
+        let mut node = scene.add_circle_with_subdiv(0.5, 12);
+        let _ = node.set_instances(&[]);
+        node
+    }
+
+    /// Creates the unit-diameter node whose instances render the particles.
+    #[cfg(feature = "dim3")]
+    fn particles_node(scene: &mut SceneNode) -> SceneNode {
+        let mut node = scene.add_sphere_with_subdiv(0.5, 8, 4);
+        let _ = node.set_instances(&[]);
+        node
+    }
+
+    #[cfg(feature = "dim2")]
+    fn particle_instance(point: &Vector<Real>, color: Color, diameter: f32) -> InstanceData {
+        InstanceData {
+            position: Self::point(point),
+            deformation: Mat2::from_diagonal(Vec2::splat(diameter)),
+            color: [color.r, color.g, color.b, color.a],
+            ..Default::default()
+        }
     }
 
     #[cfg(feature = "dim3")]
-    fn draw_particle(window: &mut Window, point: &Vector<Real>, color: Color, size: f32) {
-        window.draw_point(Self::point(point), color, size);
+    fn particle_instance(point: &Vector<Real>, color: Color, diameter: f32) -> InstanceData {
+        InstanceData {
+            position: Self::point(point),
+            deformation: Mat3::from_diagonal(Vec3::splat(diameter)),
+            color,
+            ..Default::default()
+        }
     }
 
     #[cfg(feature = "dim2")]
@@ -327,156 +470,10 @@ impl FluidsTestbedPlugin {
         let end = *point + *velocity * na::convert::<_, Real>(0.02);
         window.draw_line(Self::point(point), Self::point(&end), color, 1.5, false);
     }
-
-    fn draw_fluids(&self, window: &mut Window) {
-        let draw_velocities = matches!(
-            self.fluids_rendering_mode,
-            FluidsRenderingMode::VelocityArrows { .. }
-        );
-
-        for (handle, fluid) in self.fluids_pipeline.liquid_world.fluids().iter() {
-            let size = Self::particle_size(fluid.particle_radius());
-
-            for (point, velocity) in fluid.positions.iter().zip(fluid.velocities.iter()) {
-                let color = self.fluid_color(handle, velocity);
-                Self::draw_particle(window, point, color, size);
-
-                if draw_velocities && velocity.norm_squared() > na::zero() {
-                    Self::draw_velocity(window, point, velocity, color);
-                }
-            }
-        }
-
-        if self.render_boundary_particles {
-            let default_color = Vector3::repeat(na::convert::<_, Real>(0.5));
-            let size = Self::particle_size(self.fluids_pipeline.liquid_world.particle_radius());
-
-            for (handle, boundary) in self.fluids_pipeline.liquid_world.boundaries().iter() {
-                let color =
-                    Self::color(*self.boundary2color.get(&handle).unwrap_or(&default_color));
-
-                for point in &boundary.positions {
-                    Self::draw_particle(window, point, color, size);
-                }
-            }
-        }
-    }
 }
 
-impl TestbedPlugin for FluidsTestbedPlugin {
-    fn init_plugin(&mut self) {}
-
-    fn init_graphics(
-        &mut self,
-        _graphics: &mut GraphicsManager,
-        _window: &mut Window,
-        _harness: &mut Harness,
-    ) {
-    }
-
-    fn clear_graphics(&mut self, _graphics: &mut GraphicsManager, _window: &mut Window) {}
-
-    fn run_callbacks(&mut self, harness: &mut Harness) {
-        for f in &mut self.callbacks {
-            f(harness, &mut self.fluids_pipeline)
-        }
-    }
-
-    fn step(&mut self, physics: &mut PhysicsState) {
-        let dt = physics.integration_parameters.dt;
-        self.fluids_pipeline.step(
-            &physics.gravity,
-            dt,
-            &physics.colliders,
-            &mut physics.bodies,
-        );
-    }
-
-    fn draw(
-        &mut self,
-        _graphics: &mut GraphicsManager,
-        window: &mut Window,
-        _harness: &mut Harness,
-    ) {
-        self.draw_fluids(window);
-    }
-
-    fn update_ui(
-        &mut self,
-        ui_context: &egui::Context,
-        _harness: &mut Harness,
-        _graphics: &mut GraphicsManager,
-        _window: &mut Window,
-    ) {
-        let _ = egui::Window::new("Fluids").show(ui_context, |ui| {
-            let _ = ui.checkbox(
-                &mut self.render_boundary_particles,
-                "Render boundary particles",
-            );
-
-            let selected = FLUIDS_RENDERING_MAP
-                .iter()
-                .find_map(|(name, mode)| (*mode == self.fluids_rendering_mode).then_some(*name))
-                .unwrap_or("Custom");
-
-            let _ = egui::ComboBox::from_label("Rendering mode")
-                .selected_text(selected)
-                .show_ui(ui, |ui| {
-                    for (name, mode) in FLUIDS_RENDERING_MAP {
-                        let _ = ui.selectable_value(&mut self.fluids_rendering_mode, mode, name);
-                    }
-                });
-        });
-    }
-
-    fn profiling_string(&self) -> String {
-        format!("Fluids: {:.2}ms", self.step_time)
-    }
-}
-
-impl TestbedPlugin for SharedFluidsTestbedPlugin {
-    fn init_plugin(&mut self) {
-        self.0.borrow_mut().init_plugin();
-    }
-
-    fn init_graphics(
-        &mut self,
-        graphics: &mut GraphicsManager,
-        window: &mut Window,
-        harness: &mut Harness,
-    ) {
-        self.0.borrow_mut().init_graphics(graphics, window, harness);
-    }
-
-    fn clear_graphics(&mut self, graphics: &mut GraphicsManager, window: &mut Window) {
-        self.0.borrow_mut().clear_graphics(graphics, window);
-    }
-
-    fn run_callbacks(&mut self, harness: &mut Harness) {
-        self.0.borrow_mut().run_callbacks(harness);
-    }
-
-    fn step(&mut self, physics: &mut PhysicsState) {
-        self.0.borrow_mut().step(physics);
-    }
-
-    fn draw(&mut self, graphics: &mut GraphicsManager, window: &mut Window, harness: &mut Harness) {
-        self.0.borrow_mut().draw(graphics, window, harness);
-    }
-
-    fn update_ui(
-        &mut self,
-        ui_context: &egui::Context,
-        harness: &mut Harness,
-        graphics: &mut GraphicsManager,
-        window: &mut Window,
-    ) {
-        self.0
-            .borrow_mut()
-            .update_ui(ui_context, harness, graphics, window);
-    }
-
-    fn profiling_string(&self) -> String {
-        self.0.borrow().profiling_string()
+impl Default for FluidsTestbedPlugin {
+    fn default() -> Self {
+        Self::new()
     }
 }

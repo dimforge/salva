@@ -1,13 +1,14 @@
+//! Headless run: builds a fluid cube over a walled ground and steps the
+//! coupled rapier + salva simulation without any window or testbed.
+
 extern crate nalgebra as na;
 
-use na::{Isometry3, Vector3};
-use rapier3d::geometry::{ColliderBuilder, ColliderSet, SharedShape};
-use rapier3d::{
-    dynamics::{RigidBodyBuilder, RigidBodySet},
-    prelude::{ImpulseJointSet, MultibodyJointSet},
-};
-use rapier_testbed3d::harness::{Harness, RapierBroadPhaseType};
-use salva3d::integrations::rapier::{ColliderSampling, FluidsHarnessPlugin, FluidsPipeline};
+use na::Isometry3;
+use rapier3d::dynamics::RigidBodyBuilder;
+use rapier3d::geometry::{ColliderBuilder, SharedShape};
+use rapier3d::math::{Pose, Vector};
+use rapier3d::pipeline::PhysicsWorld;
+use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline};
 use salva3d::object::interaction_groups::InteractionGroups;
 use salva3d::object::Boundary;
 use salva3d::solver::ArtificialViscosity;
@@ -19,16 +20,13 @@ mod helper;
 const PARTICLE_RADIUS: f32 = 0.025;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
-pub fn init_world(harness: &mut Harness) {
+fn main() {
     /*
      * World
      */
-
-    let gravity = Vector3::y() * -9.81;
-    let mut bodies = RigidBodySet::new();
-    let mut colliders = ColliderSet::new();
-    let impulse_joints = ImpulseJointSet::new();
-    let multibody_joints = MultibodyJointSet::new();
+    let mut world = PhysicsWorld::new();
+    world.gravity = Vector::Y * -9.81;
+    world.integration_parameters.dt = 1.0 / 200.0;
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     // Parameters of the ground.
@@ -55,28 +53,30 @@ pub fn init_world(harness: &mut Harness) {
     let wall_shape = SharedShape::cuboid(ground_thickness, ground_half_height, ground_half_width);
 
     let ground_body = RigidBodyBuilder::fixed().build();
-    let ground_handle = bodies.insert(ground_body);
+    let ground_handle = world.bodies.insert(ground_body);
 
     let wall_poses = [
-        Isometry3::new(
-            Vector3::new(0.0, ground_half_height, ground_half_width),
-            Vector3::y() * (f32::consts::PI / 2.0),
+        Pose::new(
+            Vector::new(0.0, ground_half_height, ground_half_width),
+            Vector::Y * (f32::consts::PI / 2.0),
         ),
-        Isometry3::new(
-            Vector3::new(0.0, ground_half_height, -ground_half_width),
-            Vector3::y() * (f32::consts::PI / 2.0),
+        Pose::new(
+            Vector::new(0.0, ground_half_height, -ground_half_width),
+            Vector::Y * (f32::consts::PI / 2.0),
         ),
-        Isometry3::translation(ground_half_width, ground_half_height, 0.0),
-        Isometry3::translation(-ground_half_width, ground_half_height, 0.0),
+        Pose::from_translation(Vector::new(ground_half_width, ground_half_height, 0.0)),
+        Pose::from_translation(Vector::new(-ground_half_width, ground_half_height, 0.0)),
     ];
 
     for pose in wall_poses.iter() {
         let samples =
             salva3d::sampling::shape_surface_ray_sample(&*wall_shape, PARTICLE_RADIUS).unwrap();
         let co = ColliderBuilder::new(wall_shape.clone())
-            .position((*pose).into())
+            .position(*pose)
             .build();
-        let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
+        let co_handle = world
+            .colliders
+            .insert_with_parent(co, ground_handle, &mut world.bodies);
         let bo_handle = fluids_pipeline
             .liquid_world
             .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
@@ -91,7 +91,9 @@ pub fn init_world(harness: &mut Harness) {
     let samples =
         salva3d::sampling::shape_surface_ray_sample(&*ground_shape, PARTICLE_RADIUS).unwrap();
     let co = ColliderBuilder::new(ground_shape).build();
-    let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
+    let co_handle = world
+        .colliders
+        .insert_with_parent(co, ground_handle, &mut world.bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
@@ -103,25 +105,17 @@ pub fn init_world(harness: &mut Harness) {
     );
 
     /*
-     * Set up the harness.
+     * Run the simulation.
      */
-    let mut plugin = FluidsHarnessPlugin::new();
-    plugin.set_pipeline(fluids_pipeline);
-    harness.add_plugin(plugin);
-    harness.set_world_with_params(
-        bodies,
-        colliders,
-        impulse_joints,
-        multibody_joints,
-        RapierBroadPhaseType::default(),
-        gravity.into(),
-        (),
-    );
-    harness.integration_parameters_mut().dt = 1.0 / 200.0;
-}
-
-fn main() {
-    let harness = &mut Harness::new_empty();
-    init_world(harness);
-    harness.run()
+    let num_steps = 1000;
+    for _ in 0..num_steps {
+        world.step();
+        fluids_pipeline.step(
+            &world.gravity,
+            world.integration_parameters.dt,
+            &world.colliders,
+            &mut world.bodies,
+        );
+    }
+    println!("Ran {num_steps} coupled steps.");
 }

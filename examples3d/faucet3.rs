@@ -1,12 +1,11 @@
 extern crate nalgebra as na;
 
 use na::Vector3;
-use rapier3d::geometry::{ColliderBuilder, ColliderSet};
-use rapier3d::{
-    dynamics::{RigidBodyBuilder, RigidBodySet},
-    prelude::{ImpulseJointSet, MultibodyJointSet},
-};
-use rapier_testbed3d::{Example, Testbed, TestbedApp};
+use rapier3d::dynamics::RigidBodyBuilder;
+use rapier3d::geometry::ColliderBuilder;
+use rapier3d::math::Vector;
+use rapier3d::pipeline::PhysicsWorld;
+use rapier_testbed3d::TestbedViewer;
 use salva3d::integrations::rapier::{ColliderSampling, FluidsPipeline, FluidsTestbedPlugin};
 use salva3d::object::interaction_groups::InteractionGroups;
 use salva3d::object::{Boundary, Fluid};
@@ -19,16 +18,15 @@ mod helper;
 const PARTICLE_RADIUS: f32 = 0.025 / 2.0;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
-pub fn init_world(testbed: &mut Testbed) {
+pub async fn run(viewer: &mut TestbedViewer) -> anyhow::Result<()> {
     /*
      * World
      */
+    let mut world = PhysicsWorld::new();
+    world.gravity = Vector::Y * -9.81;
+    world.integration_parameters.dt = 1.0 / 200.0;
+
     let mut plugin = FluidsTestbedPlugin::new();
-    let gravity = Vector3::y() * -9.81;
-    let mut bodies = RigidBodySet::new();
-    let mut colliders = ColliderSet::new();
-    let impulse_joints = ImpulseJointSet::new();
-    let multibody_joints = MultibodyJointSet::new();
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
 
     let ground_rad = 0.15;
@@ -48,11 +46,13 @@ pub fn init_world(testbed: &mut Testbed) {
     plugin.set_fluid_color(fluid_handle, Vector3::new(0.5, 1.0, 1.0));
 
     // Setup the ground.
-    let ground_handle = bodies.insert(RigidBodyBuilder::fixed().build());
+    let ground_handle = world.bodies.insert(RigidBodyBuilder::fixed().build());
     let co = ColliderBuilder::ball(ground_rad).build();
     let ball_samples =
         salva3d::sampling::shape_surface_ray_sample(co.shape(), PARTICLE_RADIUS).unwrap();
-    let co_handle = colliders.insert_with_parent(co, ground_handle, &mut bodies);
+    let co_handle = world
+        .colliders
+        .insert_with_parent(co, ground_handle, &mut world.bodies);
     let bo_handle = fluids_pipeline
         .liquid_world
         .add_boundary(Boundary::new(Vec::new(), InteractionGroups::default()));
@@ -63,70 +63,62 @@ pub fn init_world(testbed: &mut Testbed) {
         ColliderSampling::StaticSampling(ball_samples),
     );
 
-    // Callback that will be executed on the main loop to generate new particles every second.
-    let mut last_t = 0.0;
-
-    plugin.add_callback(move |harness, fluids_pipeline| {
-        let fluid = fluids_pipeline
-            .liquid_world
-            .fluids_mut()
-            .get_mut(fluid_handle)
-            .unwrap();
-
-        for i in 0..fluid.num_particles() {
-            if fluid.positions[i].y < -2.0 {
-                fluid.delete_particle_at_next_timestep(i);
-            }
-        }
-
-        let t = harness.state.time;
-        if t - last_t < 0.06 {
-            return;
-        }
-
-        last_t = t;
-        let height = 0.6;
-        let diam = PARTICLE_RADIUS * 2.0;
-        let nparticles = 10;
-        let mut particles = Vec::new();
-        let mut velocities = Vec::new();
-        let shift = -nparticles as f32 * PARTICLE_RADIUS;
-        let vel = 0.0;
-
-        for i in 0..nparticles {
-            for j in 0..nparticles {
-                let pos = Vector3::new(i as f32 * diam, height, j as f32 * diam);
-                particles.push(pos + Vector3::new(shift, 0.0, shift));
-                velocities.push(Vector3::y() * vel);
-            }
-        }
-
-        fluid.add_particles(&particles, Some(&velocities));
-    });
-
     /*
-     * Set up the testbed.
+     * Set up the viewer and run the simulation, generating new particles
+     * every few timesteps (was a testbed callback).
      */
     plugin.set_pipeline(fluids_pipeline);
-    plugin.add_to_testbed(testbed);
-    testbed.set_body_wireframe(ground_handle, true);
-    testbed.set_world_with_params(
-        bodies,
-        colliders,
-        impulse_joints,
-        multibody_joints,
-        gravity.into(),
-        (),
-    );
-    testbed.integration_parameters_mut().dt = 1.0 / 200.0;
-    // testbed.enable_boundary_particles_rendering(true);
-    testbed.look_at(
-        Vector3::new(1.5, 0.0, 1.5).into(),
-        Vector3::new(0.0, 0.0, 0.0).into(),
-    );
-}
+    viewer.set_world(&mut world);
+    viewer.set_body_wireframe(ground_handle, true);
+    viewer.look_at(Vector::new(1.5, 0.0, 1.5), Vector::ZERO);
 
-fn main() {
-    let testbed = TestbedApp::from_builders(vec![Example::demo("Boxes", init_world)]);
-    pollster::block_on(testbed.run());
+    let mut time = 0.0f32;
+    let mut last_t = 0.0f32;
+
+    while viewer.render_frame(&mut world).await {
+        plugin.update_from_settings(viewer.example_settings_mut());
+        plugin.draw(viewer);
+
+        if viewer.simulating() {
+            world.step();
+            plugin.step(&mut world);
+            time += world.integration_parameters.dt;
+
+            let fluid = plugin
+                .pipeline_mut()
+                .liquid_world
+                .fluids_mut()
+                .get_mut(fluid_handle)
+                .unwrap();
+
+            for i in 0..fluid.num_particles() {
+                if fluid.positions[i].y < -2.0 {
+                    fluid.delete_particle_at_next_timestep(i);
+                }
+            }
+
+            if time - last_t >= 0.06 {
+                last_t = time;
+                let height = 0.6;
+                let diam = PARTICLE_RADIUS * 2.0;
+                let nparticles = 10;
+                let mut particles = Vec::new();
+                let mut velocities = Vec::new();
+                let shift = -nparticles as f32 * PARTICLE_RADIUS;
+                let vel = 0.0;
+
+                for i in 0..nparticles {
+                    for j in 0..nparticles {
+                        let pos = Vector3::new(i as f32 * diam, height, j as f32 * diam);
+                        particles.push(pos + Vector3::new(shift, 0.0, shift));
+                        velocities.push(Vector3::y() * vel);
+                    }
+                }
+
+                fluid.add_particles(&particles, Some(&velocities));
+            }
+        }
+    }
+
+    Ok(())
 }

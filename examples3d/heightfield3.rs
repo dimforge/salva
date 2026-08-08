@@ -1,10 +1,10 @@
 extern crate nalgebra as na;
 
-use nalgebra::{Isometry3, Vector3};
+use na::{Isometry3, Vector3};
 use rapier3d::geometry::Array2;
 use rapier3d::na::ComplexField;
 use rapier3d::prelude::*;
-use rapier_testbed3d::Testbed;
+use rapier_testbed3d::TestbedViewer;
 use salva3d::integrations::rapier::ColliderSampling;
 use salva3d::integrations::rapier::FluidsPipeline;
 use salva3d::integrations::rapier::FluidsTestbedPlugin;
@@ -17,14 +17,12 @@ mod helper;
 const PARTICLE_RADIUS: f32 = 0.15;
 const SMOOTHING_FACTOR: f32 = 2.0;
 
-pub fn init_world(testbed: &mut Testbed) {
+pub async fn run(viewer: &mut TestbedViewer) -> anyhow::Result<()> {
     /*
      * World
      */
-    let mut bodies = RigidBodySet::new();
-    let mut colliders = ColliderSet::new();
-    let impulse_joints = ImpulseJointSet::new();
-    let multibody_joints = MultibodyJointSet::new();
+    let mut world = PhysicsWorld::new();
+    world.integration_parameters.dt = 1.0 / 200.0;
 
     /* Fluid */
     let mut fluids_pipeline = FluidsPipeline::new(PARTICLE_RADIUS, SMOOTHING_FACTOR);
@@ -70,9 +68,12 @@ pub fn init_world(testbed: &mut Testbed) {
     );
 
     let rigid_body = RigidBodyBuilder::fixed().build();
-    let handle = bodies.insert(rigid_body);
+    let handle = world.bodies.insert(rigid_body);
     let ground_collider = ColliderBuilder::heightfield(heights.clone(), ground_size).build();
-    let ground_handle = colliders.insert_with_parent(ground_collider.clone(), handle, &mut bodies);
+    let ground_handle =
+        world
+            .colliders
+            .insert_with_parent(ground_collider.clone(), handle, &mut world.bodies);
 
     let samples =
         salva3d::sampling::shape_surface_ray_sample(ground_collider.shape(), PARTICLE_RADIUS / 1.5)
@@ -88,17 +89,27 @@ pub fn init_world(testbed: &mut Testbed) {
         ColliderSampling::StaticSampling(samples),
     );
 
+    /*
+     * Set up the viewer and run the simulation.
+     */
     let mut plugin = FluidsTestbedPlugin::new();
     plugin.set_pipeline(fluids_pipeline);
-    plugin.set_fluid_color(fluid_handle, Vector::new(0.8, 0.7, 1.0).into());
+    plugin.set_fluid_color(fluid_handle, Vector3::new(0.8, 0.7, 1.0));
     // plugin.render_boundary_particles = true;
-    plugin.add_to_testbed(testbed);
-    testbed.set_body_wireframe(handle, true);
-    testbed.integration_parameters_mut().dt = 1.0 / 200.0;
-    // testbed.look_at(Vector3::new(3.0, 3.0, 3.0), Vector3::origin());
-    /*
-     * Set up the testbed.
-     */
-    testbed.set_world(bodies, colliders, impulse_joints, multibody_joints);
-    testbed.look_at(Vector::new(100.0, 100.0, 100.0), Vector::ZERO);
+
+    viewer.set_world(&mut world);
+    viewer.set_body_wireframe(handle, true);
+    viewer.look_at(Vector::new(100.0, 100.0, 100.0), Vector::ZERO);
+
+    while viewer.render_frame(&mut world).await {
+        plugin.update_from_settings(viewer.example_settings_mut());
+        plugin.draw(viewer);
+
+        if viewer.simulating() {
+            world.step();
+            plugin.step(&mut world);
+        }
+    }
+
+    Ok(())
 }
