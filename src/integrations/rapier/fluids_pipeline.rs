@@ -1,5 +1,5 @@
 use crate::coupling::CouplingManager;
-use crate::geometry::{HGrid, HGridEntry};
+use crate::geometry::{DeterministicState, HGrid, HGridEntry};
 use crate::object::{BoundaryHandle, BoundarySet, Fluid};
 use crate::solver::{DFSPHSolver, DfsphParameters, PressureSolver};
 use crate::TimestepManager;
@@ -171,14 +171,14 @@ pub struct ColliderCouplingEntry {
 /// Structure managing all the coupling between colliders from rapier with boundaries and fluids from salva.
 pub struct ColliderCouplingSet {
     /// The hashmap containing mappings from ColliderHandle to ColliderCouplingEntry
-    pub entries: HashMap<ColliderHandle, ColliderCouplingEntry>,
+    pub entries: HashMap<ColliderHandle, ColliderCouplingEntry, DeterministicState>,
 }
 
 impl ColliderCouplingSet {
     /// Create a new collider coupling manager.
     pub fn new() -> Self {
         Self {
-            entries: HashMap::new(),
+            entries: HashMap::with_hasher(DeterministicState),
         }
     }
 
