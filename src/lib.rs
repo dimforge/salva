@@ -1,6 +1,6 @@
 /*!
 **Salva** is a 2 and 3-dimensional particle-based fluid simulation engine for games and animations.
-It uses [nalgebra](https://nalgebra.org) for vector/matrix math and can optionally interface with
+It uses [nalgebra](https://nalgebra.rs) for vector/matrix math and can optionally interface with
 [rapier](https://rapier.rs) for two-way coupling with rigid bodies, multibodies, and deformable bodies.
 2D and 3D implementations both share (mostly) the same code!
 
