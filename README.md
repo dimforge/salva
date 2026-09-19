@@ -24,10 +24,9 @@
 -----
 
 **Salva** is a 2 and 3-dimensional particle-based fluid simulation engine for games and animations.
-It uses [nalgebra](https://nalgebra.org) for vector/matrix math and can optionally interface with
+It uses [nalgebra](https://nalgebra.rs) for vector/matrix math and can optionally interface with
 [rapier](https://rapier.rs) for two-way coupling with rigid bodies, multibodies, and deformable bodies.
 2D and 3D implementations both share (mostly) the same code!
-
 
 Examples are available in the `examples2d` and `examples3d` directories.  Because those demos are based on
 WASM and WebGl 1.0 they should work on most modern browsers. Feel free to ask for help
@@ -39,6 +38,7 @@ The name of this library is inspired from the famous surrealist artist `Salvador
 is inspired from its renown painting [The Persistence of Memory](https://en.wikipedia.org/wiki/The_Persistence_of_Memory).
 
 ## Features
+
 - **Pressure resolution:** DFSPH and IISPH.
 - **Viscosity:** DFSPH viscosity, Artificial viscosity, and XSPH viscosity.
 - **Surface tension:** WCSPH surface tension, and methods from He et al. 2014 and Akinci et al. 2013
