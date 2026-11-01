@@ -16,3 +16,4 @@ Cargo.lock
 .idea
 .vscode
 .DS_Store
+testbed_state_*.autosave.json
