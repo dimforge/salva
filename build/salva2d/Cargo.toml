@@ -51,9 +51,9 @@ rayon = { version = "1.8", optional = true }
 
 nalgebra = { version = "0.35", features = ["convert-glam033"] }
 glamx = { version = "0.3", features = ["nalgebra"] }
-parry2d = { version = "0.30", optional = true }
-rapier2d = { version = "0.35.1", optional = true }
-rapier_testbed2d = { version = "0.35.1", optional = true }
+parry2d = { version = "0.31.1", optional = true }
+rapier2d = { version = "0.36.1", optional = true }
+rapier_testbed2d = { version = "0.36.1", optional = true }
 kiss3d = { version = "0.45", optional = true }
 
 bitflags = "2"

@@ -12,9 +12,9 @@ parallel = ["rapier2d/parallel", "rapier_testbed2d/parallel", "salva2d/parallel"
 [dependencies]
 anyhow = "1"
 nalgebra = "0.35"
-parry2d = "0.30"
-rapier2d = "0.35.1"
-rapier_testbed2d = "0.35.1"
+parry2d = "0.31.1"
+rapier2d = "0.36.1"
+rapier_testbed2d = "0.36.1"
 kiss3d = { version = "0.45", features = ["rt_switcher"] }
 
 [dependencies.salva2d]
